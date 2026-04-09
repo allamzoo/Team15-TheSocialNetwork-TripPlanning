@@ -3,7 +3,11 @@ package com.team15.tripplanning.activityservice.service;
 import com.team15.tripplanning.activityservice.model.Activity;
 import com.team15.tripplanning.activityservice.repository.ActivityRepository;
 import java.util.List;
+
+import jakarta.transaction.Transactional;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class ActivityService {
@@ -36,6 +40,15 @@ public class ActivityService {
         existing.setScheduledTime(activity.getScheduledTime());
         existing.setMetadata(activity.getMetadata());
         return activityRepository.save(existing);
+    }
+
+    @Transactional
+    public Activity createActivityForItinerary(Long itineraryId, Activity activity) {
+        if (!activityRepository.itineraryExists(itineraryId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found");
+        }
+        activity.setItineraryId(itineraryId);
+        return activityRepository.save(activity);
     }
 
     public void delete(Long id) {
