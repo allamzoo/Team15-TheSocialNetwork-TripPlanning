@@ -1,10 +1,12 @@
 package com.team15.tripplanning.userservice.service;
 
 import com.team15.tripplanning.userservice.model.User;
+import com.team15.tripplanning.userservice.model.UserStatus;
 import com.team15.tripplanning.userservice.repository.UserRepository;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -46,5 +48,20 @@ public class UserService {
     public void delete(Long id) {
         findById(id);
         userRepository.deleteById(id);
+    }
+
+    @Transactional
+    public User deactivate(Long id) {
+        User user = findById(id);
+        long activeItinerariesCount = userRepository.countActiveItinerariesForUser(id);
+        if (activeItinerariesCount > 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Cannot deactivate user with active itineraries"
+            );
+        }
+
+        user.setStatus(UserStatus.DEACTIVATED);
+        return userRepository.save(user);
     }
 }

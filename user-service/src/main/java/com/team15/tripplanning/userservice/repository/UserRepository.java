@@ -29,4 +29,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Transactional
     @Query(value = "UPDATE users SET status = :status WHERE id = :id", nativeQuery = true)
     int updateStatusById(@Param("id") Long id, @Param("status") String status);
+
+    @Query(value = """
+            SELECT COUNT(1)
+            FROM itineraries i
+            WHERE i.user_id = :userId
+              AND i.status IN ('DRAFT', 'PLANNED', 'IN_PROGRESS')
+            """, nativeQuery = true)
+    long countActiveItinerariesForUser(@Param("userId") Long userId);
 }

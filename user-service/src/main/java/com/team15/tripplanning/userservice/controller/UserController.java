@@ -47,5 +47,10 @@ public class UserController {
         userService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PutMapping("/{id}/deactivate")
+    public ResponseEntity<User> deactivate(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.deactivate(id));
+    }
 }
 
