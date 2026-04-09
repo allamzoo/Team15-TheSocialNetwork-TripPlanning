@@ -1,17 +1,11 @@
 package com.team15.tripplanning.activityservice.controller;
 
+import com.team15.tripplanning.activityservice.dto.NearbyActivityDTO;
 import com.team15.tripplanning.activityservice.model.Activity;
 import com.team15.tripplanning.activityservice.service.ActivityService;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/activities")
@@ -32,6 +26,15 @@ public class ActivityController {
         return ResponseEntity.ok(activityService.findAll());
     }
 
+    @GetMapping("/nearby")
+    public ResponseEntity<List<NearbyActivityDTO>> findNearby(
+            @RequestParam Double lat,
+            @RequestParam Double lon,
+            @RequestParam Double radiusKm) {
+        List<NearbyActivityDTO> result = activityService.findNearbyActivities(lat, lon, radiusKm);
+        return ResponseEntity.ok(result);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Activity> findById(@PathVariable Long id) {
         return ResponseEntity.ok(activityService.findById(id));
@@ -47,5 +50,7 @@ public class ActivityController {
         activityService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+
 }
 

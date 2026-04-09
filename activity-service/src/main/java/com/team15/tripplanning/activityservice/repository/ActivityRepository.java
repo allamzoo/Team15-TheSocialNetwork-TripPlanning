@@ -25,4 +25,16 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     @Transactional
     @Query(value = "DELETE FROM activities WHERE itinerary_id = :itineraryId", nativeQuery = true)
     int deleteAllByItineraryId(@Param("itineraryId") Long itineraryId);
+
+    @Query(value = """
+        SELECT a.id, a.name, a.category, a.latitude, a.longitude,
+               (SQRT(POW(a.latitude - :lat, 2) + POW(a.longitude - :lon, 2)) * 111) AS distanceKm
+        FROM activities a
+        GROUP BY a.id
+        HAVING (SQRT(POW(a.latitude - :lat, 2) + POW(a.longitude - :lon, 2)) * 111) <= :radiusKm
+        ORDER BY distanceKm ASC
+        """, nativeQuery = true)
+    List<Object[]> findNearbyActivitiesRaw(@Param("lat") Double lat,
+                                           @Param("lon") Double lon,
+                                           @Param("radiusKm") Double radiusKm);
 }
