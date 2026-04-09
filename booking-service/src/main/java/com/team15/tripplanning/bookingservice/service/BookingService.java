@@ -1,11 +1,17 @@
 package com.team15.tripplanning.bookingservice.service;
 
 import com.team15.tripplanning.bookingservice.model.Booking;
+import com.team15.tripplanning.bookingservice.repository.BookingCouponRepository;
 import com.team15.tripplanning.bookingservice.repository.BookingRepository;
+import com.team15.tripplanning.bookingservice.dto.CouponUsageDTO;
+
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
+import java.time.LocalDateTime;
+
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,9 +19,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class BookingService {
     private final BookingRepository bookingRepository;
+    private final BookingCouponRepository bookingCouponRepository;
 
-    public BookingService(BookingRepository bookingRepository) {
+
+    public BookingService(BookingRepository bookingRepository,
+                          BookingCouponRepository bookingCouponRepository) {
         this.bookingRepository = bookingRepository;
+        this.bookingCouponRepository = bookingCouponRepository;
     }
 
     public Booking create(Booking booking) {
@@ -86,5 +96,33 @@ public class BookingService {
 
         // e) Save
         return bookingRepository.save(booking);
+    }
+
+    public List<CouponUsageDTO> getTopUsedCoupons(int limit) {
+        List<Object[]> results = bookingCouponRepository.findTopUsedCoupons(limit);
+
+        List<CouponUsageDTO> response = new ArrayList<>();
+
+        for (Object[] row : results) {
+            CouponUsageDTO dto = new CouponUsageDTO();
+
+            dto.setCouponId(((Number) row[0]).longValue());
+            dto.setCode((String) row[1]);
+            dto.setDiscountType((String) row[2]);
+            dto.setDiscountValue(((Number) row[3]).doubleValue());
+            dto.setTimesUsed(((Number) row[4]).intValue());
+            dto.setTotalDiscountGiven(((Number) row[5]).doubleValue());
+            dto.setActive((Boolean) row[6]);
+
+            LocalDateTime expiryDate = (LocalDateTime) row[7];
+
+            // compute expired
+            boolean expired = expiryDate != null && expiryDate.isBefore(LocalDateTime.now());
+            dto.setExpired(expired);
+
+            response.add(dto);
+        }
+
+        return response;
     }
 }

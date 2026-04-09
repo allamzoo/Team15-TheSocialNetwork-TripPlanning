@@ -4,14 +4,7 @@ import com.team15.tripplanning.bookingservice.model.Booking;
 import com.team15.tripplanning.bookingservice.service.BookingService;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/bookings")
@@ -51,6 +44,11 @@ public class BookingController {
     @PutMapping("/{id}/retry")
     public ResponseEntity<Booking> retryBooking(@PathVariable Long id) {
         return ResponseEntity.ok(bookingService.retryBooking(id));
+    }
+
+    @GetMapping("/coupons/top-used")
+    public ResponseEntity<?> getTopUsedCoupons(@RequestParam int limit) {
+        return ResponseEntity.ok(bookingService.getTopUsedCoupons(limit));
     }
 }
 
