@@ -1,8 +1,10 @@
 package com.team15.tripplanning.userservice.controller;
 
+import com.team15.tripplanning.userservice.dto.UserTripSummaryDTO;
 import com.team15.tripplanning.userservice.model.User;
 import com.team15.tripplanning.userservice.service.UserService;
 import java.util.List;
+import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -32,14 +35,36 @@ public class UserController {
         return ResponseEntity.ok(userService.findAll());
     }
 
+    @GetMapping("/search")
+    public ResponseEntity<List<User>> search(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String role
+    ) {
+        return ResponseEntity.ok(userService.search(name, email, role != null ? Enum.valueOf(com.team15.tripplanning.userservice.model.UserRole.class, role) : null));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<User> findById(@PathVariable Long id) {
         return ResponseEntity.ok(userService.findById(id));
     }
 
+    @GetMapping("/{id}/trip-summary")
+    public ResponseEntity<UserTripSummaryDTO> getTripSummary(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.getTripSummary(id));
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<User> update(@PathVariable Long id, @RequestBody User user) {
         return ResponseEntity.ok(userService.update(id, user));
+    }
+
+    @PutMapping("/{id}/preferences")
+    public ResponseEntity<User> updatePreferences(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> newPreferences
+    ) {
+        return ResponseEntity.ok(userService.mergePreferences(id, newPreferences));
     }
 
     @DeleteMapping("/{id}")
@@ -48,4 +73,3 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 }
-
