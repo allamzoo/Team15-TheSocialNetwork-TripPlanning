@@ -1,0 +1,191 @@
+{
+  "info": {
+    "_postman_id": "b9aa0d8d-2e2f-4df7-9c95-5bdc1f3c5e01",
+    "name": "S1-F4 User Deactivation",
+    "description": "Requests to verify PUT /api/users/{id}/deactivate with and without active itineraries.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Create User (ACTIVE)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Postman Active User\",\n  \"email\": \"postman.active.user@example.com\",\n  \"password\": \"pass123\",\n  \"phone\": \"+201000000001\",\n  \"role\": \"TRAVELER\",\n  \"status\": \"ACTIVE\",\n  \"preferences\": {\n    \"language\": \"en\",\n    \"travelStyle\": \"backpacker\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{userBaseUrl}}/api/users",
+          "host": ["{{userBaseUrl}}"],
+          "path": ["api", "users"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200 or 201', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
+              "});",
+              "var body = pm.response.json();",
+              "if (body && body.id) {",
+              "  pm.environment.set('userId', body.id);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create Itinerary (DRAFT)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userId\": {{userId}},\n  \"title\": \"Postman Trip\",\n  \"status\": \"DRAFT\",\n  \"estimatedBudget\": 1000,\n  \"metadata\": {\n    \"travelStyle\": \"backpacker\"\n  },\n  \"startDate\": \"2026-04-15\",\n  \"endDate\": \"2026-04-20\"\n}"
+        },
+        "url": {
+          "raw": "{{itineraryBaseUrl}}/api/itineraries",
+          "host": ["{{itineraryBaseUrl}}"],
+          "path": ["api", "itineraries"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200 or 201', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
+              "});",
+              "var body = pm.response.json();",
+              "if (body && body.id) {",
+              "  pm.environment.set('itineraryId', body.id);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Deactivate User With Active Itinerary (expect 400)",
+      "request": {
+        "method": "PUT",
+        "url": {
+          "raw": "{{userBaseUrl}}/api/users/{{userId}}/deactivate",
+          "host": ["{{userBaseUrl}}"],
+          "path": ["api", "users", "{{userId}}", "deactivate"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 400', function () {",
+              "  pm.response.to.have.status(400);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Complete Itinerary",
+      "request": {
+        "method": "PUT",
+        "url": {
+          "raw": "{{itineraryBaseUrl}}/api/itineraries/{{itineraryId}}",
+          "host": ["{{itineraryBaseUrl}}"],
+          "path": ["api", "itineraries", "{{itineraryId}}"]
+        },
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userId\": {{userId}},\n  \"title\": \"Postman Trip\",\n  \"status\": \"COMPLETED\",\n  \"estimatedBudget\": 1000,\n  \"metadata\": {\n    \"travelStyle\": \"backpacker\"\n  },\n  \"startDate\": \"2026-04-15\",\n  \"endDate\": \"2026-04-20\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200 or 201', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Deactivate User After Completing Itinerary (expect 200)",
+      "request": {
+        "method": "PUT",
+        "url": {
+          "raw": "{{userBaseUrl}}/api/users/{{userId}}/deactivate",
+          "host": ["{{userBaseUrl}}"],
+          "path": ["api", "users", "{{userId}}", "deactivate"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "var body = pm.response.json();",
+              "pm.test('User is deactivated', function () {",
+              "  pm.expect(body.status).to.eql('DEACTIVATED');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get User By Id",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{userBaseUrl}}/api/users/{{userId}}",
+          "host": ["{{userBaseUrl}}"],
+          "path": ["api", "users", "{{userId}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "var body = pm.response.json();",
+              "pm.test('Persisted status is DEACTIVATED', function () {",
+              "  pm.expect(body.status).to.eql('DEACTIVATED');",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
