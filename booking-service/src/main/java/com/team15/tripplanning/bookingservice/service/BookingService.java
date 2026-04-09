@@ -68,7 +68,7 @@ public class BookingService {
         }
 
         // Get retryAttempt safely
-        Integer retryAttempt = 0;
+        int retryAttempt = 0;
         Object retryObj = details.get("retryAttempt");
 
         if (retryObj instanceof Integer) {
