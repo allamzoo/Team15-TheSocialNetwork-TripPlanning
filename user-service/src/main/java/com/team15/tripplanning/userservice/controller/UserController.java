@@ -1,5 +1,6 @@
 package com.team15.tripplanning.userservice.controller;
 
+import com.team15.tripplanning.userservice.dto.UserTripSummaryDTO;
 import com.team15.tripplanning.userservice.model.User;
 import com.team15.tripplanning.userservice.model.UserRole;
 import com.team15.tripplanning.userservice.service.UserService;
@@ -39,14 +40,19 @@ public class UserController {
     public ResponseEntity<List<User>> search(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String email,
-            @RequestParam(required = false) UserRole role
+            @RequestParam(required = false) String role
     ) {
-        return ResponseEntity.ok(userService.search(name, email, role));
+        return ResponseEntity.ok(userService.search(name, email, role != null ? Enum.valueOf(com.team15.tripplanning.userservice.model.UserRole.class, role) : null));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<User> findById(@PathVariable Long id) {
         return ResponseEntity.ok(userService.findById(id));
+    }
+
+    @GetMapping("/{id}/trip-summary")
+    public ResponseEntity<UserTripSummaryDTO> getTripSummary(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.getTripSummary(id));
     }
 
     @PutMapping("/{id}")
@@ -68,3 +74,4 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 }
+
