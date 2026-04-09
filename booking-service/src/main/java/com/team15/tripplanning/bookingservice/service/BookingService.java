@@ -14,6 +14,8 @@ import java.util.ArrayList;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 @Service
 public class BookingService {
@@ -93,36 +95,38 @@ public class BookingService {
         return bookingRepository.save(booking);
     }
 
+    @Transactional
     public BookingDetailsDTO getBookingDetails(Long bookingId) {
-        // a) find booking
+
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException("Booking not found: " + bookingId));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Booking not found: " + bookingId
+                ));
 
         List<BookingCoupon> bookingCoupons = booking.getBookingCoupons();
 
         List<AppliedCouponDTO> appliedCoupons = new ArrayList<>();
-
         double totalDiscount = 0.0;
 
         for (BookingCoupon bc : bookingCoupons) {
+            if (bc.getCoupon() == null) continue;
+
             AppliedCouponDTO dto = new AppliedCouponDTO();
 
-            // access Coupon entity
             dto.setCouponCode(bc.getCoupon().getCode());
             dto.setDiscountType(bc.getCoupon().getDiscountType().name());
             dto.setDiscountApplied(bc.getDiscountApplied());
             dto.setAppliedAt(bc.getAppliedAt());
 
-            totalDiscount += bc.getDiscountApplied();
+            totalDiscount += bc.getDiscountApplied() != null ? bc.getDiscountApplied() : 0;
 
             appliedCoupons.add(dto);
         }
 
         double finalAmount = booking.getAmount() - totalDiscount;
 
-        // build response DTO
         BookingDetailsDTO result = new BookingDetailsDTO();
-
         result.setBookingId(booking.getId());
         result.setItineraryId(booking.getItineraryId());
         result.setUserId(booking.getUserId());
@@ -130,7 +134,6 @@ public class BookingService {
         result.setType(booking.getType().name());
         result.setStatus(booking.getStatus().name());
         result.setBookingDetails(booking.getBookingDetails());
-
         result.setAppliedCoupons(appliedCoupons);
         result.setTotalDiscount(totalDiscount);
         result.setFinalAmount(finalAmount);
