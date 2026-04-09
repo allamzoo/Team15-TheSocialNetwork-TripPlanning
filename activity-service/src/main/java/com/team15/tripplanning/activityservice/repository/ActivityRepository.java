@@ -1,6 +1,8 @@
 package com.team15.tripplanning.activityservice.repository;
 
 import com.team15.tripplanning.activityservice.model.Activity;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,4 +35,13 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     boolean itineraryExists(@Param("itineraryId") Long itineraryId);
 
     Optional<Activity> findFirstByItineraryIdOrderByScheduledTimeDesc(Long itineraryId);
+    // -------------------- S4-F7 --------------------
+    // Count activities older than cutoff
+    @Query(value = "SELECT COUNT(*) FROM activities WHERE scheduled_time < :cutoff", nativeQuery = true)
+    int countByScheduledTimeBefore(@Param("cutoff") LocalDateTime cutoff);
+
+    // Delete activities older than cutoff
+    @Modifying
+    @Query(value = "DELETE FROM activities WHERE scheduled_time < :cutoff", nativeQuery = true)
+    int deleteByScheduledTimeBefore(@Param("cutoff") LocalDateTime cutoff);
 }

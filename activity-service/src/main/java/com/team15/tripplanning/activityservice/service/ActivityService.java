@@ -2,6 +2,8 @@ package com.team15.tripplanning.activityservice.service;
 
 import com.team15.tripplanning.activityservice.model.Activity;
 import com.team15.tripplanning.activityservice.repository.ActivityRepository;
+import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
@@ -54,5 +56,13 @@ public class ActivityService {
         return activityRepository.findFirstByItineraryIdOrderByScheduledTimeDesc(itineraryId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "No activities found for this itinerary"));
+    }
+    // ---------- S4-F7 ----------
+    @Transactional
+    public int purgeOldActivities(int olderThanDays) {
+        LocalDateTime cutoff = LocalDateTime.now().minusDays(olderThanDays);
+        int count = activityRepository.countByScheduledTimeBefore(cutoff);
+        activityRepository.deleteByScheduledTimeBefore(cutoff);
+        return count;
     }
 }
