@@ -23,6 +23,9 @@ import java.time.LocalDateTime;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+
 
 @Service
 public class BookingService {
@@ -66,13 +69,20 @@ public class BookingService {
 
     @Transactional
     public Booking retryBooking(Long id) {
-        // a) Find booking
-        Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Booking not found: " + id));
 
-        // b) Validate status
+        // a) Find booking → 404
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Booking not found: " + id
+                ));
+
+        // b) Validate status → 400
         if (booking.getStatus() != Booking.BookingStatus.FAILED) {
-            throw new RuntimeException("Only FAILED bookings can be retried");
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Only FAILED bookings can be retried"
+            );
         }
 
         // c) Update status
@@ -85,7 +95,6 @@ public class BookingService {
             details = new HashMap<>();
         }
 
-        // Get retryAttempt safely
         int retryAttempt = 0;
         Object retryObj = details.get("retryAttempt");
 
