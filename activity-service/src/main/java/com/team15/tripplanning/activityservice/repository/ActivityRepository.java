@@ -1,6 +1,8 @@
 package com.team15.tripplanning.activityservice.repository;
 
 import com.team15.tripplanning.activityservice.model.Activity;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,4 +35,18 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     boolean itineraryExists(@Param("itineraryId") Long itineraryId);
 
     Optional<Activity> findFirstByItineraryIdOrderByScheduledTimeDesc(Long itineraryId);
+    // -------------------- S4-F9 --------------------
+    @Query(value = """
+    SELECT id, name, category, latitude, longitude,
+           CAST(metadata->>'cost' AS numeric) AS cost,
+           scheduled_time
+    FROM activities
+    WHERE CAST(metadata->>'cost' AS numeric) <= :maxCost
+      AND scheduled_time >= :since
+    ORDER BY CAST(metadata->>'cost' AS numeric) ASC
+    """, nativeQuery = true)
+    List<Object[]> findBudgetFriendlyActivities(
+            @Param("maxCost") Double maxCost,
+            @Param("since") LocalDateTime since
+    );
 }
