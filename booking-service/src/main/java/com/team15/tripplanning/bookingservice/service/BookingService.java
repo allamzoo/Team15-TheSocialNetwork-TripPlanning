@@ -4,8 +4,15 @@ import com.team15.tripplanning.bookingservice.model.Booking;
 import com.team15.tripplanning.bookingservice.repository.BookingRepository;
 
 import java.util.HashMap;
+import com.team15.tripplanning.bookingservice.dto.AppliedCouponDTO;
+import com.team15.tripplanning.bookingservice.dto.BookingDetailsDTO;
+import com.team15.tripplanning.bookingservice.model.BookingCoupon;
+
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
+
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -86,5 +93,50 @@ public class BookingService {
 
         // e) Save
         return bookingRepository.save(booking);
+    }
+
+    public BookingDetailsDTO getBookingDetails(Long bookingId) {
+        // a) find booking
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found: " + bookingId));
+
+        List<BookingCoupon> bookingCoupons = booking.getBookingCoupons();
+
+        List<AppliedCouponDTO> appliedCoupons = new ArrayList<>();
+
+        double totalDiscount = 0.0;
+
+        for (BookingCoupon bc : bookingCoupons) {
+            AppliedCouponDTO dto = new AppliedCouponDTO();
+
+            // access Coupon entity
+            dto.setCouponCode(bc.getCoupon().getCode());
+            dto.setDiscountType(bc.getCoupon().getDiscountType().name());
+            dto.setDiscountApplied(bc.getDiscountApplied());
+            dto.setAppliedAt(bc.getAppliedAt());
+
+            totalDiscount += bc.getDiscountApplied();
+
+            appliedCoupons.add(dto);
+        }
+
+        double finalAmount = booking.getAmount() - totalDiscount;
+
+        // build response DTO
+        BookingDetailsDTO result = new BookingDetailsDTO();
+
+        result.setBookingId(booking.getId());
+        result.setItineraryId(booking.getItineraryId());
+        result.setUserId(booking.getUserId());
+        result.setOriginalAmount(booking.getAmount());
+        result.setType(booking.getType().name());
+        result.setStatus(booking.getStatus().name());
+        result.setBookingDetails(booking.getBookingDetails());
+
+        result.setAppliedCoupons(appliedCoupons);
+        result.setTotalDiscount(totalDiscount);
+        result.setFinalAmount(finalAmount);
+
+        return result;
     }
 }
