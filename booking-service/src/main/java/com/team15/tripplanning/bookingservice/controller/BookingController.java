@@ -52,5 +52,10 @@ public class BookingController {
     public ResponseEntity<Booking> retryBooking(@PathVariable Long id) {
         return ResponseEntity.ok(bookingService.retryBooking(id));
     }
+
+    @GetMapping("/{id}/details")
+    public ResponseEntity<?> getBookingDetails(@PathVariable Long id) {
+        return ResponseEntity.ok(bookingService.getBookingDetails(id));
+    }
 }
 
