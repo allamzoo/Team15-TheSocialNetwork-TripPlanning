@@ -18,6 +18,17 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByStatus(UserStatus status);
 
     @Query(value = """
+            SELECT *
+            FROM users u
+            WHERE (
+                (:name IS NOT NULL AND TRIM(:name) <> '' AND LOWER(u.name) LIKE LOWER(CONCAT('%', :name, '%')))
+                OR (:email IS NOT NULL AND TRIM(:email) <> '' AND LOWER(u.email) LIKE LOWER(CONCAT('%', :email, '%')))
+                OR (:role IS NOT NULL AND TRIM(:role) <> '' AND u.role = :role)
+            )
+            """, nativeQuery = true)
+    List<User> searchUsers(@Param("name") String name, @Param("email") String email, @Param("role") String role);
+
+    @Query(value = """
             SELECT u.id, u.name, u.email, COUNT(sd.id) AS saved_count
             FROM users u
             LEFT JOIN saved_destinations sd ON sd.user_id = u.id

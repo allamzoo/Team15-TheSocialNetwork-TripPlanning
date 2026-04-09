@@ -1,6 +1,7 @@
 package com.team15.tripplanning.userservice.service;
 
 import com.team15.tripplanning.userservice.model.User;
+import com.team15.tripplanning.userservice.model.UserRole;
 import com.team15.tripplanning.userservice.repository.UserRepository;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -21,6 +22,16 @@ public class UserService {
 
     public List<User> findAll() {
         return userRepository.findAll();
+    }
+
+    public List<User> search(String name, String email, UserRole role) {
+        String normalizedName = normalize(name);
+        String normalizedEmail = normalize(email);
+        String normalizedRole = role != null ? role.name() : null;
+        if (normalizedName == null && normalizedEmail == null && normalizedRole == null) {
+            return List.of();
+        }
+        return userRepository.searchUsers(normalizedName, normalizedEmail, normalizedRole);
     }
 
     public User findById(Long id) {
@@ -46,5 +57,9 @@ public class UserService {
     public void delete(Long id) {
         findById(id);
         userRepository.deleteById(id);
+    }
+
+    private String normalize(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }
