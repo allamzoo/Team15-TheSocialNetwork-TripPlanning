@@ -34,12 +34,14 @@ public interface BookingCouponRepository extends JpaRepository<BookingCoupon, Lo
         c.discount_type,
         c.discount_value,
         c.current_uses,
-        COALESCE(SUM(bc.discount_applied), 0),
+        COALESCE(SUM(bc.discount_applied), 0) AS total_discount,
         c.active,
         c.expiry_date
     FROM coupons c
     LEFT JOIN booking_coupons bc ON bc.coupon_id = c.id
-    GROUP BY c.id
+    GROUP BY 
+        c.id, c.code, c.discount_type, c.discount_value, 
+        c.current_uses, c.active, c.expiry_date
     ORDER BY c.current_uses DESC
     LIMIT :limit
     """, nativeQuery = true)
