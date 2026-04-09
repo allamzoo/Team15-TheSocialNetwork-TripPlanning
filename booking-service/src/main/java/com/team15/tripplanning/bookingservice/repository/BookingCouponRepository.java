@@ -26,4 +26,22 @@ public interface BookingCouponRepository extends JpaRepository<BookingCoupon, Lo
     @Transactional
     @Query(value = "DELETE FROM booking_coupons WHERE booking_id = :bookingId", nativeQuery = true)
     int deleteAllByBookingId(@Param("bookingId") Long bookingId);
+
+    @Query(value = """
+    SELECT 
+        c.id,
+        c.code,
+        c.discount_type,
+        c.discount_value,
+        c.current_uses,
+        COALESCE(SUM(bc.discount_applied), 0),
+        c.active,
+        c.expiry_date
+    FROM coupons c
+    LEFT JOIN booking_coupons bc ON bc.coupon_id = c.id
+    GROUP BY c.id
+    ORDER BY c.current_uses DESC
+    LIMIT :limit
+    """, nativeQuery = true)
+    List<Object[]> findTopUsedCoupons(@Param("limit") int limit);
 }
