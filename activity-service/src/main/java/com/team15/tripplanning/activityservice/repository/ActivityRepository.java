@@ -3,7 +3,7 @@ package com.team15.tripplanning.activityservice.repository;
 import com.team15.tripplanning.activityservice.model.Activity;
 import java.util.List;
 import java.util.Optional;
-
+import java.time.LocalDateTime;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -33,4 +33,25 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     boolean itineraryExists(@Param("itineraryId") Long itineraryId);
 
     Optional<Activity> findFirstByItineraryIdOrderByScheduledTimeDesc(Long itineraryId);
+
+    // -------------------- S4-F8 --------------------
+    @Query(value = """
+    SELECT 
+        COUNT(*) AS totalActivities,
+        AVG(CAST(metadata->>'cost' AS numeric)) AS averageCost,
+        MAX(CAST(metadata->>'cost' AS numeric)) AS maxCost,
+        MIN(scheduled_time) AS firstScheduledTime,
+        MAX(scheduled_time) AS lastScheduledTime
+    FROM activities
+    WHERE itinerary_id = :itineraryId
+      AND scheduled_time BETWEEN :startDate AND :endDate
+    """, nativeQuery = true)
+    List<Object[]> getActivitySummary(
+            @Param("itineraryId") Long itineraryId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
+
+    @Query(value = "SELECT COUNT(*) FROM itineraries WHERE id = :id", nativeQuery = true)
+    int countItineraryById(@Param("id") Long id);
 }

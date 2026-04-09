@@ -1,7 +1,11 @@
 package com.team15.tripplanning.activityservice.service;
 
+import com.team15.tripplanning.activityservice.dto.ActivitySummaryDTO;
 import com.team15.tripplanning.activityservice.model.Activity;
 import com.team15.tripplanning.activityservice.repository.ActivityRepository;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
@@ -54,5 +58,51 @@ public class ActivityService {
         return activityRepository.findFirstByItineraryIdOrderByScheduledTimeDesc(itineraryId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "No activities found for this itinerary"));
+    }
+    // ---------- S4-F8 ----------
+    public ActivitySummaryDTO getActivitySummary(Long itineraryId, LocalDate startDate, LocalDate endDate) {
+        // Verify itinerary exists
+        int exists = activityRepository.countItineraryById(itineraryId);
+        if (exists == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found");
+        }
+
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(23, 59, 59);
+
+        List<Object[]> results = activityRepository.getActivitySummary(itineraryId, startDateTime, endDateTime);
+
+        // Guard: no rows returned at all
+        if (results == null || results.isEmpty()) {
+            return new ActivitySummaryDTO(itineraryId, 0, 0.0, 0.0, null, null);
+        }
+
+        Object[] row = results.get(0);
+
+        int total = row[0] != null ? ((Number) row[0]).intValue() : 0;
+        Double avg = row[1] != null ? ((Number) row[1]).doubleValue() : 0.0;
+        Double max = row[2] != null ? ((Number) row[2]).doubleValue() : 0.0;
+
+        // Fix: handle both LocalDateTime and Timestamp since driver version affects return type
+        LocalDateTime first = null;
+        LocalDateTime last = null;
+
+        if (row[3] != null) {
+            if (row[3] instanceof LocalDateTime) {
+                first = (LocalDateTime) row[3];
+            } else {
+                first = ((java.sql.Timestamp) row[3]).toLocalDateTime();
+            }
+        }
+
+        if (row[4] != null) {
+            if (row[4] instanceof LocalDateTime) {
+                last = (LocalDateTime) row[4];
+            } else {
+                last = ((java.sql.Timestamp) row[4]).toLocalDateTime();
+            }
+        }
+
+        return new ActivitySummaryDTO(itineraryId, total, avg, max, first, last);
     }
 }
