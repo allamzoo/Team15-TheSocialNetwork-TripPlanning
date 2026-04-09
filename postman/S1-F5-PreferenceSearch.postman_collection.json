@@ -1,0 +1,204 @@
+{
+  "info": {
+    "name": "S1-F5 Filter Users by Preference",
+    "description": "Test collection for S1-F5 JSONB preference search feature",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Create User with luxury preference",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Alice Luxury\",\n  \"email\": \"alice.luxury@test.com\",\n  \"password\": \"password123\",\n  \"phone\": \"1111111111\",\n  \"role\": \"USER\",\n  \"status\": \"ACTIVE\",\n  \"preferences\": {\n    \"travelStyle\": \"luxury\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{userBaseUrl}}/api/users",
+          "host": [
+            "{{userBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "users"
+          ]
+        }
+      }
+    },
+    {
+      "name": "2. Create User with backpacker preference",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Bob Backpacker\",\n  \"email\": \"bob.backpacker@test.com\",\n  \"password\": \"password123\",\n  \"phone\": \"2222222222\",\n  \"role\": \"USER\",\n  \"status\": \"ACTIVE\",\n  \"preferences\": {\n    \"travelStyle\": \"backpacker\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{userBaseUrl}}/api/users",
+          "host": [
+            "{{userBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "users"
+          ]
+        }
+      }
+    },
+    {
+      "name": "3. Create User with luxury preference (second)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Carol Luxury\",\n  \"email\": \"carol.luxury@test.com\",\n  \"password\": \"password123\",\n  \"phone\": \"3333333333\",\n  \"role\": \"USER\",\n  \"status\": \"ACTIVE\",\n  \"preferences\": {\n    \"travelStyle\": \"luxury\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{userBaseUrl}}/api/users",
+          "host": [
+            "{{userBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "users"
+          ]
+        }
+      }
+    },
+    {
+      "name": "4. Search: travelStyle=luxury (expect 2 users)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{userBaseUrl}}/api/users/preferences/search?key=travelStyle&value=luxury",
+          "host": [
+            "{{userBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "users",
+            "preferences",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "key",
+              "value": "travelStyle"
+            },
+            {
+              "key": "value",
+              "value": "luxury"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "5. Search: travelStyle=solo (expect empty list)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{userBaseUrl}}/api/users/preferences/search?key=travelStyle&value=solo",
+          "host": [
+            "{{userBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "users",
+            "preferences",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "key",
+              "value": "travelStyle"
+            },
+            {
+              "key": "value",
+              "value": "solo"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "6. Search: blank key (expect 400 Bad Request)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{userBaseUrl}}/api/users/preferences/search?key=&value=luxury",
+          "host": [
+            "{{userBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "users",
+            "preferences",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "key",
+              "value": ""
+            },
+            {
+              "key": "value",
+              "value": "luxury"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "7. Search: blank value (expect 400 Bad Request)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{userBaseUrl}}/api/users/preferences/search?key=travelStyle&value=",
+          "host": [
+            "{{userBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "users",
+            "preferences",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "key",
+              "value": "travelStyle"
+            },
+            {
+              "key": "value",
+              "value": ""
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
+

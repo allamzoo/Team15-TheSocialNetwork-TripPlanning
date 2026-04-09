@@ -111,6 +111,22 @@ public class UserService {
         userRepository.deleteById(id);
     }
 
+    public List<User> searchByPreference(String key, String value) {
+        if (key == null || key.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Preference key cannot be blank"
+            );
+        }
+        if (value == null || value.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Preference value cannot be blank"
+            );
+        }
+        return userRepository.searchByPreference(key, value);
+    }
+
     @Transactional
     public User deactivate(Long id) {
         User user = findById(id);
