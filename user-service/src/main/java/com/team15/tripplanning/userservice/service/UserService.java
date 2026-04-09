@@ -1,12 +1,17 @@
 package com.team15.tripplanning.userservice.service;
 
+import com.team15.tripplanning.userservice.dto.SavedDestinationProfileDTO;
+import com.team15.tripplanning.userservice.dto.UserProfileDTO;
 import com.team15.tripplanning.userservice.dto.UserTripSummaryDTO;
 import com.team15.tripplanning.userservice.dto.TopTravelerDTO;
+import com.team15.tripplanning.userservice.model.SavedDestination;
 import com.team15.tripplanning.userservice.model.User;
 import com.team15.tripplanning.userservice.model.UserRole;
 import com.team15.tripplanning.userservice.model.UserStatus;
 import com.team15.tripplanning.userservice.repository.UserRepository;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +52,37 @@ public class UserService {
                         HttpStatus.NOT_FOUND,
                         "User not found with id: " + id
                 ));
+    }
+
+    public UserProfileDTO getProfile(Long id) {
+        User user = userRepository.findByIdWithSavedDestinations(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "User not found with id: " + id
+                ));
+
+        List<SavedDestination> savedDestinations = new ArrayList<>(user.getSavedDestinations());
+        savedDestinations.sort(
+                Comparator.comparing(
+                                (SavedDestination savedDestination) -> Boolean.TRUE.equals(savedDestination.getIsDefault())
+                        )
+                        .reversed()
+                        .thenComparing(SavedDestination::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder()))
+        );
+
+        List<SavedDestinationProfileDTO> savedDestinationDtos = savedDestinations.stream()
+                .map(this::mapSavedDestinationToDto)
+                .toList();
+
+        return new UserProfileDTO(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getPhone(),
+                user.getPreferences(),
+                savedDestinationDtos,
+                (long) savedDestinationDtos.size()
+        );
     }
 
     public User update(Long id, User user) {
@@ -94,10 +130,16 @@ public class UserService {
     }
 
     private Object[] unwrapRow(Object rawRow) {
-        if (rawRow instanceof Object[] row && row.length == 1 && row[0] instanceof Object[]) {
-            return (Object[]) row[0];
+        if (rawRow instanceof Object[] row) {
+            if (row.length == 1 && row[0] instanceof Object[] nestedRow) {
+                return nestedRow;
+            }
+            return row;
         }
-        return (Object[]) rawRow;
+        throw new ResponseStatusException(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "Unexpected trip summary row format"
+        );
     }
 
     private Long toLong(Object value) {
@@ -137,6 +179,18 @@ public class UserService {
         Long tripCount = row[3] != null ? ((Number) row[3]).longValue() : 0L;
 
         return new TopTravelerDTO(userId, name, totalSpent, tripCount);
+    }
+
+    private SavedDestinationProfileDTO mapSavedDestinationToDto(SavedDestination savedDestination) {
+        return new SavedDestinationProfileDTO(
+                savedDestination.getLabel(),
+                savedDestination.getDestinationName(),
+                savedDestination.getCountry(),
+                savedDestination.getLatitude(),
+                savedDestination.getLongitude(),
+                savedDestination.getIsDefault(),
+                savedDestination.getMetadata()
+        );
     }
 
     public List<User> searchByPreference(String key, String value) {

@@ -1,6 +1,5 @@
 package com.team15.tripplanning.userservice.repository;
 
-import com.team15.tripplanning.userservice.dto.UserTripSummaryDTO;
 import com.team15.tripplanning.userservice.model.User;
 import com.team15.tripplanning.userservice.model.UserStatus;
 import java.util.List;
@@ -17,6 +16,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByPhone(String phone);
 
     List<User> findByStatus(UserStatus status);
+
+    @Query(value = """
+            SELECT DISTINCT u
+            FROM User u
+            LEFT JOIN FETCH u.savedDestinations sd
+            WHERE u.id = :id
+            """)
+    Optional<User> findByIdWithSavedDestinations(@Param("id") Long id);
 
     @Query(value = """
             SELECT *
