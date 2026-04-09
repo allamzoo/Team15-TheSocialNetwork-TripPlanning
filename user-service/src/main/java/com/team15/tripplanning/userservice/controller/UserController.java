@@ -1,8 +1,11 @@
 package com.team15.tripplanning.userservice.controller;
 
+import com.team15.tripplanning.userservice.dto.TopTravelerDTO;
 import com.team15.tripplanning.userservice.model.User;
 import com.team15.tripplanning.userservice.service.UserService;
+import java.time.LocalDate;
 import java.util.List;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -47,5 +51,12 @@ public class UserController {
         userService.delete(id);
         return ResponseEntity.noContent().build();
     }
-}
 
+    @GetMapping("/reports/top-travelers")
+    public ResponseEntity<List<TopTravelerDTO>> getTopTravelersBySpending(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam int limit) {
+        return ResponseEntity.ok(userService.getTopTravelersBySpending(startDate, endDate, limit));
+    }
+}

@@ -25,6 +25,25 @@ public interface UserRepository extends JpaRepository<User, Long> {
             """, nativeQuery = true)
     List<Object[]> findUsersWithSavedDestinationCounts();
 
+    @Query(value = """
+            SELECT u.id AS user_id,
+                   u.name AS name,
+                   COALESCE(SUM(b.amount), 0) AS total_spent,
+                   COUNT(b.id) AS trip_count
+            FROM users u
+            JOIN bookings b ON b.user_id = u.id
+            WHERE b.status = 'CONFIRMED'
+              AND DATE(b.created_at) BETWEEN :startDate AND :endDate
+            GROUP BY u.id, u.name
+            ORDER BY total_spent DESC
+            LIMIT :limit
+            """, nativeQuery = true)
+    List<Object[]> findTopTravelersBySpending(
+            @Param("startDate") java.time.LocalDate startDate,
+            @Param("endDate") java.time.LocalDate endDate,
+            @Param("limit") int limit
+    );
+
     @Modifying
     @Transactional
     @Query(value = "UPDATE users SET status = :status WHERE id = :id", nativeQuery = true)
