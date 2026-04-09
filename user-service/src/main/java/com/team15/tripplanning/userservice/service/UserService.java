@@ -1,10 +1,12 @@
 package com.team15.tripplanning.userservice.service;
 
 import com.team15.tripplanning.userservice.dto.UserTripSummaryDTO;
+import com.team15.tripplanning.userservice.dto.TopTravelerDTO;
 import com.team15.tripplanning.userservice.model.User;
 import com.team15.tripplanning.userservice.model.UserRole;
 import com.team15.tripplanning.userservice.model.UserStatus;
 import com.team15.tripplanning.userservice.repository.UserRepository;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -109,6 +111,32 @@ public class UserService {
     public void delete(Long id) {
         findById(id);
         userRepository.deleteById(id);
+    }
+
+    public List<TopTravelerDTO> getTopTravelersBySpending(LocalDate startDate, LocalDate endDate, int limit) {
+        if (startDate == null || endDate == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "startDate and endDate are required");
+        }
+        if (startDate.isAfter(endDate)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "startDate cannot be after endDate");
+        }
+        if (limit <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "limit must be greater than 0");
+        }
+
+        return userRepository.findTopTravelersBySpending(startDate, endDate, limit)
+                .stream()
+                .map(this::mapTopTravelerRow)
+                .toList();
+    }
+
+    private TopTravelerDTO mapTopTravelerRow(Object[] row) {
+        Long userId = row[0] != null ? ((Number) row[0]).longValue() : 0L;
+        String name = row[1] != null ? row[1].toString() : null;
+        Double totalSpent = row[2] != null ? ((Number) row[2]).doubleValue() : 0.0;
+        Long tripCount = row[3] != null ? ((Number) row[3]).longValue() : 0L;
+
+        return new TopTravelerDTO(userId, name, totalSpent, tripCount);
     }
 
     public List<User> searchByPreference(String key, String value) {

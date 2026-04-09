@@ -1,10 +1,13 @@
 package com.team15.tripplanning.userservice.controller;
 
 import com.team15.tripplanning.userservice.dto.UserTripSummaryDTO;
+import com.team15.tripplanning.userservice.dto.TopTravelerDTO;
 import com.team15.tripplanning.userservice.model.User;
 import com.team15.tripplanning.userservice.model.UserRole;
 import com.team15.tripplanning.userservice.service.UserService;
+import java.time.LocalDate;
 import java.util.List;
+import org.springframework.format.annotation.DateTimeFormat;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -72,6 +75,14 @@ public class UserController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         userService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/reports/top-travelers")
+    public ResponseEntity<List<TopTravelerDTO>> getTopTravelersBySpending(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam int limit) {
+        return ResponseEntity.ok(userService.getTopTravelersBySpending(startDate, endDate, limit));
     }
 
     @GetMapping("/preferences/search")
