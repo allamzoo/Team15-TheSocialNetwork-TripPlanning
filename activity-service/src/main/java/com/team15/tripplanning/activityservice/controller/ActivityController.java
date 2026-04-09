@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.team15.tripplanning.activityservice.dto.NearbyActivityDTO;
 
 @RestController
 @RequestMapping("/api/activities")
@@ -46,6 +47,12 @@ public class ActivityController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         activityService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+    // ---------- S4-F1 ----------
+    @GetMapping("/itinerary/{itineraryId}/latest")
+    public ResponseEntity<Activity> getLatestActivity(@PathVariable Long itineraryId) {
+        Activity activity = activityService.getLatestActivityForItinerary(itineraryId);
+        return ResponseEntity.ok(activity);
     }
 }
 

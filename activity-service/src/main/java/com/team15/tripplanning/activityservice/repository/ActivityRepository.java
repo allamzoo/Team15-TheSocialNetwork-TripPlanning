@@ -2,6 +2,8 @@ package com.team15.tripplanning.activityservice.repository;
 
 import com.team15.tripplanning.activityservice.model.Activity;
 import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -25,4 +27,10 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     @Transactional
     @Query(value = "DELETE FROM activities WHERE itinerary_id = :itineraryId", nativeQuery = true)
     int deleteAllByItineraryId(@Param("itineraryId") Long itineraryId);
+
+    // -------------------- S4-F1 --------------------
+    @Query(value = "SELECT COUNT(*) > 0 FROM itineraries WHERE id = :itineraryId", nativeQuery = true)
+    boolean itineraryExists(@Param("itineraryId") Long itineraryId);
+
+    Optional<Activity> findFirstByItineraryIdOrderByScheduledTimeDesc(Long itineraryId);
 }
