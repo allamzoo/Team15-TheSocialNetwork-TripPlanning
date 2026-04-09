@@ -5,8 +5,10 @@ import com.team15.tripplanning.userservice.model.User;
 import com.team15.tripplanning.userservice.repository.SavedDestinationRepository;
 import com.team15.tripplanning.userservice.repository.UserRepository;
 import java.util.List;
+import java.util.Objects;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -55,6 +57,45 @@ public class SavedDestinationService {
     public void delete(Long id) {
         findById(id);
         savedDestinationRepository.deleteById(id);
+    }
+
+    @Transactional
+    public User setDefaultSavedDestination(Long userId, Long destinationId) {
+        if (userId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "userId is required");
+        }
+        if (destinationId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "destinationId is required");
+        }
+
+        User user = resolveUser(userId);
+        SavedDestination target = savedDestinationRepository.findById(destinationId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "SavedDestination not found with id: " + destinationId
+                ));
+
+        if (target.getUser() == null || !Objects.equals(target.getUser().getId(), userId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Saved destination does not belong to this user"
+            );
+        }
+
+        List<SavedDestination> userDestinations = savedDestinationRepository.findByUser_Id(userId);
+        for (SavedDestination savedDestination : userDestinations) {
+            savedDestination.setIsDefault(false);
+        }
+        savedDestinationRepository.saveAll(userDestinations);
+
+        target.setIsDefault(true);
+        savedDestinationRepository.save(target);
+
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "User not found with id: " + userId
+                ));
     }
 
     private User resolveUser(Long userId) {

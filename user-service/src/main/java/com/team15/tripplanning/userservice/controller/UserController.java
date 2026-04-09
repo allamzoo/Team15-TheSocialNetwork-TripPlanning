@@ -2,6 +2,7 @@ package com.team15.tripplanning.userservice.controller;
 
 import com.team15.tripplanning.userservice.model.User;
 import com.team15.tripplanning.userservice.service.UserService;
+import com.team15.tripplanning.userservice.service.SavedDestinationService;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -17,9 +18,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/users")
 public class UserController {
     private final UserService userService;
+    private final SavedDestinationService savedDestinationService;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, SavedDestinationService savedDestinationService) {
         this.userService = userService;
+        this.savedDestinationService = savedDestinationService;
     }
 
     @PostMapping
@@ -40,6 +43,14 @@ public class UserController {
     @PutMapping("/{id}")
     public ResponseEntity<User> update(@PathVariable Long id, @RequestBody User user) {
         return ResponseEntity.ok(userService.update(id, user));
+    }
+
+    @PutMapping("/{userId}/destinations/{destinationId}/default")
+    public ResponseEntity<User> setDefaultSavedDestination(
+            @PathVariable Long userId,
+            @PathVariable Long destinationId
+    ) {
+        return ResponseEntity.ok(savedDestinationService.setDefaultSavedDestination(userId, destinationId));
     }
 
     @DeleteMapping("/{id}")

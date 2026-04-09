@@ -11,6 +11,10 @@ import org.springframework.transaction.annotation.Transactional;
 public interface SavedDestinationRepository extends JpaRepository<SavedDestination, Long> {
     List<SavedDestination> findByUser_Id(Long userId);
 
+    java.util.Optional<SavedDestination> findByIdAndUser_Id(Long id, Long userId);
+
+    List<SavedDestination> findByUser_IdAndIsDefaultTrue(Long userId);
+
     @Query(value = """
             SELECT sd.id, sd.label, sd.destination_name, u.name AS user_name
             FROM saved_destinations sd
