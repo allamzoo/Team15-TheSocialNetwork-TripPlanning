@@ -3,7 +3,9 @@ package com.team15.tripplanning.userservice.service;
 import com.team15.tripplanning.userservice.model.User;
 import com.team15.tripplanning.userservice.model.UserRole;
 import com.team15.tripplanning.userservice.repository.UserRepository;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -51,6 +53,19 @@ public class UserService {
         existing.setRole(user.getRole());
         existing.setStatus(user.getStatus());
         existing.setPreferences(user.getPreferences());
+        return userRepository.save(existing);
+    }
+
+    public User mergePreferences(Long id, Map<String, Object> newPreferences) {
+        User existing = findById(id);
+        Map<String, Object> currentPreferences = existing.getPreferences();
+        if (currentPreferences == null) {
+            currentPreferences = new HashMap<>();
+        }
+        if (newPreferences != null) {
+            currentPreferences.putAll(newPreferences);
+        }
+        existing.setPreferences(currentPreferences);
         return userRepository.save(existing);
     }
 

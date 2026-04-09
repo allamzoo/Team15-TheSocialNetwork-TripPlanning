@@ -4,6 +4,7 @@ import com.team15.tripplanning.userservice.model.User;
 import com.team15.tripplanning.userservice.model.UserRole;
 import com.team15.tripplanning.userservice.service.UserService;
 import java.util.List;
+import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -51,6 +52,14 @@ public class UserController {
     @PutMapping("/{id}")
     public ResponseEntity<User> update(@PathVariable Long id, @RequestBody User user) {
         return ResponseEntity.ok(userService.update(id, user));
+    }
+
+    @PutMapping("/{id}/preferences")
+    public ResponseEntity<User> updatePreferences(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> newPreferences
+    ) {
+        return ResponseEntity.ok(userService.mergePreferences(id, newPreferences));
     }
 
     @DeleteMapping("/{id}")
