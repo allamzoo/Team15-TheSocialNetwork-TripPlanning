@@ -9,79 +9,79 @@
     "studentId": "55-1231",
     "name": "Marwan Allam",
     "githubUsername": "Marwan-Allam",
-    "service": "activity-service"
+    "service": "user-service"
   },
   {
     "studentId": "55-4234",
     "name": "Omar Bakr",
     "githubUsername": "Omar-bakr",
-    "service": "booking-service"
+    "service": "user-service"
   },
   {
     "studentId": "55-4791",
     "name": "Mahmoud Omran",
     "githubUsername": "mahmoud-omran",
-    "service": "destination-service"
+    "service": "booking-service"
   },
   {
     "studentId": "55-22860",
     "name": "Nada Hayhtham",
     "githubUsername": "nada-haythem",
-    "service": "itinerary-service"
+    "service": "booking-service"
   },
   {
     "studentId": "55-1659",
     "name": "mayar mohamed",
     "githubUsername": "mayar-mohamed",
-    "service": "user-service"
+    "service": "booking-service"
   },
   {
     "studentId": "55-0677",
     "name": "Mario sameh",
     "githubUsername": "mario-sameh",
-    "service": "activity-service"
+    "service": "Itinerary Service"
   },
   {
     "studentId": "55-4649",
     "name": "omar Elhossary",
     "githubUsername": "omar-elhossary",
-    "service": "booking-service"
+    "service": "activity-service"
   },
   {
     "studentId": "55-25312",
     "name": "Seif Elsheikh",
     "githubUsername": "seif-elsheikh",
-    "service": "destination-service"
+    "service": "Itinerary Service"
   },
   {
     "studentId": "55-5012",
     "name": "Abdullah Hesham",
     "githubUsername": "Abdullah-hesham",
-    "service": "itinerary-service"
+    "service": "Destination-service"
   },
   {
     "studentId": "55-4895",
     "name": "Ahmed Samy",
     "githubUsername": "ahmed-samy",
-    "service": "user-service"
+    "service": "Destination-service"
   },
   {
     "studentId": "55-0993",
     "name": "youssef elseddeik",
     "githubUsername": "youssef-elseddeik",
-    "service": "activity-service"
+    "service": "Destination-service"
   },
   {
     "studentId": "55-0992",
     "name": "Youssef Ahmed",
     "githubUsername": "youssef-Ahmed",
-    "service": "booking-service"
+    "service": "activity-service"
   },
   {
     "studentId": "55-26722",
     "name": "Omar wael",
     "githubUsername": "omar-wael",
-    "service": "destination-service"
+    "service": "activity-service"
   },
   {
     "studentId": "55-27755",

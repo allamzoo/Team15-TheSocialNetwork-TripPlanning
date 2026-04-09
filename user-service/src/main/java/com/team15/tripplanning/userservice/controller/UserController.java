@@ -1,6 +1,7 @@
 package com.team15.tripplanning.userservice.controller;
 
 import com.team15.tripplanning.userservice.model.User;
+import com.team15.tripplanning.userservice.model.UserRole;
 import com.team15.tripplanning.userservice.service.UserService;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -32,6 +34,15 @@ public class UserController {
         return ResponseEntity.ok(userService.findAll());
     }
 
+    @GetMapping("/search")
+    public ResponseEntity<List<User>> search(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) UserRole role
+    ) {
+        return ResponseEntity.ok(userService.search(name, email, role));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<User> findById(@PathVariable Long id) {
         return ResponseEntity.ok(userService.findById(id));
@@ -48,4 +59,3 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 }
-
