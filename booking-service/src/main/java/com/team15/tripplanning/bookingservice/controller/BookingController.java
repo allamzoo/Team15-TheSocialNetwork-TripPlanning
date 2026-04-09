@@ -47,5 +47,10 @@ public class BookingController {
         bookingService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PutMapping("/{id}/retry")
+    public ResponseEntity<Booking> retryBooking(@PathVariable Long id) {
+        return ResponseEntity.ok(bookingService.retryBooking(id));
+    }
 }
 

@@ -2,8 +2,13 @@ package com.team15.tripplanning.bookingservice.service;
 
 import com.team15.tripplanning.bookingservice.model.Booking;
 import com.team15.tripplanning.bookingservice.repository.BookingRepository;
+
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class BookingService {
@@ -39,5 +44,47 @@ public class BookingService {
 
     public void delete(Long id) {
         bookingRepository.delete(findById(id));
+    }
+
+    @Transactional
+    public Booking retryBooking(Long id) {
+        // a) Find booking
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Booking not found: " + id));
+
+        // b) Validate status
+        if (booking.getStatus() != Booking.BookingStatus.FAILED) {
+            throw new RuntimeException("Only FAILED bookings can be retried");
+        }
+
+        // c) Update status
+        booking.setStatus(Booking.BookingStatus.CONFIRMED);
+
+        // d) Update JSONB bookingDetails
+        Map<String, Object> details = booking.getBookingDetails();
+
+        if (details == null) {
+            details = new HashMap<>();
+        }
+
+        // Get retryAttempt safely
+        Integer retryAttempt = 0;
+        Object retryObj = details.get("retryAttempt");
+
+        if (retryObj instanceof Integer) {
+            retryAttempt = (Integer) retryObj;
+        } else if (retryObj instanceof Number) {
+            retryAttempt = ((Number) retryObj).intValue();
+        }
+
+        retryAttempt++;
+
+        details.put("retryAttempt", retryAttempt);
+        details.put("confirmationNumber", "RETRY-" + id + "-" + retryAttempt);
+
+        booking.setBookingDetails(details);
+
+        // e) Save
+        return bookingRepository.save(booking);
     }
 }
