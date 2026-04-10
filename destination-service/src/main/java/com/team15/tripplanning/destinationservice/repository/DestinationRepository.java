@@ -3,6 +3,7 @@ package com.team15.tripplanning.destinationservice.repository;
 import com.team15.tripplanning.destinationservice.model.Destination;
 import com.team15.tripplanning.destinationservice.model.DestinationStatus;
 import java.util.List;
+import java.time.LocalDate;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -13,6 +14,23 @@ public interface DestinationRepository extends JpaRepository<Destination, Long> 
     List<Destination> findByCountry(String country);
 
     List<Destination> findByStatus(DestinationStatus status);
+
+    @Query(value = """
+        SELECT
+            COUNT(b.id) AS total_bookings,
+            COALESCE(SUM(b.amount), 0) AS total_revenue,
+            COALESCE(AVG(b.amount), 0) AS average_booking_amount
+        FROM bookings b
+        JOIN itineraries i ON b.itinerary_id = i.id
+        WHERE i.destination_id = :destinationId
+          AND b.status = 'CONFIRMED'
+          AND DATE(b.created_at) BETWEEN :startDate AND :endDate
+        """, nativeQuery = true)
+    List<Object[]> getDestinationRevenueSummary(
+            @Param("destinationId") Long destinationId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
 
     @Query(value = """
             SELECT d.id, d.name, COALESCE(AVG(dr.rating), 0) AS avg_rating, COUNT(dr.id) AS reviews_count
