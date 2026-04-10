@@ -95,4 +95,12 @@ public class ItineraryService {
         double total = (accommodation + transport + activities) * seasonMultiplier;
         return new TripCostEstimateDTO(accommodation, transport, activities, total, seasonMultiplier);
     }
+
+    public List<Itinerary> filterByMetadata(String key, String value) {
+        if (key == null || key.isBlank() || value == null || value.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "key and value must not be blank");
+        }
+        return itineraryRepository.findByMetadataKeyValue(key, value);
+    }
 }

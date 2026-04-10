@@ -81,4 +81,11 @@ public class ItineraryController {
                 request.getNumberOfTravelers()
         ));
     }
+
+    @GetMapping("/metadata/search")
+    public ResponseEntity<List<Itinerary>> filterByMetadata(
+            @RequestParam String key,
+            @RequestParam String value) {
+        return ResponseEntity.ok(itineraryService.filterByMetadata(key, value));
+    }
 }
