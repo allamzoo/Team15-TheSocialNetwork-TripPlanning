@@ -2,6 +2,9 @@ package com.team15.tripplanning.destinationservice.service;
 
 import com.team15.tripplanning.destinationservice.model.Destination;
 import com.team15.tripplanning.destinationservice.repository.DestinationRepository;
+import com.team15.tripplanning.destinationservice.model.DestinationCategory;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 import org.springframework.stereotype.Service;
 
@@ -41,5 +44,16 @@ public class DestinationService {
 
     public void delete(Long id) {
         destinationRepository.delete(findById(id));
+    }
+
+    public List<Destination> searchDestinations(DestinationCategory category, Double minRating, Double maxRating) {
+        if (minRating != null && maxRating != null && minRating > maxRating) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "minRating cannot be greater than maxRating");
+        }
+
+        double min = (minRating != null) ? minRating : 0.0;
+        double max = (maxRating != null) ? maxRating : 5.0;
+
+        return destinationRepository.searchDestinations(category, min, max);
     }
 }
