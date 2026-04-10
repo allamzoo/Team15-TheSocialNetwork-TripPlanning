@@ -2,7 +2,11 @@ package com.team15.tripplanning.destinationservice.service;
 
 import com.team15.tripplanning.destinationservice.model.Destination;
 import com.team15.tripplanning.destinationservice.repository.DestinationRepository;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -41,5 +45,22 @@ public class DestinationService {
 
     public void delete(Long id) {
         destinationRepository.delete(findById(id));
+    }
+
+    public Destination updateDestinationDetails(Long id, Map<String, Object> incomingDetails) {
+        Destination destination = destinationRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Destination not found: " + id));
+
+        Map<String, Object> existingDetails = destination.getDetails();
+        if (existingDetails == null) {
+            existingDetails = new HashMap<>();
+        }
+
+        if (incomingDetails != null) {
+            existingDetails.putAll(incomingDetails);
+        }
+
+        destination.setDetails(existingDetails);
+        return destinationRepository.save(destination);
     }
 }
