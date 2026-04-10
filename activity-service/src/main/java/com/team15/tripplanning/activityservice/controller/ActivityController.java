@@ -1,5 +1,6 @@
 package com.team15.tripplanning.activityservice.controller;
 
+import com.team15.tripplanning.activityservice.dto.NearbyActivityDTO;
 import com.team15.tripplanning.activityservice.model.Activity;
 import com.team15.tripplanning.activityservice.service.ActivityService;
 import java.util.List;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.team15.tripplanning.activityservice.dto.NearbyActivityDTO;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/activities")
@@ -33,6 +35,15 @@ public class ActivityController {
     @GetMapping
     public ResponseEntity<List<Activity>> findAll() {
         return ResponseEntity.ok(activityService.findAll());
+    }
+
+    @GetMapping("/nearby")
+    public ResponseEntity<List<NearbyActivityDTO>> findNearby(
+            @RequestParam Double lat,
+            @RequestParam Double lon,
+            @RequestParam Double radiusKm) {
+        List<NearbyActivityDTO> result = activityService.findNearbyActivities(lat, lon, radiusKm);
+        return ResponseEntity.ok(result);
     }
 
     @GetMapping("/{id}")
@@ -63,5 +74,7 @@ public class ActivityController {
         Activity activity = activityService.getLatestActivityForItinerary(itineraryId);
         return ResponseEntity.ok(activity);
     }
+
+
 }
 

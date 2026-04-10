@@ -31,9 +31,19 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     @Query(value = "SELECT COUNT(*) > 0 FROM itineraries WHERE id = :itineraryId", nativeQuery = true)
     boolean itineraryExists(@Param("itineraryId") Long itineraryId);
 
-    // -------------------- S4-F1 --------------------
-    @Query(value = "SELECT COUNT(*) > 0 FROM itineraries WHERE id = :itineraryId", nativeQuery = true)
-    boolean itineraryExists(@Param("itineraryId") Long itineraryId);
+
 
     Optional<Activity> findFirstByItineraryIdOrderByScheduledTimeDesc(Long itineraryId);
+
+    @Query(value = """
+        SELECT a.id, a.name, a.category, a.latitude, a.longitude,
+               (SQRT(POW(a.latitude - :lat, 2) + POW(a.longitude - :lon, 2)) * 111) AS distanceKm
+        FROM activities a
+        GROUP BY a.id
+        HAVING (SQRT(POW(a.latitude - :lat, 2) + POW(a.longitude - :lon, 2)) * 111) <= :radiusKm
+        ORDER BY distanceKm ASC
+        """, nativeQuery = true)
+    List<Object[]> findNearbyActivitiesRaw(@Param("lat") Double lat,
+                                           @Param("lon") Double lon,
+                                           @Param("radiusKm") Double radiusKm);
 }

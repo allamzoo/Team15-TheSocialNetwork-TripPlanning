@@ -19,6 +19,7 @@ public class NearbyActivityDTO {
     }
 
     // Getters and setters (required for JSON serialization)
+    // Getters and setters
     public Long getActivityId() { return activityId; }
     public void setActivityId(Long activityId) { this.activityId = activityId; }
 

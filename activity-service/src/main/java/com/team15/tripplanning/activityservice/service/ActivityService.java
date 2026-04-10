@@ -1,5 +1,6 @@
 package com.team15.tripplanning.activityservice.service;
 
+import com.team15.tripplanning.activityservice.dto.NearbyActivityDTO;
 import com.team15.tripplanning.activityservice.model.Activity;
 import com.team15.tripplanning.activityservice.repository.ActivityRepository;
 import java.util.List;
@@ -8,7 +9,11 @@ import org.springframework.http.HttpStatus;
 
 import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
+import java.util.stream.Collectors;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ResponseStatusException;
 import com.team15.tripplanning.activityservice.dto.NearbyActivityDTO;
 import org.springframework.web.server.ResponseStatusException;
@@ -53,6 +58,28 @@ public class ActivityService {
         }
         activity.setItineraryId(itineraryId);
         return activityRepository.save(activity);
+    }
+
+    public List<NearbyActivityDTO> findNearbyActivities(Double lat, Double lon, Double radiusKm) {
+        // Validate input
+        if (lat == null || lat < -90 || lat > 90 ||
+                lon == null || lon < -180 || lon > 180 ||
+                radiusKm == null || radiusKm <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Invalid latitude, longitude, or radius");
+        }
+
+        List<Object[]> rows = activityRepository.findNearbyActivitiesRaw(lat, lon, radiusKm);
+        return rows.stream()
+                .map(row -> new NearbyActivityDTO(
+                        ((Number) row[0]).longValue(),   // activityId
+                        (String) row[1],                 // name
+                        (String) row[2],                 // category
+                        (Double) row[3],                 // latitude
+                        (Double) row[4],                 // longitude
+                        (Double) row[5]                  // distanceKm
+                ))
+                .collect(Collectors.toList());
     }
 
     public void delete(Long id) {
