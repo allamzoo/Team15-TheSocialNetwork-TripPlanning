@@ -1,10 +1,13 @@
 package com.team15.tripplanning.activityservice.controller;
 
 import com.team15.tripplanning.activityservice.dto.NearbyActivityDTO;
+import com.team15.tripplanning.activityservice.dto.ActivitySummaryDTO;
 import com.team15.tripplanning.activityservice.model.Activity;
 import com.team15.tripplanning.activityservice.service.ActivityService;
 
 import java.util.HashMap;
+
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
@@ -70,6 +73,15 @@ public class ActivityController {
     public ResponseEntity<Activity> getLatestActivity(@PathVariable Long itineraryId) {
         Activity activity = activityService.getLatestActivityForItinerary(itineraryId);
         return ResponseEntity.ok(activity);
+    }
+    // ---------- S4-F8 ----------
+    @GetMapping("/itinerary/{itineraryId}/summary")
+    public ResponseEntity<ActivitySummaryDTO> getActivitySummary(
+            @PathVariable Long itineraryId,
+            @RequestParam LocalDate startDate,
+            @RequestParam LocalDate endDate) {
+        ActivitySummaryDTO dto = activityService.getActivitySummary(itineraryId, startDate, endDate);
+        return ResponseEntity.ok(dto);
     }
     // ---------- S4-F7 ----------
     @DeleteMapping("/purge")
