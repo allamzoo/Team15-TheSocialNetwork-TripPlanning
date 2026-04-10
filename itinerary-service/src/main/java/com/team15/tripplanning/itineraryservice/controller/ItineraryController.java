@@ -2,6 +2,7 @@ package com.team15.tripplanning.itineraryservice.controller;
 
 import com.team15.tripplanning.itineraryservice.dto.EstimateRequest;
 import com.team15.tripplanning.itineraryservice.dto.TripCostEstimateDTO;
+import com.team15.tripplanning.itineraryservice.dto.ItineraryDayRequestDTO;
 import com.team15.tripplanning.itineraryservice.model.Itinerary;
 import com.team15.tripplanning.itineraryservice.service.ItineraryService;
 import java.time.LocalDate;
@@ -80,5 +81,21 @@ public class ItineraryController {
                 request.getNumberOfDays(),
                 request.getNumberOfTravelers()
         ));
+    }
+    // S3-F8
+    @PostMapping("/{itineraryId}/days")
+    public ResponseEntity<?> addDays(
+            @PathVariable Long itineraryId,
+            @RequestBody List<ItineraryDayRequestDTO> days) {
+
+        try {
+            Itinerary updated = itineraryService.addDays(itineraryId, days);
+            return ResponseEntity.ok(updated);
+        } catch (RuntimeException e) {
+            if (e.getMessage().toLowerCase().contains("not found")) {
+                return ResponseEntity.status(404).body(e.getMessage());
+            }
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }

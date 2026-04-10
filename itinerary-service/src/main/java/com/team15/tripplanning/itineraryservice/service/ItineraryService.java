@@ -8,6 +8,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import com.team15.tripplanning.itineraryservice.dto.ItineraryDayRequestDTO;
+import com.team15.tripplanning.itineraryservice.model.ItineraryDay;
+import java.util.ArrayList;
 
 @Service
 public class ItineraryService {
@@ -95,4 +98,66 @@ public class ItineraryService {
         double total = (accommodation + transport + activities) * seasonMultiplier;
         return new TripCostEstimateDTO(accommodation, transport, activities, total, seasonMultiplier);
     }
+    @Transactional
+    public Itinerary addDays(Long itineraryId, List<ItineraryDayRequestDTO> daysRequest) {
+
+        // 🔍 1. Find itinerary
+        Itinerary itinerary = itineraryRepository.findById(itineraryId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found"));
+
+        // ❌ 2. Status validation
+        if (!(itinerary.getStatus() == Itinerary.ItineraryStatus.DRAFT ||
+                itinerary.getStatus() == Itinerary.ItineraryStatus.PLANNED)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Cannot add days to in-progress or completed itineraries");
+        }
+
+        // ❌ 3. Validate input
+        for (ItineraryDayRequestDTO dto : daysRequest) {
+            if (dto.getDate() == null || dto.getTitle() == null || dto.getTitle().trim().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Each day must have a date and title");
+            }
+        }
+
+        // 🔢 4. Get current max dayOrder
+        int currentMax = 0;
+        if (itinerary.getItineraryDays() != null && !itinerary.getItineraryDays().isEmpty()) {
+            currentMax = itinerary.getItineraryDays()
+                    .stream()
+                    .mapToInt(ItineraryDay::getDayOrder)
+                    .max()
+                    .orElse(0);
+        }
+
+        // ➕ 5. Create new days
+        List<ItineraryDay> newDays = new ArrayList<>();
+
+        for (int i = 0; i < daysRequest.size(); i++) {
+            ItineraryDayRequestDTO dto = daysRequest.get(i);
+
+            ItineraryDay day = new ItineraryDay();
+            day.setDate(dto.getDate());
+            day.setTitle(dto.getTitle());
+            day.setDescription(dto.getDescription());
+            day.setMetadata(dto.getMetadata());
+
+            day.setDayOrder(currentMax + i + 1);
+            day.setStatus(ItineraryDay.ItineraryDayStatus.PLANNED);
+
+            day.setItinerary(itinerary); // 🔗 relationship
+
+            newDays.add(day);
+        }
+
+        // 🧩 6. Attach to itinerary
+        if (itinerary.getItineraryDays() == null) {
+            itinerary.setItineraryDays(new ArrayList<>());
+        }
+        itinerary.getItineraryDays().addAll(newDays);
+
+        // 💾 7. Save
+        return itineraryRepository.save(itinerary);
+    }
+
 }
