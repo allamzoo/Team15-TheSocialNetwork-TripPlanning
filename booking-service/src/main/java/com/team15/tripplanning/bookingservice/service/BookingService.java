@@ -4,41 +4,32 @@ import com.team15.tripplanning.bookingservice.dto.CouponUsageDTO;
 import com.team15.tripplanning.bookingservice.model.Booking;
 import com.team15.tripplanning.bookingservice.repository.BookingCouponRepository;
 import com.team15.tripplanning.bookingservice.repository.BookingRepository;
-
-
 import com.team15.tripplanning.bookingservice.dto.AppliedCouponDTO;
 import com.team15.tripplanning.bookingservice.dto.BookingDetailsDTO;
 import com.team15.tripplanning.bookingservice.model.BookingCoupon;
-
-import java.util.HashMap;
-import com.team15.tripplanning.bookingservice.dto.CouponUsageDTO;
-
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
 import java.time.LocalDateTime;
-
-
+import com.team15.tripplanning.bookingservice.model.Coupon;
+import com.team15.tripplanning.bookingservice.repository.CouponRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
-
 
 @Service
 public class BookingService {
     private final BookingRepository bookingRepository;
     private final BookingCouponRepository bookingCouponRepository;
-
+    private final CouponRepository couponRepository;
 
     public BookingService(BookingRepository bookingRepository,
-                          BookingCouponRepository bookingCouponRepository) {
+                          BookingCouponRepository bookingCouponRepository, CouponRepository couponRepository) {
         this.bookingRepository = bookingRepository;
         this.bookingCouponRepository = bookingCouponRepository;
+        this.couponRepository = couponRepository;
     }
 
     public Booking create(Booking booking) {
@@ -189,5 +180,72 @@ public class BookingService {
         }
 
         return response;
+    }
+    @Transactional
+    public Booking applyCoupon(Long bookingId, Long couponId) {
+
+        // a) Find booking
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
+
+        // b) Validate booking status
+        if (booking.getStatus() == Booking.BookingStatus.CONFIRMED ||
+                booking.getStatus() == Booking.BookingStatus.CANCELLED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "cannot apply coupon to a confirmed/cancelled booking");
+        }
+
+        // c) Find coupon
+        Coupon coupon = couponRepository.findById(couponId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Coupon not found"));
+
+        // d) Validate coupon
+        if (!coupon.getActive()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Coupon not active");
+        }
+
+        if (coupon.getExpiryDate().isBefore(LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Coupon expired");
+        }
+
+        if (coupon.getCurrentUses() >= coupon.getMaxUses()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Coupon usage limit reached");
+        }
+
+        // e) Check duplicate
+        if (bookingCouponRepository.existsByBooking_IdAndCoupon_Id(bookingId, couponId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "coupon already applied");
+        }
+
+        // f) Calculate discount
+        double discount;
+
+        if (coupon.getDiscountType() == Coupon.DiscountType.PERCENTAGE) {
+            discount = booking.getAmount() * coupon.getDiscountValue() / 100;
+        } else {
+            discount = coupon.getDiscountValue();
+        }
+
+        // cap discount
+        discount = Math.min(discount, booking.getAmount());
+
+        // g) Create join entity
+        BookingCoupon bookingCoupon = new BookingCoupon();
+        bookingCoupon.setBooking(booking);
+        bookingCoupon.setCoupon(coupon);
+        bookingCoupon.setDiscountApplied(discount);
+
+        // h) Update coupon usage
+        coupon.setCurrentUses(coupon.getCurrentUses() + 1);
+
+        // i) Save everything
+        booking.getBookingCoupons().add(bookingCoupon);
+
+        bookingCouponRepository.save(bookingCoupon);
+        couponRepository.save(coupon);
+        bookingRepository.save(booking);
+
+        // j) Return updated booking
+        return booking;
     }
 }

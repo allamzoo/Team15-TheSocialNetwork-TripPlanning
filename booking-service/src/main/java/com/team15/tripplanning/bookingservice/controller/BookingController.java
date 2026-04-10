@@ -19,6 +19,15 @@ public class BookingController {
     public ResponseEntity<Booking> create(@RequestBody Booking booking) {
         return ResponseEntity.ok(bookingService.create(booking));
     }
+    @PostMapping("/{bookingId}/coupons/{couponId}")
+    public ResponseEntity<Booking> applyCoupon(
+            @PathVariable Long bookingId,
+            @PathVariable Long couponId) {
+
+        return ResponseEntity.ok(
+                bookingService.applyCoupon(bookingId, couponId)
+        );
+    }
 
     @GetMapping
     public ResponseEntity<List<Booking>> findAll() {

@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 public interface BookingCouponRepository extends JpaRepository<BookingCoupon, Long> {
     List<BookingCoupon> findByBooking_Id(Long bookingId);
-
+    boolean existsByBooking_IdAndCoupon_Id(Long bookingId, Long couponId);
     List<BookingCoupon> findByCoupon_Id(Long couponId);
 
     @Query(value = """
