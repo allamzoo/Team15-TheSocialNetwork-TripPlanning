@@ -59,4 +59,13 @@ public interface DestinationRepository extends JpaRepository<Destination, Long> 
     @Transactional
     @Query(value = "UPDATE destinations SET status = :status WHERE id = :id", nativeQuery = true)
     int updateStatusById(@Param("id") Long id, @Param("status") String status);
+
+    @Query(value = """
+    SELECT COUNT(*) FROM itineraries
+    WHERE destination_id = :destinationId
+      AND status IN ('DRAFT', 'PLANNED', 'IN_PROGRESS')
+    """, nativeQuery = true)
+    long countActiveItinerariesForDestination(@Param("destinationId") Long destinationId);
+
 }
+
