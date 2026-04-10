@@ -49,4 +49,12 @@ public interface ItineraryRepository extends JpaRepository<Itinerary, Long> {
 
     @Query(value = "SELECT COUNT(*) FROM destinations WHERE id = :destinationId AND status = 'ACTIVE'", nativeQuery = true)
     int countActiveDestinationById(@Param("destinationId") Long destinationId);
+
+    // S3-F3
+    @Query(value = """
+            SELECT COUNT(*) FROM itineraries
+            WHERE destination_id = :destinationId
+            AND status IN ('DRAFT', 'PLANNED', 'IN_PROGRESS')
+            """, nativeQuery = true)
+    int countActiveItinerariesForDestination(@Param("destinationId") Long destinationId);
 }

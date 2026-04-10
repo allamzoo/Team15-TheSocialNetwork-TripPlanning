@@ -1,5 +1,6 @@
 package com.team15.tripplanning.itineraryservice.service;
 
+import com.team15.tripplanning.itineraryservice.dto.TripCostEstimateDTO;
 import com.team15.tripplanning.itineraryservice.model.Itinerary;
 import com.team15.tripplanning.itineraryservice.repository.ItineraryRepository;
 import java.util.List;
@@ -72,5 +73,26 @@ public class ItineraryService {
         itinerary.setDestinationId(destinationId);
         itinerary.setStatus(Itinerary.ItineraryStatus.PLANNED);
         return itineraryRepository.save(itinerary);
+    }
+
+    // S3-F3
+    public TripCostEstimateDTO estimateTripCost(Long destinationId, int numberOfDays, int numberOfTravelers) {
+        double accommodation = 150.0 * numberOfDays * numberOfTravelers;
+        double transport     = 50.0  * numberOfDays * numberOfTravelers;
+        double activities    = 100.0 * numberOfDays;
+
+        int activeCount = itineraryRepository.countActiveItinerariesForDestination(destinationId);
+
+        double seasonMultiplier;
+        if (activeCount <= 5) {
+            seasonMultiplier = 1.0;
+        } else if (activeCount <= 15) {
+            seasonMultiplier = 1.3;
+        } else {
+            seasonMultiplier = 1.6;
+        }
+
+        double total = (accommodation + transport + activities) * seasonMultiplier;
+        return new TripCostEstimateDTO(accommodation, transport, activities, total, seasonMultiplier);
     }
 }

@@ -1,5 +1,7 @@
 package com.team15.tripplanning.itineraryservice.controller;
 
+import com.team15.tripplanning.itineraryservice.dto.EstimateRequest;
+import com.team15.tripplanning.itineraryservice.dto.TripCostEstimateDTO;
 import com.team15.tripplanning.itineraryservice.model.Itinerary;
 import com.team15.tripplanning.itineraryservice.service.ItineraryService;
 import java.time.LocalDate;
@@ -68,5 +70,15 @@ public class ItineraryController {
             @RequestParam Long destinationId
     ) {
         return ResponseEntity.ok(itineraryService.assignDestination(itineraryId, destinationId));
+    }
+
+    // S3-F3
+    @PostMapping("/estimate")
+    public ResponseEntity<TripCostEstimateDTO> estimateTripCost(@RequestBody EstimateRequest request) {
+        return ResponseEntity.ok(itineraryService.estimateTripCost(
+                request.getDestinationId(),
+                request.getNumberOfDays(),
+                request.getNumberOfTravelers()
+        ));
     }
 }
