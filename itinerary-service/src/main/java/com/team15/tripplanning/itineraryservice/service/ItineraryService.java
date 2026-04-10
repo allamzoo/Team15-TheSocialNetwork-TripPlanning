@@ -42,4 +42,9 @@ public class ItineraryService {
     public void delete(Long id) {
         itineraryRepository.delete(findById(id));
     }
+
+    // S3-F1
+    public List<Itinerary> searchByStatusAndDateRange(String status, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+        return itineraryRepository.searchByStatusAndDateRange(status, startDate, endDate);
+    }
 }

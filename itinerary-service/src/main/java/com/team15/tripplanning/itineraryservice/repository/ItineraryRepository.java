@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 public interface ItineraryRepository extends JpaRepository<Itinerary, Long> {
+
     List<Itinerary> findByUserId(Long userId);
 
     List<Itinerary> findByStatus(Itinerary.ItineraryStatus status);
@@ -27,4 +28,18 @@ public interface ItineraryRepository extends JpaRepository<Itinerary, Long> {
     @Transactional
     @Query(value = "UPDATE itineraries SET status = :status WHERE id = :id", nativeQuery = true)
     int updateStatusById(@Param("id") Long id, @Param("status") String status);
+
+    // S3-F1
+    @Query(value = """
+            SELECT * FROM itineraries
+            WHERE start_date >= :startDate
+            AND start_date <= :endDate
+            AND (:status IS NULL OR status = :status)
+            ORDER BY created_at DESC
+            """, nativeQuery = true)
+    List<Itinerary> searchByStatusAndDateRange(
+            @Param("status") String status,
+            @Param("startDate") java.time.LocalDate startDate,
+            @Param("endDate") java.time.LocalDate endDate
+    );
 }
