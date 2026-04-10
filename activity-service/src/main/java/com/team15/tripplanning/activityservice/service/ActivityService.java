@@ -2,6 +2,7 @@ package com.team15.tripplanning.activityservice.service;
 
 import com.team15.tripplanning.activityservice.dto.NearbyActivityDTO;
 import com.team15.tripplanning.activityservice.dto.ActivitySummaryDTO;
+import com.team15.tripplanning.activityservice.dto.BudgetActivityDTO;
 import com.team15.tripplanning.activityservice.model.Activity;
 import com.team15.tripplanning.activityservice.repository.ActivityRepository;
 import org.springframework.transaction.annotation.Transactional;
@@ -9,11 +10,13 @@ import java.time.LocalDateTime;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
 
-import jakarta.transaction.Transactional;
+
 import org.springframework.http.HttpStatus;
 import java.util.stream.Collectors;
 
@@ -100,6 +103,32 @@ public class ActivityService {
         return activityRepository.findFirstByItineraryIdOrderByScheduledTimeDesc(itineraryId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "No activities found for this itinerary"));
+    }
+    // ---------- S4-F9 ----------
+    public List<BudgetActivityDTO> findBudgetFriendlyActivities(Double maxCost, int sinceMinutes) {
+        LocalDateTime since = LocalDateTime.now().minusMinutes(sinceMinutes);
+        List<Object[]> results = activityRepository.findBudgetFriendlyActivities(maxCost, since);
+
+        return results.stream().map(row -> {
+            LocalDateTime scheduledTime = null;
+            if (row[6] != null) {
+                if (row[6] instanceof LocalDateTime) {
+                    scheduledTime = (LocalDateTime) row[6];
+                } else {
+                    scheduledTime = ((java.sql.Timestamp) row[6]).toLocalDateTime();
+                }
+            }
+
+            return new BudgetActivityDTO(
+                    ((Number) row[0]).longValue(),      // activityId
+                    (String) row[1],                     // name
+                    (String) row[2],                     // category
+                    ((Number) row[3]).doubleValue(),      // latitude
+                    ((Number) row[4]).doubleValue(),      // longitude
+                    ((Number) row[5]).doubleValue(),      // cost
+                    scheduledTime                         // scheduledTime
+            );
+        }).collect(java.util.stream.Collectors.toList());
     }
     // ---------- S4-F8 ----------
     public ActivitySummaryDTO getActivitySummary(Long itineraryId, LocalDate startDate, LocalDate endDate) {

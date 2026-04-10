@@ -78,4 +78,18 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     @Modifying
     @Query(value = "DELETE FROM activities WHERE scheduled_time < :cutoff", nativeQuery = true)
     int deleteByScheduledTimeBefore(@Param("cutoff") LocalDateTime cutoff);
+    // -------------------- S4-F9 --------------------
+    @Query(value = """
+    SELECT id, name, category, latitude, longitude,
+           CAST(metadata->>'cost' AS numeric) AS cost,
+           scheduled_time
+    FROM activities
+    WHERE CAST(metadata->>'cost' AS numeric) <= :maxCost
+      AND scheduled_time >= :since
+    ORDER BY CAST(metadata->>'cost' AS numeric) ASC
+    """, nativeQuery = true)
+    List<Object[]> findBudgetFriendlyActivities(
+            @Param("maxCost") Double maxCost,
+            @Param("since") LocalDateTime since
+    );
 }

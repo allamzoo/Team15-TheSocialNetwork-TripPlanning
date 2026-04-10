@@ -2,6 +2,7 @@ package com.team15.tripplanning.activityservice.controller;
 
 import com.team15.tripplanning.activityservice.dto.NearbyActivityDTO;
 import com.team15.tripplanning.activityservice.dto.ActivitySummaryDTO;
+import com.team15.tripplanning.activityservice.dto.BudgetActivityDTO;
 import com.team15.tripplanning.activityservice.model.Activity;
 import com.team15.tripplanning.activityservice.service.ActivityService;
 
@@ -94,5 +95,13 @@ public class ActivityController {
     }
 
 
+    // ---------- S4-F9 ----------
+    @GetMapping("/budget-friendly")
+    public ResponseEntity<List<BudgetActivityDTO>> findBudgetFriendlyActivities(
+            @RequestParam Double maxCost,
+            @RequestParam int sinceMinutes) {
+        List<BudgetActivityDTO> result = activityService.findBudgetFriendlyActivities(maxCost, sinceMinutes);
+        return ResponseEntity.ok(result);
+    }
 }
 
