@@ -115,4 +115,20 @@ public class DestinationService {
                 averageBookingAmount
         );
     }
+
+    public List<com.team15.tripplanning.destinationservice.dto.TopDestinationDTO> getTopRatedDestinations(int limit) {
+        if (limit <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "limit must be greater than 0");
+        }
+
+        List<Object[]> rows = destinationRepository.findTopRatedWithBookingCount(limit);
+
+        return rows.stream().map(row -> new com.team15.tripplanning.destinationservice.dto.TopDestinationDTO(
+                ((Number) row[0]).longValue(),
+                (String) row[1],
+                row[2] == null ? 0.0 : ((Number) row[2]).doubleValue(),
+                row[3] == null ? 0L : ((Number) row[3]).longValue()
+        )).toList();
+    }
+
 }

@@ -59,4 +59,20 @@ public interface DestinationRepository extends JpaRepository<Destination, Long> 
     @Transactional
     @Query(value = "UPDATE destinations SET status = :status WHERE id = :id", nativeQuery = true)
     int updateStatusById(@Param("id") Long id, @Param("status") String status);
+
+
+    @Query(value = """
+    SELECT d.id                         AS destination_id,
+           d.name                       AS name,
+           d.rating                     AS rating,
+           COALESCE(COUNT(b.id), 0)     AS total_bookings
+    FROM destinations d
+    LEFT JOIN itineraries i ON i.destination_id = d.id
+    LEFT JOIN bookings b    ON b.itinerary_id = i.id AND b.status = 'CONFIRMED'
+    GROUP BY d.id, d.name, d.rating, d.total_ratings
+    ORDER BY d.rating DESC, d.total_ratings DESC, d.id ASC
+    LIMIT :limit
+    """, nativeQuery = true)
+    List<Object[]> findTopRatedWithBookingCount(@Param("limit") int limit);
+
 }

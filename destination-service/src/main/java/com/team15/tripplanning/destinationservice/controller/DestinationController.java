@@ -80,5 +80,12 @@ public class DestinationController {
     ) {
         return ResponseEntity.ok(destinationService.updateDestinationDetails(id, details));
     }
+
+    @GetMapping("/reports/top-rated")
+    public ResponseEntity<List<com.team15.tripplanning.destinationservice.dto.TopDestinationDTO>> getTopRated(
+            @RequestParam int limit
+    ) {
+        return ResponseEntity.ok(destinationService.getTopRatedDestinations(limit));
+    }
 }
 
