@@ -59,4 +59,15 @@ public interface DestinationRepository extends JpaRepository<Destination, Long> 
     @Transactional
     @Query(value = "UPDATE destinations SET status = :status WHERE id = :id", nativeQuery = true)
     int updateStatusById(@Param("id") Long id, @Param("status") String status);
+
+    @Query(value = """
+    SELECT * FROM destinations d
+    WHERE d.details ->> :key = :value
+      AND (:status IS NULL OR d.status = :status)
+    """, nativeQuery = true)
+    List<Destination> findByDetailAttribute(
+            @Param("key") String key,
+            @Param("value") String value,
+            @Param("status") String status
+    );
 }
