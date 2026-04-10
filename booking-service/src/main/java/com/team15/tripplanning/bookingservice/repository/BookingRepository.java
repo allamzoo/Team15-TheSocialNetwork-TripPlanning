@@ -1,6 +1,8 @@
 package com.team15.tripplanning.bookingservice.repository;
 
 import com.team15.tripplanning.bookingservice.model.Booking;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -25,4 +27,14 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @Transactional
     @Query(value = "UPDATE bookings SET status = :status WHERE id = :id", nativeQuery = true)
     int updateStatusById(@Param("id") Long id, @Param("status") String status);
+    @Query(""" 
+SELECT 
+    COALESCE(SUM(CASE WHEN b.status = 'CONFIRMED' THEN b.amount ELSE 0 END), 0),
+    COUNT(CASE WHEN b.status = 'CONFIRMED' THEN 1 END),
+    COALESCE(SUM(CASE WHEN b.status = 'CANCELLED' THEN b.amount ELSE 0 END), 0),
+    COUNT(CASE WHEN b.status = 'CANCELLED' THEN 1 END)
+FROM Booking b
+WHERE b.createdAt BETWEEN :startDate AND :endDate
+""")
+    Object[] getRevenueStats(LocalDateTime startDate, LocalDateTime endDate);
 }

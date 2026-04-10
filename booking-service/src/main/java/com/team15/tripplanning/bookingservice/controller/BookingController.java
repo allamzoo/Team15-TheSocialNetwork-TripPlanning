@@ -2,6 +2,9 @@ package com.team15.tripplanning.bookingservice.controller;
 
 import com.team15.tripplanning.bookingservice.model.Booking;
 import com.team15.tripplanning.bookingservice.service.BookingService;
+import com.team15.tripplanning.bookingservice.dto.RevenueReportDTO;
+import org.springframework.web.bind.annotation.RequestParam;
+import java.time.LocalDate;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -46,6 +49,15 @@ public class BookingController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         bookingService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+    @GetMapping("/reports/revenue")
+    public ResponseEntity<RevenueReportDTO> getRevenueReport(
+            @RequestParam LocalDate startDate,
+            @RequestParam LocalDate endDate) {
+
+        return ResponseEntity.ok(
+                bookingService.getRevenueReport(startDate, endDate)
+        );
     }
 }
 
