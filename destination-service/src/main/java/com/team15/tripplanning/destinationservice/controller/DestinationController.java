@@ -2,6 +2,8 @@ package com.team15.tripplanning.destinationservice.controller;
 
 import com.team15.tripplanning.destinationservice.model.Destination;
 import com.team15.tripplanning.destinationservice.service.DestinationService;
+import com.team15.tripplanning.destinationservice.model.DestinationCategory;
+import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -46,6 +48,15 @@ public class DestinationController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         destinationService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<Destination>> searchDestinations(
+            @RequestParam(required = false) DestinationCategory category,
+            @RequestParam(required = false) Double minRating,
+            @RequestParam(required = false) Double maxRating
+    ) {
+        return ResponseEntity.ok(destinationService.searchDestinations(category, minRating, maxRating));
     }
 }
 

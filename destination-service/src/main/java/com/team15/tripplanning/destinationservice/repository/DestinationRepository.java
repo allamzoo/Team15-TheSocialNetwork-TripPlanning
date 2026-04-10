@@ -2,6 +2,7 @@ package com.team15.tripplanning.destinationservice.repository;
 
 import com.team15.tripplanning.destinationservice.model.Destination;
 import com.team15.tripplanning.destinationservice.model.DestinationStatus;
+import com.team15.tripplanning.destinationservice.model.DestinationCategory;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -13,6 +14,20 @@ public interface DestinationRepository extends JpaRepository<Destination, Long> 
     List<Destination> findByCountry(String country);
 
     List<Destination> findByStatus(DestinationStatus status);
+
+    @Query("""
+        SELECT d
+        FROM Destination d
+        WHERE (:category IS NULL OR d.category = :category)
+          AND d.rating >= :minRating
+          AND d.rating <= :maxRating
+        ORDER BY d.rating DESC
+        """)
+    List<Destination> searchDestinations(
+            @Param("category") DestinationCategory category,
+            @Param("minRating") Double minRating,
+            @Param("maxRating") Double maxRating
+    );
 
     @Query(value = """
             SELECT d.id, d.name, COALESCE(AVG(dr.rating), 0) AS avg_rating, COUNT(dr.id) AS reviews_count
