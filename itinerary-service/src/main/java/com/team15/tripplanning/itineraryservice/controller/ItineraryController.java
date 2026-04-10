@@ -1,6 +1,7 @@
 package com.team15.tripplanning.itineraryservice.controller;
 
 import com.team15.tripplanning.itineraryservice.dto.EstimateRequest;
+import com.team15.tripplanning.itineraryservice.dto.ItineraryAnalyticsDTO;
 import com.team15.tripplanning.itineraryservice.dto.TripCostEstimateDTO;
 import com.team15.tripplanning.itineraryservice.model.Itinerary;
 import com.team15.tripplanning.itineraryservice.service.ItineraryService;
@@ -80,5 +81,12 @@ public class ItineraryController {
                 request.getNumberOfDays(),
                 request.getNumberOfTravelers()
         ));
+    }
+    @GetMapping("/analytics")
+    public ResponseEntity<ItineraryAnalyticsDTO> getAnalytics(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
+        return ResponseEntity.ok(itineraryService.getAnalytics(startDate, endDate));
     }
 }

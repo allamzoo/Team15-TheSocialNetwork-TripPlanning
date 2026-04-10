@@ -57,4 +57,19 @@ public interface ItineraryRepository extends JpaRepository<Itinerary, Long> {
             AND status IN ('DRAFT', 'PLANNED', 'IN_PROGRESS')
             """, nativeQuery = true)
     int countActiveItinerariesForDestination(@Param("destinationId") Long destinationId);
+
+    @Query(value = """
+    SELECT
+        COUNT(*),
+        SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END),
+        SUM(CASE WHEN status = 'CANCELLED' THEN 1 ELSE 0 END),
+        COALESCE(SUM(estimated_budget), 0),
+        COALESCE(AVG(CASE WHEN status = 'COMPLETED' THEN estimated_budget ELSE NULL END), 0)
+    FROM itineraries
+    WHERE start_date >= :startDate AND start_date <= :endDate
+    """, nativeQuery = true)
+    List<Object[]> getAnalytics(
+            @Param("startDate") java.time.LocalDate startDate,
+            @Param("endDate") java.time.LocalDate endDate
+    );
 }
