@@ -42,4 +42,11 @@ public interface ItineraryRepository extends JpaRepository<Itinerary, Long> {
             @Param("startDate") java.time.LocalDate startDate,
             @Param("endDate") java.time.LocalDate endDate
     );
+
+    // S3-F2
+    @Query(value = "SELECT COUNT(*) FROM destinations WHERE id = :destinationId", nativeQuery = true)
+    int countDestinationById(@Param("destinationId") Long destinationId);
+
+    @Query(value = "SELECT COUNT(*) FROM destinations WHERE id = :destinationId AND status = 'ACTIVE'", nativeQuery = true)
+    int countActiveDestinationById(@Param("destinationId") Long destinationId);
 }

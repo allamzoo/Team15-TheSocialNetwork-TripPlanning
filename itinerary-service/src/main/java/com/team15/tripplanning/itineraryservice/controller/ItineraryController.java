@@ -60,4 +60,13 @@ public class ItineraryController {
     ) {
         return ResponseEntity.ok(itineraryService.searchByStatusAndDateRange(status, startDate, endDate));
     }
+
+    // S3-F2
+    @PutMapping("/{itineraryId}/assign")
+    public ResponseEntity<Itinerary> assignDestination(
+            @PathVariable Long itineraryId,
+            @RequestParam Long destinationId
+    ) {
+        return ResponseEntity.ok(itineraryService.assignDestination(itineraryId, destinationId));
+    }
 }
