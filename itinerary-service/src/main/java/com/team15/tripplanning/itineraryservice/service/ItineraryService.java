@@ -95,4 +95,24 @@ public class ItineraryService {
         double total = (accommodation + transport + activities) * seasonMultiplier;
         return new TripCostEstimateDTO(accommodation, transport, activities, total, seasonMultiplier);
     }
+    @Transactional
+    public Itinerary completeItinerary(Long id) {
+        Itinerary itinerary = itineraryRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Itinerary not found"));
+
+        if (itinerary.getStatus() != Itinerary.ItineraryStatus.IN_PROGRESS) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Itinerary must be IN_PROGRESS to complete");
+        }
+
+        itinerary.setStatus(Itinerary.ItineraryStatus.COMPLETED);
+
+        if (itinerary.getEstimatedBudget() == null) {
+            Double total = itineraryRepository.sumConfirmedBookingsByItinerary(id);
+            itinerary.setEstimatedBudget(total != null ? total : 0.0);
+        }
+
+        return itineraryRepository.save(itinerary);
+    }
 }

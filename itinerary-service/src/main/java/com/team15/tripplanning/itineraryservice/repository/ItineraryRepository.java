@@ -57,4 +57,11 @@ public interface ItineraryRepository extends JpaRepository<Itinerary, Long> {
             AND status IN ('DRAFT', 'PLANNED', 'IN_PROGRESS')
             """, nativeQuery = true)
     int countActiveItinerariesForDestination(@Param("destinationId") Long destinationId);
+
+
+    @Query(
+            value = "SELECT COALESCE(SUM(b.amount), 0) FROM bookings b WHERE b.itinerary_id = :itineraryId AND b.status = 'CONFIRMED'",
+            nativeQuery = true
+    )
+    Double sumConfirmedBookingsByItinerary(@Param("itineraryId") Long itineraryId);
 }
