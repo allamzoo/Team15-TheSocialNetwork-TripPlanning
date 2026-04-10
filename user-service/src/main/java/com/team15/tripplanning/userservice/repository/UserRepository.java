@@ -78,6 +78,23 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query(value = "SELECT * FROM users u WHERE u.preferences ->> :key = :value", nativeQuery = true)
     List<User> searchByPreference(@Param("key") String key, @Param("value") String value);
 
+    @Query(value = """
+            SELECT u.*
+            FROM users u
+            WHERE LOWER(TRIM(COALESCE(u.preferences ->> 'travelStyle', ''))) = LOWER(TRIM(:style))
+              AND (
+                    SELECT COUNT(1)
+                    FROM itineraries i
+                    WHERE i.user_id = u.id
+                      AND i.status = 'COMPLETED'
+                  ) >= :minTrips
+            ORDER BY u.id
+            """, nativeQuery = true)
+    List<User> findByTravelStyleWithMinimumCompletedTrips(
+            @Param("style") String style,
+            @Param("minTrips") int minTrips
+    );
+
     @Modifying
     @Transactional
     @Query(value = "UPDATE users SET status = :status WHERE id = :id", nativeQuery = true)

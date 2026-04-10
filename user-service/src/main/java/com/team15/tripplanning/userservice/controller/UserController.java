@@ -92,6 +92,14 @@ public class UserController {
         return ResponseEntity.ok(userService.searchByPreference(key, value));
     }
 
+    @GetMapping("/preferences/travel-style")
+    public ResponseEntity<List<User>> findByTravelStyleWithMinimumTrips(
+            @RequestParam String style,
+            @RequestParam(defaultValue = "0") int minTrips
+    ) {
+        return ResponseEntity.ok(userService.findByTravelStyleWithMinimumTrips(style, minTrips));
+    }
+
     @PutMapping("/{id}/deactivate")
     public ResponseEntity<User> deactivate(@PathVariable Long id) {
         return ResponseEntity.ok(userService.deactivate(id));
