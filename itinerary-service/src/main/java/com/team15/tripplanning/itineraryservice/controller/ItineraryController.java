@@ -3,6 +3,7 @@ package com.team15.tripplanning.itineraryservice.controller;
 import com.team15.tripplanning.itineraryservice.dto.EstimateRequest;
 import com.team15.tripplanning.itineraryservice.dto.TripCostEstimateDTO;
 import com.team15.tripplanning.itineraryservice.dto.ItineraryDayRequestDTO;
+import com.team15.tripplanning.itineraryservice.dto.ItineraryDetailsDTO;
 import com.team15.tripplanning.itineraryservice.model.Itinerary;
 import com.team15.tripplanning.itineraryservice.service.ItineraryService;
 import java.time.LocalDate;
@@ -97,5 +98,13 @@ public class ItineraryController {
             }
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+    // S3-F9
+    @GetMapping("/{itineraryId}/details")
+    public ResponseEntity<ItineraryDetailsDTO> getItineraryDetails(
+            @PathVariable Long itineraryId) {
+
+        ItineraryDetailsDTO details = itineraryService.getItineraryDetails(itineraryId);
+        return ResponseEntity.ok(details);
     }
 }
