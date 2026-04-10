@@ -1,6 +1,8 @@
 package com.team15.tripplanning.activityservice.repository;
 
 import com.team15.tripplanning.activityservice.model.Activity;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -46,4 +48,13 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     List<Object[]> findNearbyActivitiesRaw(@Param("lat") Double lat,
                                            @Param("lon") Double lon,
                                            @Param("radiusKm") Double radiusKm);
+    // -------------------- S4-F7 --------------------
+    // Count activities older than cutoff
+    @Query(value = "SELECT COUNT(*) FROM activities WHERE scheduled_time < :cutoff", nativeQuery = true)
+    int countByScheduledTimeBefore(@Param("cutoff") LocalDateTime cutoff);
+
+    // Delete activities older than cutoff
+    @Modifying
+    @Query(value = "DELETE FROM activities WHERE scheduled_time < :cutoff", nativeQuery = true)
+    int deleteByScheduledTimeBefore(@Param("cutoff") LocalDateTime cutoff);
 }
