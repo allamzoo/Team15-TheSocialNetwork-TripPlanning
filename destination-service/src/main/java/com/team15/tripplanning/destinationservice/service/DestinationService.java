@@ -5,7 +5,11 @@ import com.team15.tripplanning.destinationservice.repository.DestinationReposito
 import com.team15.tripplanning.destinationservice.model.DestinationCategory;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -55,5 +59,22 @@ public class DestinationService {
         double max = (maxRating != null) ? maxRating : 5.0;
 
         return destinationRepository.searchDestinations(category, min, max);
+    }
+
+    public Destination updateDestinationDetails(Long id, Map<String, Object> incomingDetails) {
+        Destination destination = destinationRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Destination not found: " + id));
+
+        Map<String, Object> existingDetails = destination.getDetails();
+        if (existingDetails == null) {
+            existingDetails = new HashMap<>();
+        }
+
+        if (incomingDetails != null) {
+            existingDetails.putAll(incomingDetails);
+        }
+
+        destination.setDetails(existingDetails);
+        return destinationRepository.save(destination);
     }
 }

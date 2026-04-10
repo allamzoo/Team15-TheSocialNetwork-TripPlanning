@@ -5,6 +5,7 @@ import com.team15.tripplanning.destinationservice.service.DestinationService;
 import com.team15.tripplanning.destinationservice.model.DestinationCategory;
 import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
+import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -57,6 +58,14 @@ public class DestinationController {
             @RequestParam(required = false) Double maxRating
     ) {
         return ResponseEntity.ok(destinationService.searchDestinations(category, minRating, maxRating));
+    }
+
+    @PutMapping("/{id}/details")
+    public ResponseEntity<Destination> updateDestinationDetails(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> details
+    ) {
+        return ResponseEntity.ok(destinationService.updateDestinationDetails(id, details));
     }
 }
 
