@@ -3,6 +3,8 @@ package com.team15.tripplanning.activityservice.controller;
 import com.team15.tripplanning.activityservice.model.Activity;
 import com.team15.tripplanning.activityservice.service.ActivityService;
 import java.util.List;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -47,6 +49,13 @@ public class ActivityController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         activityService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+    @PostMapping("/itinerary/{itineraryId}")
+    public ResponseEntity<Activity> createActivityForItinerary(
+            @PathVariable Long itineraryId,
+            @RequestBody Activity activity) {
+        Activity created = activityService.createActivityForItinerary(itineraryId, activity);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
     // ---------- S4-F1 ----------
     @GetMapping("/itinerary/{itineraryId}/latest")

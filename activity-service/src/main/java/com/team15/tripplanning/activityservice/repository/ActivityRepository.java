@@ -28,6 +28,9 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     @Query(value = "DELETE FROM activities WHERE itinerary_id = :itineraryId", nativeQuery = true)
     int deleteAllByItineraryId(@Param("itineraryId") Long itineraryId);
 
+    @Query(value = "SELECT COUNT(*) > 0 FROM itineraries WHERE id = :itineraryId", nativeQuery = true)
+    boolean itineraryExists(@Param("itineraryId") Long itineraryId);
+
     // -------------------- S4-F1 --------------------
     @Query(value = "SELECT COUNT(*) > 0 FROM itineraries WHERE id = :itineraryId", nativeQuery = true)
     boolean itineraryExists(@Param("itineraryId") Long itineraryId);
