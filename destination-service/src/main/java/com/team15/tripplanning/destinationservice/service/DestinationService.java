@@ -15,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.stereotype.Service;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
+import com.team15.tripplanning.destinationservice.model.DestinationStatus;
 
 @Service
 public class DestinationService {
@@ -79,6 +80,36 @@ public class DestinationService {
         }
 
         destination.setDetails(existingDetails);
+        return destinationRepository.save(destination);
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public Destination updateDestinationStatus(Long id, String statusStr) {
+        if (statusStr == null || statusStr.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status is required");
+        }
+
+        DestinationStatus newStatus;
+        try {
+            newStatus = DestinationStatus.valueOf(statusStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Invalid status. Must be one of ACTIVE, SEASONAL, INACTIVE");
+        }
+
+        Destination destination = destinationRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Destination not found: " + id));
+
+        if (newStatus == DestinationStatus.INACTIVE) {
+            long activeItineraries = destinationRepository.countActiveItinerariesForDestination(id);
+            if (activeItineraries > 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Cannot set destination to INACTIVE: " + activeItineraries + " active itinerary(ies) reference it");
+            }
+        }
+
+        destination.setStatus(newStatus);
         return destinationRepository.save(destination);
     }
 

@@ -80,5 +80,13 @@ public class DestinationController {
     ) {
         return ResponseEntity.ok(destinationService.updateDestinationDetails(id, details));
     }
+    @PutMapping("/{id}/status")
+    public ResponseEntity<Destination> updateDestinationStatus(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body
+    ) {
+        String status = body.get("status");
+        return ResponseEntity.ok(destinationService.updateDestinationStatus(id, status));
+    }
 }
 
