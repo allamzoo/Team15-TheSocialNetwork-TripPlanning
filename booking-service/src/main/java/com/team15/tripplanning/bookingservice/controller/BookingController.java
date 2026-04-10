@@ -2,16 +2,12 @@ package com.team15.tripplanning.bookingservice.controller;
 
 import com.team15.tripplanning.bookingservice.model.Booking;
 import com.team15.tripplanning.bookingservice.service.BookingService;
+import com.team15.tripplanning.bookingservice.dto.UserBookingSummaryDTO;
+
 import java.util.List;
+
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/bookings")
@@ -47,5 +43,10 @@ public class BookingController {
         bookingService.delete(id);
         return ResponseEntity.noContent().build();
     }
-}
 
+    // ===== S5-F3: User Booking Summary =====
+    @GetMapping("/user/{userId}/summary")
+    public ResponseEntity<UserBookingSummaryDTO> getUserBookingSummary(@PathVariable Long userId) {
+        return ResponseEntity.ok(bookingService.getUserBookingSummary(userId));
+    }
+}

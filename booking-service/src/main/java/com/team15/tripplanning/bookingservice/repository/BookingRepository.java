@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 public interface BookingRepository extends JpaRepository<Booking, Long> {
+
     List<Booking> findByUserId(Long userId);
 
     List<Booking> findByStatus(Booking.BookingStatus status);
@@ -25,4 +26,13 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @Transactional
     @Query(value = "UPDATE bookings SET status = :status WHERE id = :id", nativeQuery = true)
     int updateStatusById(@Param("id") Long id, @Param("status") String status);
+
+    // ===== S5-F3: Booking summary grouped by type =====
+    @Query("""
+        SELECT b.type, SUM(b.amount)
+        FROM Booking b
+        WHERE b.userId = :userId AND b.status = 'CONFIRMED'
+        GROUP BY b.type
+    """)
+    List<Object[]> getBookingSummaryByUser(@Param("userId") Long userId);
 }
