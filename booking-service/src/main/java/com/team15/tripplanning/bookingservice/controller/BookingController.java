@@ -3,15 +3,9 @@ package com.team15.tripplanning.bookingservice.controller;
 import com.team15.tripplanning.bookingservice.model.Booking;
 import com.team15.tripplanning.bookingservice.service.BookingService;
 import java.util.List;
+import java.util.Map;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/bookings")
@@ -47,5 +41,17 @@ public class BookingController {
         bookingService.delete(id);
         return ResponseEntity.noContent().build();
     }
-}
 
+    // ===== S5-F2: Cancel Booking Endpoint =====
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<Booking> cancelBooking(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+
+        String reason = body.get("reason");
+
+        Booking updated = bookingService.cancelBooking(id, reason);
+
+        return ResponseEntity.ok(updated);
+    }
+}
