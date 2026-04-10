@@ -209,6 +209,23 @@ public class UserService {
         return userRepository.searchByPreference(key, value);
     }
 
+    public List<User> findByTravelStyleWithMinimumTrips(String style, int minTrips) {
+        if (style == null || style.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "style cannot be blank"
+            );
+        }
+        if (minTrips < 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "minTrips cannot be negative"
+            );
+        }
+
+        return userRepository.findByTravelStyleWithMinimumCompletedTrips(style, minTrips);
+    }
+
     @Transactional
     public User deactivate(Long id) {
         User user = findById(id);
