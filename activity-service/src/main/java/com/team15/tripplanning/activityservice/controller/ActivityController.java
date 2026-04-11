@@ -15,8 +15,19 @@ import org.springframework.http.HttpStatus;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.*;
 import com.team15.tripplanning.activityservice.dto.NearbyActivityDTO;
+import com.team15.tripplanning.activityservice.dto.BatchActivityRequestDTO;
+import com.team15.tripplanning.activityservice.dto.BatchActivityResponseDTO;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -103,5 +114,16 @@ public class ActivityController {
         List<BudgetActivityDTO> result = activityService.findBudgetFriendlyActivities(maxCost, sinceMinutes);
         return ResponseEntity.ok(result);
     }
-}
 
+
+
+    // ---------- S4-F4 ----------
+    @PostMapping("/batch")
+    public ResponseEntity<BatchActivityResponseDTO> batchActivityCreation(@RequestBody BatchActivityRequestDTO request) {
+        List<Activity> createdActivities = activityService.batchActivitiyCreation(request);
+        BatchActivityResponseDTO response = new BatchActivityResponseDTO(
+                createdActivities.size(),
+                "Successfully created " + createdActivities.size() + " activities");
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+}

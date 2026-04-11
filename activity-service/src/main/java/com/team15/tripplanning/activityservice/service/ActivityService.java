@@ -22,9 +22,11 @@ import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ResponseStatusException;
 import com.team15.tripplanning.activityservice.dto.NearbyActivityDTO;
+import com.team15.tripplanning.activityservice.dto.BatchActivityRequestDTO;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -183,5 +185,41 @@ public class ActivityService {
         int count = activityRepository.countByScheduledTimeBefore(cutoff);
         activityRepository.deleteByScheduledTimeBefore(cutoff);
         return count;
+    }
+
+    // ---------- S4-F4 ----------
+
+    @Transactional
+    public List<Activity> batchActivitiyCreation(BatchActivityRequestDTO request) {
+        Long itineraryId = request.itineraryId();
+        List<Activity> activities = request.activities();
+
+        if (!activityRepository.itineraryExists(itineraryId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found");
+        }
+
+        for (Activity activity : activities) {
+            validateCoordinates(activity);
+        }
+
+        for (Activity activity : activities) {
+            activity.setItineraryId(itineraryId);
+        }
+
+        return activityRepository.saveAll(activities);
+    }
+    private void validateCoordinates(Activity activity) {
+        Double latitude = activity.getLatitude();
+        Double longitude = activity.getLongitude();
+
+        if (latitude == null || latitude < -90 || latitude > 90) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Latitude must be between -90 and 90");
+        }
+
+        if (longitude == null || longitude < -180 || longitude > 180) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Longitude must be between -180 and 180");
+        }
     }
 }
