@@ -12,10 +12,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import com.team15.tripplanning.activityservice.dto.NearbyActivityDTO;
 import com.team15.tripplanning.activityservice.dto.BatchActivityRequestDTO;
 import com.team15.tripplanning.activityservice.dto.BatchActivityResponseDTO;
+import com.team15.tripplanning.activityservice.dto.MetadataFilterResponseDTO;
 
 @RestController
 @RequestMapping("/api/activities")
@@ -68,5 +69,18 @@ public class ActivityController {
                 createdActivities.size(),
                 "Successfully created " + createdActivities.size() + " activities");
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    // ---------- S4-F5 ----------
+    @GetMapping("/metadata/search")
+    public ResponseEntity<MetadataFilterResponseDTO> searchByMetadata(
+            @RequestParam String key,
+            @RequestParam String operator,
+            @RequestParam String value) {
+        List<Activity> activities = activityService.filterActivityByMetadata(key, operator, value);
+        MetadataFilterResponseDTO response = new MetadataFilterResponseDTO(
+                activities.size(),
+                activities);
+        return ResponseEntity.ok(response);
     }
 }
