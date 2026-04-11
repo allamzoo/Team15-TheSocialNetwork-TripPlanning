@@ -1,5 +1,6 @@
 package com.team15.tripplanning.itineraryservice.service;
 
+import com.team15.tripplanning.itineraryservice.dto.ItineraryAnalyticsDTO;
 import com.team15.tripplanning.itineraryservice.dto.TripCostEstimateDTO;
 import com.team15.tripplanning.itineraryservice.model.Itinerary;
 import com.team15.tripplanning.itineraryservice.repository.ItineraryRepository;
@@ -122,5 +123,32 @@ public class ItineraryService {
                     HttpStatus.BAD_REQUEST, "key and value must not be blank");
         }
         return itineraryRepository.findByMetadataKeyValue(key, value);
+    }
+
+    public ItineraryAnalyticsDTO getAnalytics(java.time.LocalDate startDate, java.time.LocalDate endDate) {
+        List<Object[]> results = itineraryRepository.getAnalytics(startDate, endDate);
+
+        if (results.isEmpty()) {
+            return new ItineraryAnalyticsDTO(0L, 0L, 0L, 0.0, 0.0, 0.0);
+        }
+
+        Object[] row = results.get(0);
+
+        long total       = row[0] != null ? ((Number) row[0]).longValue()   : 0L;
+        long completed   = row[1] != null ? ((Number) row[1]).longValue()   : 0L;
+        long cancelled   = row[2] != null ? ((Number) row[2]).longValue()   : 0L;
+        double totalBudget   = row[3] != null ? ((Number) row[3]).doubleValue() : 0.0;
+        double averageBudget = row[4] != null ? ((Number) row[4]).doubleValue() : 0.0;
+
+        double completionRate = total == 0 ? 0.0 : (completed * 100.0 / total);
+
+        return new ItineraryAnalyticsDTO(
+                total,
+                completed,
+                cancelled,
+                totalBudget,
+                averageBudget,
+                completionRate
+        );
     }
 }
