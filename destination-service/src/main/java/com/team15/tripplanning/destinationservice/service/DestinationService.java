@@ -1,10 +1,15 @@
 package com.team15.tripplanning.destinationservice.service;
 
 import com.team15.tripplanning.destinationservice.model.Destination;
+import com.team15.tripplanning.destinationservice.model.DestinationReview;
 import com.team15.tripplanning.destinationservice.repository.DestinationRepository;
 import com.team15.tripplanning.destinationservice.model.DestinationCategory;
+import com.team15.tripplanning.destinationservice.repository.DestinationReviewRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import com.team15.tripplanning.destinationservice.dto.DestinationRevenueDTO;
@@ -19,9 +24,11 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class DestinationService {
     private final DestinationRepository destinationRepository;
-
-    public DestinationService(DestinationRepository destinationRepository) {
+    private final DestinationReviewRepository destinationReviewRepository;
+    public DestinationService(DestinationRepository destinationRepository,
+                              DestinationReviewRepository destinationReviewRepository) {
         this.destinationRepository = destinationRepository;
+        this.destinationReviewRepository = destinationReviewRepository;
     }
 
     public Destination create(Destination destination) {
@@ -114,5 +121,44 @@ public class DestinationService {
                 totalRevenue,
                 averageBookingAmount
         );
+    }
+    @Transactional
+    public Destination verifyReview(Long destinationId, Long reviewId, Long verifierId) {
+        // 1. Find Destination (404 if not found)
+        Destination destination = destinationRepository.findById(destinationId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Destination not found"));
+
+        // 2. Find Review (404 if not found)
+        // You'll need to inject DestinationReviewRepository into this service
+        DestinationReview review = destinationReviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Review not found"));
+
+        // 3. Verify relationship (400 if mismatch)
+        if (!review.getDestination().getId().equals(destinationId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Review does not belong to this destination");
+        }
+
+        // 4. Check visitDate (400 if in the future)
+        if (review.getVisitDate().isAfter(LocalDate.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot verify a review for a future visit");
+        }
+
+        // 5. Verify Admin status (403 if not Admin)
+        String role = destinationRepository.findUserRoleById(verifierId);
+        if (role == null || !role.equalsIgnoreCase("ADMIN")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User is not an Admin");
+        }
+
+        // 6. Update review status and JSONB metadata
+        review.setVerified(true);
+        Map<String, Object> metadata = review.getMetadata();
+        metadata.put("verifiedAt", LocalDateTime.now().toString());
+        metadata.put("verifiedBy", verifierId);
+        review.setMetadata(metadata);
+
+        destinationReviewRepository.save(review);
+
+        // 7. Return updated destination (Hibernate handles the relationship refresh)
+        return destinationRepository.findById(destinationId).get();
     }
 }

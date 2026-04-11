@@ -59,4 +59,7 @@ public interface DestinationRepository extends JpaRepository<Destination, Long> 
     @Transactional
     @Query(value = "UPDATE destinations SET status = :status WHERE id = :id", nativeQuery = true)
     int updateStatusById(@Param("id") Long id, @Param("status") String status);
+
+    @Query(value = "SELECT role FROM users WHERE id = :userId", nativeQuery = true)
+    String findUserRoleById(@Param("userId") Long userId);
 }
