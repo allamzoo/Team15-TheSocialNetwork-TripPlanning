@@ -3,6 +3,7 @@ package com.team15.tripplanning.bookingservice.repository;
 import com.team15.tripplanning.bookingservice.model.Booking;
 
 import java.time.LocalDateTime;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -37,4 +38,23 @@ FROM Booking b
 WHERE b.createdAt BETWEEN :startDate AND :endDate
 """)
     Object[] getRevenueStats(LocalDateTime startDate, LocalDateTime endDate);
+
+    // ===== S5-F1: search with sorting (NO NULL BUG HERE) =====
+    @Query("""
+        SELECT b FROM Booking b
+        WHERE b.status = :status
+          AND b.createdAt BETWEEN :startDateTime AND :endDateTime
+        ORDER BY b.createdAt DESC
+    """)
+    List<Booking> searchBookings(
+            @Param("status") Booking.BookingStatus status,
+            @Param("startDateTime") LocalDateTime startDateTime,
+            @Param("endDateTime") LocalDateTime endDateTime
+    );
+
+    // Optional: for date-only filtering
+    List<Booking> findByCreatedAtBetweenOrderByCreatedAtDesc(
+            LocalDateTime startDateTime,
+            LocalDateTime endDateTime
+    );
 }

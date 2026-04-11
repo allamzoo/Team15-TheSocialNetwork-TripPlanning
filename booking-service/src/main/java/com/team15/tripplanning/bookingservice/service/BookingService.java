@@ -11,6 +11,7 @@ import java.util.HashMap;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
@@ -38,6 +39,7 @@ public class BookingService {
         this.couponRepository = couponRepository;
     }
 
+    // ===== CRUD methods =====
     public Booking create(Booking booking) {
         return bookingRepository.save(booking);
     }
@@ -289,4 +291,33 @@ public class BookingService {
                 cancelledCount
         );
     }
+
+    // ===== S5-F1: FINAL SAFE LOGIC =====
+    public List<Booking> getBookings(String statusStr, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+
+        Booking.BookingStatus status = null;
+
+        if (statusStr != null && !statusStr.isBlank()) {
+            status = Booking.BookingStatus.valueOf(statusStr.toUpperCase());
+        }
+
+        // Case 1: status + date range
+        if (status != null && startDateTime != null && endDateTime != null) {
+            return bookingRepository.searchBookings(status, startDateTime, endDateTime);
+        }
+
+        //  Case 2: date range only
+        if (startDateTime != null && endDateTime != null) {
+            return bookingRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(startDateTime, endDateTime);
+        }
+
+        //  Case 3: status only
+        if (status != null) {
+            return bookingRepository.findByStatus(status);
+        }
+
+        //  Case 4: no filters
+        return bookingRepository.findAll();
+    }
 }
+
