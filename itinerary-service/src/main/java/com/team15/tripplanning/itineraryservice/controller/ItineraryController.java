@@ -82,6 +82,13 @@ public class ItineraryController {
         ));
     }
 
+    @GetMapping("/metadata/search")
+    public ResponseEntity<List<Itinerary>> filterByMetadata(
+            @RequestParam String key,
+            @RequestParam String value) {
+        return ResponseEntity.ok(itineraryService.filterByMetadata(key, value));
+    }
+
     @PutMapping("/{id}/complete")
     public ResponseEntity<Itinerary> completeItinerary(@PathVariable Long id) {
         return ResponseEntity.ok(itineraryService.completeItinerary(id));

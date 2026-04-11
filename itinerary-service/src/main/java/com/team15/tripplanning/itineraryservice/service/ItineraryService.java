@@ -115,4 +115,12 @@ public class ItineraryService {
 
         return itineraryRepository.save(itinerary);
     }
+
+    public List<Itinerary> filterByMetadata(String key, String value) {
+        if (key == null || key.isBlank() || value == null || value.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "key and value must not be blank");
+        }
+        return itineraryRepository.findByMetadataKeyValue(key, value);
+    }
 }

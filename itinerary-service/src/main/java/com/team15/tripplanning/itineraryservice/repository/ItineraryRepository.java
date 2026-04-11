@@ -64,4 +64,10 @@ public interface ItineraryRepository extends JpaRepository<Itinerary, Long> {
             nativeQuery = true
     )
     Double sumConfirmedBookingsByItinerary(@Param("itineraryId") Long itineraryId);
+
+    @Query(
+            value = "SELECT * FROM itineraries WHERE metadata ->> :key = :value",
+            nativeQuery = true
+    )
+    List<Itinerary> findByMetadataKeyValue(@Param("key") String key, @Param("value") String value);
 }
