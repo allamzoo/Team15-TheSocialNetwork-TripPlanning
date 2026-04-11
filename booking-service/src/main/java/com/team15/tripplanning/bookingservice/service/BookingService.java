@@ -8,6 +8,9 @@ import com.team15.tripplanning.bookingservice.dto.AppliedCouponDTO;
 import com.team15.tripplanning.bookingservice.dto.BookingDetailsDTO;
 import com.team15.tripplanning.bookingservice.model.BookingCoupon;
 import java.util.HashMap;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
@@ -16,6 +19,9 @@ import com.team15.tripplanning.bookingservice.model.Coupon;
 import com.team15.tripplanning.bookingservice.repository.CouponRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
+import com.team15.tripplanning.bookingservice.dto.RevenueReportDTO;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 
@@ -247,5 +253,40 @@ public class BookingService {
 
         // j) Return updated booking
         return booking;
+    }
+
+    public RevenueReportDTO getRevenueReport(LocalDate startDate, LocalDate endDate) {
+
+        if (startDate.isAfter(endDate)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Start date after end date");
+        }
+
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = endDate.atTime(23, 59, 59);
+
+        Object[] result = bookingRepository.getRevenueStats(start, end);
+
+        // 🔥 FIX: unwrap nested array
+        Object[] row;
+        if (result.length == 1 && result[0] instanceof Object[]) {
+            row = (Object[]) result[0];
+        } else {
+            row = result;
+        }
+
+        double totalRevenue = ((Number) row[0]).doubleValue();
+        long totalBookings = ((Number) row[1]).longValue();
+        double cancelledAmount = ((Number) row[2]).doubleValue();
+        long cancelledCount = ((Number) row[3]).longValue();
+
+        double average = totalBookings == 0 ? 0 : totalRevenue / totalBookings;
+
+        return new RevenueReportDTO(
+                totalRevenue,
+                totalBookings,
+                average,
+                cancelledAmount,
+                cancelledCount
+        );
     }
 }
