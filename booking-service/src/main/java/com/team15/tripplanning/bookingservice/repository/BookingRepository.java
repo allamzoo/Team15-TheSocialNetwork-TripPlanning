@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 public interface BookingRepository extends JpaRepository<Booking, Long> {
     List<Booking> findByUserId(Long userId);
-
+    List<Booking> findByItineraryId(Long itineraryId);
     List<Booking> findByStatus(Booking.BookingStatus status);
 
     @Query(value = """

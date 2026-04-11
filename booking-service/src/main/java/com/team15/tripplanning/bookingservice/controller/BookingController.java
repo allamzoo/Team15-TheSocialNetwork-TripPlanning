@@ -55,5 +55,10 @@ public class BookingController {
     public ResponseEntity<?> getTopUsedCoupons(@RequestParam int limit) {
         return ResponseEntity.ok(bookingService.getTopUsedCoupons(limit));
     }
+    @PutMapping("/itinerary/{itineraryId}/cancel")
+    public ResponseEntity<Void> cancelBookingsByItinerary(@PathVariable Long itineraryId) {
+        bookingService.cancelPendingBookingsByItinerary(itineraryId);
+        return ResponseEntity.ok().build();
+    }
 }
 

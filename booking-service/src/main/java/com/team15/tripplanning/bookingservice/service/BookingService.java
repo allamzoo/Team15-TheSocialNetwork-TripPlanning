@@ -190,4 +190,18 @@ public class BookingService {
 
         return response;
     }
+    @Transactional
+    public void cancelPendingBookingsByItinerary(Long itineraryId) {
+
+        List<Booking> bookings = bookingRepository.findByItineraryId(itineraryId);
+
+        for (Booking booking : bookings) {
+            if (booking.getStatus() == Booking.BookingStatus.PENDING) {
+                booking.setStatus(Booking.BookingStatus.CANCELLED);
+            }
+        }
+
+        bookingRepository.saveAll(bookings);
+    }
+
 }
