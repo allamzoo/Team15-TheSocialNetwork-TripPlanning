@@ -1,5 +1,6 @@
 package com.team15.tripplanning.destinationservice.controller;
 
+import com.team15.tripplanning.destinationservice.dto.DestinationRateRequest;
 import com.team15.tripplanning.destinationservice.model.Destination;
 import com.team15.tripplanning.destinationservice.service.DestinationService;
 import com.team15.tripplanning.destinationservice.model.DestinationCategory;
@@ -79,6 +80,13 @@ public class DestinationController {
             @RequestBody Map<String, Object> details
     ) {
         return ResponseEntity.ok(destinationService.updateDestinationDetails(id, details));
+    }
+    @PostMapping("/{id}/rate")
+    public ResponseEntity<Void> rateDestination(
+            @PathVariable Long id,
+            @RequestBody DestinationRateRequest request) {
+        destinationService.rateDestination(id, request);
+        return ResponseEntity.ok().build();
     }
 }
 
