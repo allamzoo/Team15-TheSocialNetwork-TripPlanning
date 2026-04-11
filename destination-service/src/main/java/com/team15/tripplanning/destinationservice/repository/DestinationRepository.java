@@ -95,12 +95,13 @@ public interface DestinationRepository extends JpaRepository<Destination, Long> 
     List<Object[]> findTopRatedWithBookingCount(@Param("limit") int limit);
 
 
-    @Query(value = """
-    SELECT COUNT(*) FROM itineraries
-    WHERE destination_id = :destinationId
-      AND status IN ('DRAFT', 'PLANNED', 'IN_PROGRESS')
-    """, nativeQuery = true)
-    long countActiveItinerariesForDestination(@Param("destinationId") Long destinationId);
 
+
+    // In DestinationRepository.java
+    @Query(value = "SELECT COUNT(*) FROM itineraries WHERE id = :itineraryId AND destination_id = :destinationId AND status = 'COMPLETED'", nativeQuery = true)
+    int countValidItinerary(@Param("itineraryId") Long itineraryId, @Param("destinationId") Long destinationId);
+
+    @Query(value = "SELECT COUNT(*) FROM itineraries WHERE id = :itineraryId", nativeQuery = true)
+    int countItineraryById(@Param("itineraryId") Long itineraryId);
 }
 
