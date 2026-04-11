@@ -132,4 +132,25 @@ public class ActivityService {
         return results;
     }
 
+    // ---------- S4-F6 ----------
+    public List<Activity> getActivitiesInDateRange(java.time.LocalDateTime startDate,
+                                                     java.time.LocalDateTime endDate,
+                                                     Activity.ActivityCategory category) {
+        if (startDate == null || endDate == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "startDate and endDate are required parameters");
+        }
+
+        if (startDate.isAfter(endDate)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "startDate must be before or equal to endDate");
+        }
+
+        if (category != null) {
+            return activityRepository.findActivitiesByDateRangeAndCategory(startDate, endDate, String.valueOf(category));
+        } else {
+            return activityRepository.findActivitiesInDateRange(startDate, endDate);
+        }
+    }
+
 }
