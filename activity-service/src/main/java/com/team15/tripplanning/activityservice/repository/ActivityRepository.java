@@ -92,4 +92,24 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
             @Param("maxCost") Double maxCost,
             @Param("since") LocalDateTime since
     );
+
+    // -------------------- S4-F5 --------------------
+
+    @Query(value = """
+         SELECT * FROM activities
+         WHERE metadata ->> :key = :value
+         """, nativeQuery = true)
+    List<Activity> filterByMetadataEqNative(@Param("key") String key, @Param("value") String value);
+
+    @Query(value = """
+            SELECT a.* FROM activities a
+            WHERE (a.metadata->>:key)::numeric > (:value)::numeric
+            """, nativeQuery = true)
+    List<Activity> filterByMetadataGtNative(@Param("key") String key, @Param("value") String value);
+
+    @Query(value = """
+            SELECT a.* FROM activities a
+            WHERE (a.metadata->>:key)::numeric < (:value)::numeric
+            """, nativeQuery = true)
+    List<Activity> filterByMetadataLtNative(@Param("key") String key, @Param("value") String value);
 }

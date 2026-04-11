@@ -222,4 +222,43 @@ public class ActivityService {
                     "Longitude must be between -180 and 180");
         }
     }
+
+    // ---------- S4-F5 ----------
+    public List<Activity> filterActivityByMetadata(String key, String operator, String value) {
+        if (!operator.equals("eq") && !operator.equals("gt") && !operator.equals("lt")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Invalid operator: " + operator + ". Allowed operators are: eq, gt, lt");
+        }
+
+        List<Activity> results;
+        switch (operator) {
+            case "eq":
+                results = activityRepository.filterByMetadataEqNative(key, value);
+                break;
+            case "gt":
+                try {
+                    Double.parseDouble(value);
+                    results = activityRepository.filterByMetadataGtNative(key, value);
+                } catch (NumberFormatException e) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                            "Value must be numeric for 'gt' operator");
+                }
+                break;
+            case "lt":
+                try {
+                    Double.parseDouble(value);
+                    results = activityRepository.filterByMetadataLtNative(key, value);
+                } catch (NumberFormatException e) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                            "Value must be numeric for 'lt' operator");
+                }
+                break;
+            default:
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Invalid operator: " + operator);
+        }
+
+        return results;
+    }
+
 }
