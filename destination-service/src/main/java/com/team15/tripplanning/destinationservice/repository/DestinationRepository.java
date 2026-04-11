@@ -103,5 +103,8 @@ public interface DestinationRepository extends JpaRepository<Destination, Long> 
 
     @Query(value = "SELECT COUNT(*) FROM itineraries WHERE id = :itineraryId", nativeQuery = true)
     int countItineraryById(@Param("itineraryId") Long itineraryId);
+
+    @Query(value = "SELECT role FROM users WHERE id = :userId", nativeQuery = true)
+    String findUserRoleById(@Param("userId") Long userId);
 }
 
