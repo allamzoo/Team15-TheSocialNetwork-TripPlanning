@@ -1,12 +1,14 @@
 package com.team15.tripplanning.destinationservice.service;
 
 import com.team15.tripplanning.destinationservice.dto.DestinationRateRequest;
+import com.team15.tripplanning.destinationservice.dto.DestinationReviewAlertDTO;
 import com.team15.tripplanning.destinationservice.model.Destination;
 import com.team15.tripplanning.destinationservice.model.DestinationReview;
 import com.team15.tripplanning.destinationservice.repository.DestinationRepository;
 import com.team15.tripplanning.destinationservice.model.DestinationCategory;
 import jakarta.transaction.Transactional;
 import com.team15.tripplanning.destinationservice.repository.DestinationReviewRepository;
+import jakarta.transaction.Transactional;
 import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.client.HttpClientErrorException;
@@ -19,6 +21,10 @@ import java.util.Map;
 import com.team15.tripplanning.destinationservice.dto.DestinationRevenueDTO;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import org.springframework.stereotype.Service;
 import org.springframework.http.HttpStatus;
@@ -262,5 +268,28 @@ public class DestinationService {
 
         // 7. Return updated destination (Hibernate handles the relationship refresh)
         return destinationRepository.findById(destinationId).get();
+    }
+    @Transactional
+    public List<DestinationReviewAlertDTO> getLowRatedReviewAlerts(Double maxRating) {
+        return destinationRepository.findAll().stream()
+                .map(dest -> {
+                    // Filter only the reviews that are <= maxRating
+                    List<DestinationReview> lowReviews = dest.getDestinationReviews().stream()
+                            .filter(r -> r.getRating() <= maxRating)
+                            .toList();
+
+                    // If this destination has low reviews, wrap it in a DTO
+                    if (!lowReviews.isEmpty()) {
+                        return new DestinationReviewAlertDTO(
+                                dest.getId(),
+                                dest.getName(),
+                                dest.getStatus(),
+                                lowReviews
+                        );
+                    }
+                    return null;
+                })
+                .filter(Objects::nonNull) // Remove destinations that had no low reviews
+                .toList();
     }
 }

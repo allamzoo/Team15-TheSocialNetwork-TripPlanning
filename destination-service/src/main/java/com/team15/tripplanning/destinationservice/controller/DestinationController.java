@@ -2,6 +2,7 @@ package com.team15.tripplanning.destinationservice.controller;
 
 import com.team15.tripplanning.destinationservice.dto.DestinationRateRequest;
 import com.team15.tripplanning.destinationservice.dto.VerifyReviewRequest;
+import com.team15.tripplanning.destinationservice.dto.DestinationReviewAlertDTO;
 import com.team15.tripplanning.destinationservice.model.Destination;
 import com.team15.tripplanning.destinationservice.service.DestinationService;
 import com.team15.tripplanning.destinationservice.model.DestinationCategory;
@@ -121,6 +122,11 @@ public class DestinationController {
 
         Destination updated = destinationService.verifyReview(destinationId, reviewId, request.getVerifiedBy());
         return ResponseEntity.ok(updated);
+    }
+    @GetMapping("/reviews/low-rated")
+    public ResponseEntity<List<DestinationReviewAlertDTO>> getLowRatedReviews(
+            @RequestParam(defaultValue = "2.0") Double maxRating) {
+        return ResponseEntity.ok(destinationService.getLowRatedReviewAlerts(maxRating));
     }
 }
 

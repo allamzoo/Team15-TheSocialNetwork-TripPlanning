@@ -167,7 +167,12 @@ public class Destination {
         return destinationReviews;
     }
 
-    public void setDestinationReviews(List<DestinationReview> destinationReviews) {
-        this.destinationReviews = destinationReviews != null ? destinationReviews : new ArrayList<>();
+    public void setDestinationReviews(List<DestinationReview> reviews) {
+        this.destinationReviews = reviews;
+        if (reviews != null) {
+            // This line is the "Magic Link"
+            // It loops through each review and sets the 'destination' field to 'this'
+            reviews.forEach(review -> review.setDestination(this));
+        }
     }
 }
