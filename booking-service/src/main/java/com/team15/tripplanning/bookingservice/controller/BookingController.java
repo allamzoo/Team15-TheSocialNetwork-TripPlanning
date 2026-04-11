@@ -4,13 +4,12 @@ import com.team15.tripplanning.bookingservice.dto.RevenueReportDTO;
 import com.team15.tripplanning.bookingservice.model.Booking;
 import com.team15.tripplanning.bookingservice.service.BookingService;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.annotation.GetMapping;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import org.springframework.web.bind.annotation.RequestParam;
-import java.time.LocalDate;
+import java.util.Map;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/bookings")
@@ -77,17 +76,28 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.getBookingDetails(id));
     }
 
+    // ===== S5-F2: Cancel Booking Endpoint =====
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<Booking> cancelBooking(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+
+        String reason = body.get("reason");
+        Booking updated = bookingService.cancelBooking(id, reason);
+        return ResponseEntity.ok(updated);
+    }
+
     @GetMapping("/coupons/top-used")
     public ResponseEntity<?> getTopUsedCoupons(@RequestParam int limit) {
         return ResponseEntity.ok(bookingService.getTopUsedCoupons(limit));
     }
+
     @GetMapping("/search")
     public ResponseEntity<List<Booking>> searchBookings(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
-        // Convert LocalDate → LocalDateTime for DB query
         LocalDateTime startDateTime = startDate != null ? startDate.atStartOfDay() : null;
         LocalDateTime endDateTime = endDate != null ? endDate.atTime(23, 59, 59) : null;
 
