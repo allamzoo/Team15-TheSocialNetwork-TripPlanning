@@ -6,6 +6,8 @@ import com.team15.tripplanning.activityservice.dto.BudgetActivityDTO;
 import com.team15.tripplanning.activityservice.model.Activity;
 import com.team15.tripplanning.activityservice.service.ActivityService;
 
+import java.time.LocalDate;
+
 import java.util.HashMap;
 
 import java.time.LocalDate;
@@ -140,5 +142,15 @@ public class ActivityController {
                 activities.size(),
                 activities);
         return ResponseEntity.ok(response);
+    }
+
+    // ---------- S4-F6 ----------
+    @GetMapping("/history")
+    public ResponseEntity<List<Activity>> getActivitiesInDateRange(
+            @RequestParam LocalDate  startDate,
+            @RequestParam LocalDate endDate,
+            @RequestParam(required = false) Activity.ActivityCategory category) {
+        List<Activity> activities = activityService.getActivitiesInDateRange(startDate.atStartOfDay(), endDate.atStartOfDay(), category);
+        return ResponseEntity.ok(activities);
     }
 }

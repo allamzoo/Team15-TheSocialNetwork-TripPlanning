@@ -112,4 +112,27 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
             WHERE (a.metadata->>:key)::numeric < (:value)::numeric
             """, nativeQuery = true)
     List<Activity> filterByMetadataLtNative(@Param("key") String key, @Param("value") String value);
+
+    // -------------------- S4-F6 --------------------
+    @Query(value = """
+    SELECT * FROM activities a
+    WHERE a.scheduled_time >= :startDate 
+      AND a.scheduled_time <= :endDate
+    ORDER BY a.scheduled_time ASC
+""", nativeQuery = true)
+    List<Activity> findActivitiesInDateRange(
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
+    @Query(value = """
+    SELECT * FROM activities a
+    WHERE a.scheduled_time >= :startDate 
+      AND a.scheduled_time <= :endDate
+      AND a.category = :category
+    ORDER BY a.scheduled_time ASC
+""", nativeQuery = true)
+    List<Activity> findActivitiesByDateRangeAndCategory(
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            @Param("category") String category);
 }
