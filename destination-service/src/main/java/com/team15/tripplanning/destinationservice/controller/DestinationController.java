@@ -80,6 +80,14 @@ public class DestinationController {
     ) {
         return ResponseEntity.ok(destinationService.updateDestinationDetails(id, details));
     }
+    @GetMapping("/details/search")
+    public ResponseEntity<List<Destination>> filterByDetailAttribute(
+            @RequestParam String key,
+            @RequestParam String value,
+            @RequestParam(required = false) String status
+    ) {
+        return ResponseEntity.ok(destinationService.filterByDetailAttribute(key, value, status));
+    }
     @PutMapping("/{id}/status")
     public ResponseEntity<Destination> updateDestinationStatus(
             @PathVariable Long id,

@@ -67,5 +67,16 @@ public interface DestinationRepository extends JpaRepository<Destination, Long> 
     """, nativeQuery = true)
     long countActiveItinerariesForDestination(@Param("destinationId") Long destinationId);
 
+
+    @Query(value = """
+    SELECT * FROM destinations d
+    WHERE d.details ->> :key = :value
+      AND (:status IS NULL OR d.status = :status)
+    """, nativeQuery = true)
+    List<Destination> findByDetailAttribute(
+            @Param("key") String key,
+            @Param("value") String value,
+            @Param("status") String status
+    );
 }
 

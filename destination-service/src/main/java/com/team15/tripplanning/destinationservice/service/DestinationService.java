@@ -146,4 +146,22 @@ public class DestinationService {
                 averageBookingAmount
         );
     }
+    public List<Destination> filterByDetailAttribute(String key, String value, String status) {
+        if (key == null || key.isBlank() || value == null || value.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "key and value are required");
+        }
+
+        String normalizedStatus = null;
+        if (status != null && !status.isBlank()) {
+            try {
+                normalizedStatus = com.team15.tripplanning.destinationservice.model.DestinationStatus
+                        .valueOf(status.toUpperCase()).name();
+            } catch (IllegalArgumentException e) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Invalid status. Must be one of ACTIVE, SEASONAL, INACTIVE");
+            }
+        }
+
+        return destinationRepository.findByDetailAttribute(key, value, normalizedStatus);
+    }
 }
