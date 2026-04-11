@@ -4,6 +4,7 @@ import com.team15.tripplanning.bookingservice.dto.AppliedCouponDTO;
 import com.team15.tripplanning.bookingservice.dto.BookingDetailsDTO;
 import com.team15.tripplanning.bookingservice.dto.CouponUsageDTO;
 import com.team15.tripplanning.bookingservice.dto.RevenueReportDTO;
+import com.team15.tripplanning.bookingservice.dto.UserBookingSummaryDTO;
 import com.team15.tripplanning.bookingservice.model.Booking;
 import com.team15.tripplanning.bookingservice.model.BookingCoupon;
 import com.team15.tripplanning.bookingservice.model.Coupon;
@@ -14,12 +15,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
-
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -35,6 +36,7 @@ public class BookingService {
         this.couponRepository = couponRepository;
     }
 
+    // ===== CRUD =====
     public Booking create(Booking booking) {
         return bookingRepository.save(booking);
     }
@@ -64,6 +66,50 @@ public class BookingService {
 
     public void delete(Long id) {
         bookingRepository.delete(findById(id));
+    }
+
+    // ===== S5-F3: User Booking Summary =====
+    public UserBookingSummaryDTO getUserBookingSummary(Long userId) {
+
+        // 1️⃣ Check user exists (based on bookings)
+        List<Booking> userBookings = bookingRepository.findByUserId(userId);
+        if (userBookings.isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "User not found"
+            );
+        }
+
+        // 2️⃣ Get grouped data (CONFIRMED only)
+        List<Object[]> results = bookingRepository.getBookingSummaryByUser(userId);
+
+        Map<String, Double> typeBreakdown = new HashMap<>();
+        int totalBookings = 0;
+        double totalAmount = 0.0;
+
+        // 3️⃣ Build map + totalAmount
+        for (Object[] row : results) {
+            String type = row[0].toString();
+            double amount = ((Number) row[1]).doubleValue();
+
+            typeBreakdown.put(type, amount);
+            totalAmount += amount;
+        }
+
+        // 4️⃣ Count CONFIRMED bookings
+        for (Booking b : userBookings) {
+            if (b.getStatus() == Booking.BookingStatus.CONFIRMED) {
+                totalBookings++;
+            }
+        }
+
+        // 5️⃣ Return DTO
+        return new UserBookingSummaryDTO(
+                userId,
+                totalBookings,
+                totalAmount,
+                typeBreakdown
+        );
     }
 
     @Transactional
@@ -349,3 +395,4 @@ public class BookingService {
         return bookingRepository.save(booking);
     }
 }
+

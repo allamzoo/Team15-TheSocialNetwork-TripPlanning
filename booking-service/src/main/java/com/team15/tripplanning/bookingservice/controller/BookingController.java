@@ -1,15 +1,17 @@
 package com.team15.tripplanning.bookingservice.controller;
 
 import com.team15.tripplanning.bookingservice.dto.RevenueReportDTO;
+import com.team15.tripplanning.bookingservice.dto.UserBookingSummaryDTO;
 import com.team15.tripplanning.bookingservice.model.Booking;
 import com.team15.tripplanning.bookingservice.service.BookingService;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/bookings")
@@ -90,6 +92,10 @@ public class BookingController {
     @GetMapping("/coupons/top-used")
     public ResponseEntity<?> getTopUsedCoupons(@RequestParam int limit) {
         return ResponseEntity.ok(bookingService.getTopUsedCoupons(limit));
+    }
+    @GetMapping("/user/{userId}/summary")
+    public ResponseEntity<UserBookingSummaryDTO> getUserBookingSummary(@PathVariable Long userId) {
+        return ResponseEntity.ok(bookingService.getUserBookingSummary(userId));
     }
 
     @GetMapping("/search")

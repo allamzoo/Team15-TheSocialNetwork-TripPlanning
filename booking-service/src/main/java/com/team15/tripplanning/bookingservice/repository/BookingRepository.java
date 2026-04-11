@@ -3,7 +3,6 @@ package com.team15.tripplanning.bookingservice.repository;
 import com.team15.tripplanning.bookingservice.model.Booking;
 
 import java.time.LocalDateTime;
-import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -12,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 public interface BookingRepository extends JpaRepository<Booking, Long> {
+
     List<Booking> findByUserId(Long userId);
 
     List<Booking> findByStatus(Booking.BookingStatus status);
@@ -28,8 +28,9 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @Transactional
     @Query(value = "UPDATE bookings SET status = :status WHERE id = :id", nativeQuery = true)
     int updateStatusById(@Param("id") Long id, @Param("status") String status);
-    @Query(""" 
-SELECT 
+
+    @Query("""
+SELECT
     COALESCE(SUM(CASE WHEN b.status = 'CONFIRMED' THEN b.amount ELSE 0 END), 0),
     COUNT(CASE WHEN b.status = 'CONFIRMED' THEN 1 END),
     COALESCE(SUM(CASE WHEN b.status = 'CANCELLED' THEN b.amount ELSE 0 END), 0),
@@ -57,4 +58,13 @@ WHERE b.createdAt BETWEEN :startDate AND :endDate
             LocalDateTime startDateTime,
             LocalDateTime endDateTime
     );
+
+    // ===== S5-F3: Booking summary grouped by type =====
+    @Query("""
+        SELECT b.type, SUM(b.amount)
+        FROM Booking b
+        WHERE b.userId = :userId AND b.status = 'CONFIRMED'
+        GROUP BY b.type
+    """)
+    List<Object[]> getBookingSummaryByUser(@Param("userId") Long userId);
 }
