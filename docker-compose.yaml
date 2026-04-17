@@ -1,4 +1,5 @@
 version: '3.8'
+
 services:
   postgres:
     image: postgres:16
@@ -11,6 +12,66 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d tripplanningdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  user-service:
+    build: ./user-service
+    container_name: user-service
+    ports:
+      - "8081:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tripplanningdb
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  destination-service:
+    build: ./destination-service
+    container_name: destination-service
+    ports:
+      - "8082:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tripplanningdb
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  itinerary-service:
+    build: ./itinerary-service
+    container_name: itinerary-service
+    ports:
+      - "8083:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tripplanningdb
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  activity-service:
+    build: ./activity-service
+    container_name: activity-service
+    ports:
+      - "8084:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tripplanningdb
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  booking-service:
+    build: ./booking-service
+    container_name: booking-service
+    ports:
+      - "8085:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tripplanningdb
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   pgdata:
-
