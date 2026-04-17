@@ -34,6 +34,9 @@ import com.team15.tripplanning.activityservice.dto.BatchActivityResponseDTO;
 import com.team15.tripplanning.activityservice.dto.MetadataFilterResponseDTO;
 import org.springframework.web.bind.annotation.*;
 
+
+
+
 @RestController
 @RequestMapping("/api/activities")
 public class ActivityController {
