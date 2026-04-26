@@ -7,6 +7,8 @@ import com.team15.tripplanning.itineraryservice.model.Itinerary;
 import com.team15.tripplanning.itineraryservice.service.ItineraryService;
 import java.time.LocalDate;
 import java.util.List;
+import com.team15.tripplanning.itineraryservice.dto.ItineraryDetailsDTO;
+import com.team15.tripplanning.itineraryservice.dto.ItineraryDayRequestDTO;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -63,6 +65,22 @@ public class ItineraryController {
     ) {
         return ResponseEntity.ok(itineraryService.searchByStatusAndDateRange(status, startDate, endDate));
     }
+    // S3-F8
+    @PostMapping("/{itineraryId}/days")
+    public ResponseEntity<?> addDays(
+            @PathVariable Long itineraryId,
+            @RequestBody List<ItineraryDayRequestDTO> days) {
+
+        try {
+            Itinerary updated = itineraryService.addDays(itineraryId, days);
+            return ResponseEntity.ok(updated);
+        } catch (RuntimeException e) {
+            if (e.getMessage().toLowerCase().contains("not found")) {
+                return ResponseEntity.status(404).body(e.getMessage());
+            }
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 
     // S3-F2
     @PutMapping("/{itineraryId}/assign")
@@ -93,6 +111,14 @@ public class ItineraryController {
     @PutMapping("/{id}/complete")
     public ResponseEntity<Itinerary> completeItinerary(@PathVariable Long id) {
         return ResponseEntity.ok(itineraryService.completeItinerary(id));
+    }
+    // S3-F9
+    @GetMapping("/{itineraryId}/details")
+    public ResponseEntity<ItineraryDetailsDTO> getItineraryDetails(
+            @PathVariable Long itineraryId) {
+
+        ItineraryDetailsDTO details = itineraryService.getItineraryDetails(itineraryId);
+        return ResponseEntity.ok(details);
     }
     @GetMapping("/analytics")
     public ResponseEntity<ItineraryAnalyticsDTO> getAnalytics(
