@@ -1,7 +1,7 @@
 package com.team15.tripplanning.userservice.service;
 
-import com.team15.tripplanning.userservice.model.SavedDestination;
-import com.team15.tripplanning.userservice.model.User;
+import com.team15.tripplanning.userservice.entity.SavedDestination;
+import com.team15.tripplanning.userservice.entity.User;
 import com.team15.tripplanning.userservice.repository.SavedDestinationRepository;
 import com.team15.tripplanning.userservice.repository.UserRepository;
 import java.util.List;
@@ -24,13 +24,28 @@ public class SavedDestinationService {
         this.userRepository = userRepository;
     }
 
+    @Transactional
     public SavedDestination create(Long userId, SavedDestination savedDestination) {
-        savedDestination.setUser(resolveUser(userId));
+        User user = resolveUser(userId);
+        savedDestination.setUser(user);
+
+        if (Boolean.TRUE.equals(savedDestination.getIsDefault())) {
+            clearDefaultFlags(userId);
+            savedDestination.setIsDefault(true);
+        } else if (savedDestination.getIsDefault() == null) {
+            savedDestination.setIsDefault(false);
+        }
+
         return savedDestinationRepository.save(savedDestination);
     }
 
     public List<SavedDestination> findAll() {
         return savedDestinationRepository.findAll();
+    }
+
+    public List<SavedDestination> findByUserId(Long userId) {
+        resolveUser(userId);
+        return savedDestinationRepository.findByUser_Id(userId);
     }
 
     public SavedDestination findById(Long id) {
@@ -41,6 +56,16 @@ public class SavedDestinationService {
                 ));
     }
 
+    public SavedDestination findByIdForUser(Long userId, Long destinationId) {
+        resolveUser(userId);
+        return savedDestinationRepository.findByIdAndUser_Id(destinationId, userId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "SavedDestination not found with id: " + destinationId
+                ));
+    }
+
+    @Transactional
     public SavedDestination update(Long id, SavedDestination savedDestination) {
         SavedDestination existing = findById(id);
         // Owner relation is set on create via userId path parameter.
@@ -49,14 +74,29 @@ public class SavedDestinationService {
         existing.setCountry(savedDestination.getCountry());
         existing.setLatitude(savedDestination.getLatitude());
         existing.setLongitude(savedDestination.getLongitude());
-        existing.setIsDefault(savedDestination.getIsDefault() != null ? savedDestination.getIsDefault() : existing.getIsDefault());
-        existing.setMetadata(savedDestination.getMetadata() != null ? savedDestination.getMetadata() : existing.getMetadata());
+
+        if (Boolean.TRUE.equals(savedDestination.getIsDefault()) && existing.getUser() != null) {
+            clearDefaultFlags(existing.getUser().getId());
+            existing.setIsDefault(true);
+        } else if (savedDestination.getIsDefault() != null) {
+            existing.setIsDefault(savedDestination.getIsDefault());
+        }
+
+        if (savedDestination.getMetadata() != null) {
+            existing.setMetadata(savedDestination.getMetadata());
+        }
+
         return savedDestinationRepository.save(existing);
     }
 
     public void delete(Long id) {
         findById(id);
         savedDestinationRepository.deleteById(id);
+    }
+
+    public void deleteForUser(Long userId, Long destinationId) {
+        SavedDestination existing = findByIdForUser(userId, destinationId);
+        savedDestinationRepository.deleteById(existing.getId());
     }
 
     @Transactional
@@ -68,7 +108,7 @@ public class SavedDestinationService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "destinationId is required");
         }
 
-        User user = resolveUser(userId);
+        resolveUser(userId);
         SavedDestination target = savedDestinationRepository.findById(destinationId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
@@ -82,12 +122,7 @@ public class SavedDestinationService {
             );
         }
 
-        List<SavedDestination> userDestinations = savedDestinationRepository.findByUser_Id(userId);
-        for (SavedDestination savedDestination : userDestinations) {
-            savedDestination.setIsDefault(false);
-        }
-        savedDestinationRepository.saveAll(userDestinations);
-
+        clearDefaultFlags(userId);
         target.setIsDefault(true);
         savedDestinationRepository.save(target);
 
@@ -96,6 +131,14 @@ public class SavedDestinationService {
                         HttpStatus.NOT_FOUND,
                         "User not found with id: " + userId
                 ));
+    }
+
+    private void clearDefaultFlags(Long userId) {
+        List<SavedDestination> userDestinations = savedDestinationRepository.findByUser_Id(userId);
+        for (SavedDestination savedDestination : userDestinations) {
+            savedDestination.setIsDefault(false);
+        }
+        savedDestinationRepository.saveAll(userDestinations);
     }
 
     private User resolveUser(Long userId) {

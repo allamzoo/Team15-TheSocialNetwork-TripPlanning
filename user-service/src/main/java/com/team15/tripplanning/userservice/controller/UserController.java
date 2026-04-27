@@ -1,16 +1,18 @@
 package com.team15.tripplanning.userservice.controller;
 
+import com.team15.tripplanning.userservice.dto.TopTravelerDTO;
 import com.team15.tripplanning.userservice.dto.UserProfileDTO;
 import com.team15.tripplanning.userservice.dto.UserTripSummaryDTO;
-import com.team15.tripplanning.userservice.dto.TopTravelerDTO;
-import com.team15.tripplanning.userservice.model.User;
-import com.team15.tripplanning.userservice.model.UserRole;
-import com.team15.tripplanning.userservice.service.UserService;
+import com.team15.tripplanning.userservice.entity.SavedDestination;
+import com.team15.tripplanning.userservice.entity.User;
+import com.team15.tripplanning.userservice.entity.UserRole;
 import com.team15.tripplanning.userservice.service.SavedDestinationService;
+import com.team15.tripplanning.userservice.service.UserService;
 import java.time.LocalDate;
 import java.util.List;
-import org.springframework.format.annotation.DateTimeFormat;
 import java.util.Map;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/users")
@@ -49,7 +52,7 @@ public class UserController {
             @RequestParam(required = false) String email,
             @RequestParam(required = false) String role
     ) {
-        return ResponseEntity.ok(userService.search(name, email, role != null ? UserRole.valueOf(role) : null));
+        return ResponseEntity.ok(userService.search(name, email, parseRole(role)));
     }
 
     @GetMapping("/{id}")
@@ -80,8 +83,46 @@ public class UserController {
         return ResponseEntity.ok(userService.mergePreferences(id, newPreferences));
     }
 
-    @PutMapping("/{userId}/destinations/{destinationId}/default")
+    @PostMapping("/{userId}/saved-destinations")
+    public ResponseEntity<SavedDestination> createSavedDestination(
+            @PathVariable Long userId,
+            @RequestBody SavedDestination savedDestination
+    ) {
+        return ResponseEntity.ok(savedDestinationService.create(userId, savedDestination));
+    }
+
+    @GetMapping("/{userId}/saved-destinations")
+    public ResponseEntity<List<SavedDestination>> findSavedDestinationsByUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(savedDestinationService.findByUserId(userId));
+    }
+
+    @GetMapping("/{userId}/saved-destinations/{destinationId}")
+    public ResponseEntity<SavedDestination> findSavedDestinationById(
+            @PathVariable Long userId,
+            @PathVariable Long destinationId
+    ) {
+        return ResponseEntity.ok(savedDestinationService.findByIdForUser(userId, destinationId));
+    }
+
+    @DeleteMapping("/{userId}/saved-destinations/{destinationId}")
+    public ResponseEntity<Void> deleteSavedDestinationById(
+            @PathVariable Long userId,
+            @PathVariable Long destinationId
+    ) {
+        savedDestinationService.deleteForUser(userId, destinationId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{userId}/saved-destinations/{destinationId}/default")
     public ResponseEntity<User> setDefaultSavedDestination(
+            @PathVariable Long userId,
+            @PathVariable Long destinationId
+    ) {
+        return ResponseEntity.ok(savedDestinationService.setDefaultSavedDestination(userId, destinationId));
+    }
+
+    @PutMapping("/{userId}/destinations/{destinationId}/default")
+    public ResponseEntity<User> setDefaultSavedDestinationLegacyPath(
             @PathVariable Long userId,
             @PathVariable Long destinationId
     ) {
@@ -121,5 +162,15 @@ public class UserController {
     public ResponseEntity<User> deactivate(@PathVariable Long id) {
         return ResponseEntity.ok(userService.deactivate(id));
     }
-}
 
+    private UserRole parseRole(String role) {
+        if (role == null || role.isBlank()) {
+            return null;
+        }
+        try {
+            return UserRole.valueOf(role.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid role: " + role);
+        }
+    }
+}

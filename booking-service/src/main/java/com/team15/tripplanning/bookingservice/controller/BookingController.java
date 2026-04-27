@@ -41,6 +41,11 @@ public class BookingController {
     public ResponseEntity<List<Booking>> findAll() {
         return ResponseEntity.ok(bookingService.findAll());
     }
+    @PutMapping("/itinerary/{itineraryId}/cancel")
+    public ResponseEntity<Void> cancelBookingsByItinerary(@PathVariable Long itineraryId) {
+        bookingService.cancelPendingBookingsByItinerary(itineraryId);
+        return ResponseEntity.ok().build();
+    }
 
     @GetMapping("/{id}")
     public ResponseEntity<Booking> findById(@PathVariable Long id) {

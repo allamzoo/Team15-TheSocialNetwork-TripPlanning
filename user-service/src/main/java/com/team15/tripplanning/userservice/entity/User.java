@@ -1,7 +1,5 @@
-package com.team15.tripplanning.userservice.model;
+package com.team15.tripplanning.userservice.entity;
 
-import com.team15.tripplanning.userservice.model.UserRole;
-import com.team15.tripplanning.userservice.model.UserStatus;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -154,3 +152,4 @@ public class User {
         this.savedDestinations = savedDestinations != null ? savedDestinations : new ArrayList<>();
     }
 }
+

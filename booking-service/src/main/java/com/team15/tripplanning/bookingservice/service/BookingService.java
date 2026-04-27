@@ -205,6 +205,19 @@ public class BookingService {
 
         return result;
     }
+    @Transactional
+    public void cancelPendingBookingsByItinerary(Long itineraryId) {
+
+        List<Booking> bookings = bookingRepository.findByItineraryId(itineraryId);
+
+        for (Booking booking : bookings) {
+            if (booking.getStatus() == Booking.BookingStatus.PENDING) {
+                booking.setStatus(Booking.BookingStatus.CANCELLED);
+            }
+        }
+
+        bookingRepository.saveAll(bookings);
+    }
 
     public List<CouponUsageDTO> getTopUsedCoupons(int limit) {
         List<Object[]> results = bookingCouponRepository.findTopUsedCoupons(limit);

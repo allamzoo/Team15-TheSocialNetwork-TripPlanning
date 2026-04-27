@@ -1,4 +1,4 @@
-package com.team15.tripplanning.userservice.model;
+package com.team15.tripplanning.userservice.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;

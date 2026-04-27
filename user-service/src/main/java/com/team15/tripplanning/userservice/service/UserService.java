@@ -1,13 +1,13 @@
 package com.team15.tripplanning.userservice.service;
 
 import com.team15.tripplanning.userservice.dto.SavedDestinationProfileDTO;
+import com.team15.tripplanning.userservice.dto.TopTravelerDTO;
 import com.team15.tripplanning.userservice.dto.UserProfileDTO;
 import com.team15.tripplanning.userservice.dto.UserTripSummaryDTO;
-import com.team15.tripplanning.userservice.dto.TopTravelerDTO;
-import com.team15.tripplanning.userservice.model.SavedDestination;
-import com.team15.tripplanning.userservice.model.User;
-import com.team15.tripplanning.userservice.model.UserRole;
-import com.team15.tripplanning.userservice.model.UserStatus;
+import com.team15.tripplanning.userservice.entity.SavedDestination;
+import com.team15.tripplanning.userservice.entity.User;
+import com.team15.tripplanning.userservice.entity.UserRole;
+import com.team15.tripplanning.userservice.entity.UserStatus;
 import com.team15.tripplanning.userservice.repository.UserRepository;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -41,7 +41,7 @@ public class UserService {
         String normalizedEmail = normalize(email);
         String normalizedRole = role != null ? role.name() : null;
         if (normalizedName == null && normalizedEmail == null && normalizedRole == null) {
-            return List.of();
+            return userRepository.findAll();
         }
         return userRepository.searchUsers(normalizedName, normalizedEmail, normalizedRole);
     }
@@ -87,13 +87,29 @@ public class UserService {
 
     public User update(Long id, User user) {
         User existing = findById(id);
-        existing.setName(user.getName());
-        existing.setEmail(user.getEmail());
-        existing.setPassword(user.getPassword());
-        existing.setPhone(user.getPhone());
-        existing.setRole(user.getRole());
-        existing.setStatus(user.getStatus());
-        existing.setPreferences(user.getPreferences());
+
+        if (user.getName() != null) {
+            existing.setName(user.getName());
+        }
+        if (user.getEmail() != null) {
+            existing.setEmail(user.getEmail());
+        }
+        if (user.getPassword() != null) {
+            existing.setPassword(user.getPassword());
+        }
+        if (user.getPhone() != null) {
+            existing.setPhone(user.getPhone());
+        }
+        if (user.getRole() != null) {
+            existing.setRole(user.getRole());
+        }
+        if (user.getStatus() != null) {
+            existing.setStatus(user.getStatus());
+        }
+        if (user.getPreferences() != null) {
+            existing.setPreferences(user.getPreferences());
+        }
+
         return userRepository.save(existing);
     }
 
