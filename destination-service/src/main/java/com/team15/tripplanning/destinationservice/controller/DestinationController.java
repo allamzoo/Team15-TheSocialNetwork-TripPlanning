@@ -1,17 +1,16 @@
 package com.team15.tripplanning.destinationservice.controller;
 
 import com.team15.tripplanning.destinationservice.dto.DestinationRateRequest;
-import com.team15.tripplanning.destinationservice.dto.VerifyReviewRequest;
 import com.team15.tripplanning.destinationservice.dto.DestinationReviewAlertDTO;
-import com.team15.tripplanning.destinationservice.model.Destination;
-import com.team15.tripplanning.destinationservice.service.DestinationService;
-import com.team15.tripplanning.destinationservice.model.DestinationCategory;
-import org.springframework.web.bind.annotation.RequestParam;
 import com.team15.tripplanning.destinationservice.dto.DestinationRevenueDTO;
-import java.util.List;
+import com.team15.tripplanning.destinationservice.dto.TopDestinationDTO;
+import com.team15.tripplanning.destinationservice.model.Destination;
+import com.team15.tripplanning.destinationservice.model.DestinationCategory;
+import com.team15.tripplanning.destinationservice.service.DestinationService;
 import java.time.LocalDate;
-import org.springframework.format.annotation.DateTimeFormat;
+import java.util.List;
 import java.util.Map;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,8 +19,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/destinations")
@@ -83,6 +82,7 @@ public class DestinationController {
     ) {
         return ResponseEntity.ok(destinationService.updateDestinationDetails(id, details));
     }
+
     @PutMapping("/{id}/status")
     public ResponseEntity<Destination> updateDestinationStatus(
             @PathVariable Long id,
@@ -91,6 +91,7 @@ public class DestinationController {
         String status = body.get("status");
         return ResponseEntity.ok(destinationService.updateDestinationStatus(id, status));
     }
+
     @GetMapping("/details/search")
     public ResponseEntity<List<Destination>> filterByDetailAttribute(
             @RequestParam String key,
@@ -100,33 +101,24 @@ public class DestinationController {
         return ResponseEntity.ok(destinationService.filterByDetailAttribute(key, value, status));
     }
 
-
     @GetMapping("/reports/top-rated")
-    public ResponseEntity<List<com.team15.tripplanning.destinationservice.dto.TopDestinationDTO>> getTopRated(
-            @RequestParam int limit
-    ) {
+    public ResponseEntity<List<TopDestinationDTO>> getTopRated(@RequestParam int limit) {
         return ResponseEntity.ok(destinationService.getTopRatedDestinations(limit));
     }
+
     @PostMapping("/{id}/rate")
     public ResponseEntity<Void> rateDestination(
             @PathVariable Long id,
-            @RequestBody DestinationRateRequest request) {
+            @RequestBody DestinationRateRequest request
+    ) {
         destinationService.rateDestination(id, request);
         return ResponseEntity.ok().build();
     }
-    @PutMapping("/{destinationId}/reviews/{reviewId}/verify")
-    public ResponseEntity<Destination> verifyReview(
-            @PathVariable Long destinationId,
-            @PathVariable Long reviewId,
-            @RequestBody VerifyReviewRequest request) {
 
-        Destination updated = destinationService.verifyReview(destinationId, reviewId, request.getVerifiedBy());
-        return ResponseEntity.ok(updated);
-    }
-    @GetMapping("/reviews/low-rated")
+    @GetMapping({"/reviews/low-rated", "/low-rated", "/reports/low-rated"})
     public ResponseEntity<List<DestinationReviewAlertDTO>> getLowRatedReviews(
-            @RequestParam(defaultValue = "2.0") Double maxRating) {
+            @RequestParam(defaultValue = "2.0") Double maxRating
+    ) {
         return ResponseEntity.ok(destinationService.getLowRatedReviewAlerts(maxRating));
     }
 }
-

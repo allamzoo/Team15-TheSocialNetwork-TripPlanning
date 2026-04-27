@@ -108,6 +108,11 @@ public class ItineraryController {
         return ResponseEntity.ok(itineraryService.filterByMetadata(key, value));
     }
 
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<Itinerary> cancelItinerary(@PathVariable Long id) {
+        return ResponseEntity.ok(itineraryService.cancelItinerary(id));
+    }
+
     @PutMapping("/{id}/complete")
     public ResponseEntity<Itinerary> completeItinerary(@PathVariable Long id) {
         return ResponseEntity.ok(itineraryService.completeItinerary(id));

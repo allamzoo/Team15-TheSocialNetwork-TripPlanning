@@ -35,7 +35,7 @@ public class ItineraryService {
 
     public Itinerary findById(Long id) {
         return itineraryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Itinerary not found: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found: " + id));
     }
 
     public Itinerary update(Long id, Itinerary itinerary) {
@@ -270,5 +270,25 @@ public class ItineraryService {
                 averageBudget,
                 completionRate
         );
+    }
+
+    @Transactional
+    public Itinerary cancelItinerary(Long id) {
+        Itinerary itinerary = itineraryRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found"));
+
+        if (itinerary.getStatus() == Itinerary.ItineraryStatus.COMPLETED
+                || itinerary.getStatus() == Itinerary.ItineraryStatus.IN_PROGRESS) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Only DRAFT or PLANNED itineraries can be cancelled");
+        }
+
+        if (itinerary.getStatus() != Itinerary.ItineraryStatus.CANCELLED) {
+            itinerary.setStatus(Itinerary.ItineraryStatus.CANCELLED);
+            itineraryRepository.cancelPendingBookings(id);
+            itinerary = itineraryRepository.save(itinerary);
+        }
+
+        return itinerary;
     }
 }

@@ -5,6 +5,7 @@ import com.team15.tripplanning.bookingservice.dto.BookingDetailsDTO;
 import com.team15.tripplanning.bookingservice.dto.CouponUsageDTO;
 import com.team15.tripplanning.bookingservice.dto.RevenueReportDTO;
 import com.team15.tripplanning.bookingservice.dto.UserBookingSummaryDTO;
+import com.team15.tripplanning.bookingservice.dto.CreateBookingRequest;
 import com.team15.tripplanning.bookingservice.model.Booking;
 import com.team15.tripplanning.bookingservice.model.BookingCoupon;
 import com.team15.tripplanning.bookingservice.model.Coupon;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -38,6 +40,43 @@ public class BookingService {
 
     // ===== CRUD =====
     public Booking create(Booking booking) {
+        if (booking.getItineraryId() != null) {
+            validateItineraryAllowsBooking(booking.getItineraryId());
+        }
+        if (booking.getStatus() == null) {
+            booking.setStatus(Booking.BookingStatus.PENDING);
+        }
+        return bookingRepository.save(booking);
+    }
+
+    @Transactional
+    public Booking createFromRequest(CreateBookingRequest request) {
+        if (request.getItineraryId() == null || request.getUserId() == null
+                || request.getAmount() == null || request.getType() == null || request.getType().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "itineraryId, userId, amount and type are required");
+        }
+
+        validateItineraryAllowsBooking(request.getItineraryId());
+
+        Booking booking = new Booking();
+        booking.setItineraryId(request.getItineraryId());
+        booking.setUserId(request.getUserId());
+        booking.setAmount(request.getAmount());
+
+        try {
+            booking.setType(Booking.BookingType.valueOf(request.getType().toUpperCase()));
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid booking type");
+        }
+
+        booking.setStatus(Booking.BookingStatus.PENDING);
+
+        Map<String, Object> details = new HashMap<>();
+        if (request.getProviderName() != null && !request.getProviderName().isBlank()) {
+            details.put("providerName", request.getProviderName());
+        }
+        booking.setBookingDetails(details);
+
         return bookingRepository.save(booking);
     }
 
@@ -71,14 +110,8 @@ public class BookingService {
     // ===== S5-F3: User Booking Summary =====
     public UserBookingSummaryDTO getUserBookingSummary(Long userId) {
 
-        // 1️⃣ Check user exists (based on bookings)
+        // 1️⃣ Get all bookings for user (can be empty)
         List<Booking> userBookings = bookingRepository.findByUserId(userId);
-        if (userBookings.isEmpty()) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "User not found"
-            );
-        }
 
         // 2️⃣ Get grouped data (CONFIRMED only)
         List<Object[]> results = bookingRepository.getBookingSummaryByUser(userId);
@@ -103,7 +136,7 @@ public class BookingService {
             }
         }
 
-        // 5️⃣ Return DTO
+        // 5️⃣ Return DTO (even if user has no bookings, return empty summary with userId)
         return new UserBookingSummaryDTO(
                 userId,
                 totalBookings,
@@ -235,9 +268,13 @@ public class BookingService {
             dto.setTotalDiscountGiven(((Number) row[5]).doubleValue());
             dto.setActive((Boolean) row[6]);
 
-            LocalDateTime expiryDate = (LocalDateTime) row[7];
+            LocalDateTime expiryDate = null;
+            if (row[7] instanceof LocalDateTime ldt) {
+                expiryDate = ldt;
+            } else if (row[7] instanceof Timestamp ts) {
+                expiryDate = ts.toLocalDateTime();
+            }
 
-            // compute expired
             boolean expired = expiryDate != null && expiryDate.isBefore(LocalDateTime.now());
             dto.setExpired(expired);
 
@@ -312,6 +349,9 @@ public class BookingService {
 
     @Transactional
     public Booking applyCoupon(Long bookingId, Long couponId) {
+        if (bookingId == null || couponId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "bookingId and couponId are required");
+        }
 
         // a) Find booking
         Booking booking = bookingRepository.findById(bookingId)
@@ -407,5 +447,21 @@ public class BookingService {
         // 5) Save and return
         return bookingRepository.save(booking);
     }
-}
 
+    private void validateItineraryAllowsBooking(Long itineraryId) {
+        if (bookingRepository.countItineraryById(itineraryId) == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found");
+        }
+
+        String status = bookingRepository.getItineraryStatus(itineraryId);
+        if (status == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found");
+        }
+
+        String normalized = status.trim().toUpperCase();
+        if (!normalized.equals("PLANNED") && !normalized.equals("IN_PROGRESS")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Booking is allowed only for PLANNED or IN_PROGRESS itineraries");
+        }
+    }
+}

@@ -3,6 +3,7 @@ package com.team15.tripplanning.bookingservice.controller;
 import com.team15.tripplanning.bookingservice.model.Coupon;
 import com.team15.tripplanning.bookingservice.service.CouponService;
 import java.util.List;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,7 +25,7 @@ public class CouponController {
 
     @PostMapping
     public ResponseEntity<Coupon> create(@RequestBody Coupon coupon) {
-        return ResponseEntity.ok(couponService.create(coupon));
+        return ResponseEntity.status(HttpStatus.CREATED).body(couponService.create(coupon));
     }
 
     @GetMapping
@@ -34,7 +35,7 @@ public class CouponController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Coupon> findById(@PathVariable Long id) {
-        return ResponseEntity.ok(couponService.findById(id));
+        return ResponseEntity.status(HttpStatus.CREATED).body(couponService.findById(id));
     }
 
     @PutMapping("/{id}")

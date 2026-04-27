@@ -85,4 +85,9 @@ public interface ItineraryRepository extends JpaRepository<Itinerary, Long> {
             @Param("startDate") java.time.LocalDate startDate,
             @Param("endDate") java.time.LocalDate endDate
     );
+
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE bookings SET status = 'CANCELLED' WHERE itinerary_id = :itineraryId AND status = 'PENDING'", nativeQuery = true)
+    int cancelPendingBookings(@Param("itineraryId") Long itineraryId);
 }

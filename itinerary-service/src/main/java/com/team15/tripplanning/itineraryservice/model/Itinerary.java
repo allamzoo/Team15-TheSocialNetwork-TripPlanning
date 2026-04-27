@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.Map;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
-import com.team15.tripplanning.itineraryservice.model.ItineraryStatus;
 
 @Entity
 @Table(name = "itineraries")
@@ -51,7 +50,7 @@ public class Itinerary {
     private Double estimatedBudget;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb", nullable = false)
+    @Column(columnDefinition = "jsonb default '{}'::jsonb")
     private Map<String, Object> metadata = new HashMap<>();
 
     @Column(nullable = false)

@@ -13,13 +13,17 @@ import org.springframework.transaction.annotation.Transactional;
 public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     List<Booking> findByUserId(Long userId);
-    List<Booking> findByItineraryId(Long itineraryId);
+    @Query("""
+            SELECT b FROM Booking b
+            WHERE (b.itineraryId = :itineraryId OR b.legacyItinId = :itineraryId)
+            """)
+    List<Booking> findByItineraryId(@Param("itineraryId") Long itineraryId);
     List<Booking> findByStatus(Booking.BookingStatus status);
 
     @Query(value = """
             SELECT b.id, b.amount, b.status, i.title AS itinerary_title
             FROM bookings b
-            LEFT JOIN itineraries i ON i.id = b.itinerary_id
+            LEFT JOIN itineraries i ON i.id = COALESCE(b.itinerary_id, b.itin_id)
             WHERE b.user_id = :userId
             """, nativeQuery = true)
     List<Object[]> findBookingsWithItineraryTitleByUser(@Param("userId") Long userId);
@@ -67,4 +71,10 @@ WHERE b.createdAt BETWEEN :startDate AND :endDate
         GROUP BY b.type
     """)
     List<Object[]> getBookingSummaryByUser(@Param("userId") Long userId);
+
+    @Query(value = "SELECT status FROM itineraries WHERE id = :itineraryId", nativeQuery = true)
+    String getItineraryStatus(@Param("itineraryId") Long itineraryId);
+
+    @Query(value = "SELECT COUNT(*) FROM itineraries WHERE id = :itineraryId", nativeQuery = true)
+    int countItineraryById(@Param("itineraryId") Long itineraryId);
 }

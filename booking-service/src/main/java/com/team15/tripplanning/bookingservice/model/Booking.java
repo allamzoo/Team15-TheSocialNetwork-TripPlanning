@@ -10,6 +10,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -39,8 +40,12 @@ public class Booking {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "itinerary_id")
     private Long itineraryId;
+
+    // Backward-compatibility for tests/scripts that insert itin_id directly.
+    @Column(name = "itin_id")
+    private Long legacyItinId;
 
     @Column(nullable = false)
     private Long userId;
@@ -57,10 +62,10 @@ public class Booking {
     private BookingStatus status = BookingStatus.PENDING;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb", nullable = false)
+    @Column(columnDefinition = "jsonb default '{}'::jsonb")
     private Map<String, Object> bookingDetails = new HashMap<>();
 
-    @Column(nullable = false, updatable = false)
+    @Column(nullable = false, updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -80,12 +85,33 @@ public class Booking {
         if (bookingDetails == null) {
             bookingDetails = new HashMap<>();
         }
+        syncItineraryColumns();
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        syncItineraryColumns();
+    }
+
+    private void syncItineraryColumns() {
+        if (itineraryId == null && legacyItinId != null) {
+            itineraryId = legacyItinId;
+        }
+        if (legacyItinId == null && itineraryId != null) {
+            legacyItinId = itineraryId;
+        }
     }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-    public Long getItineraryId() { return itineraryId; }
-    public void setItineraryId(Long itineraryId) { this.itineraryId = itineraryId; }
+    public Long getItineraryId() {
+        return itineraryId != null ? itineraryId : legacyItinId;
+    }
+
+    public void setItineraryId(Long itineraryId) {
+        this.itineraryId = itineraryId;
+        this.legacyItinId = itineraryId;
+    }
     public Long getUserId() { return userId; }
     public void setUserId(Long userId) { this.userId = userId; }
     public Double getAmount() { return amount; }

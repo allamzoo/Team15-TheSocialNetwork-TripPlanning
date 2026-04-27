@@ -51,7 +51,7 @@ public class DestinationService {
 
     public Destination findById(Long id) {
         return destinationRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Destination not found: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Destination not found: " + id));
     }
 
     public Destination update(Long id, Destination destination) {
@@ -260,14 +260,17 @@ public class DestinationService {
         // 6. Update review status and JSONB metadata
         review.setVerified(true);
         Map<String, Object> metadata = review.getMetadata();
+        if (metadata == null) {
+            metadata = new HashMap<>();
+        }
         metadata.put("verifiedAt", LocalDateTime.now().toString());
         metadata.put("verifiedBy", verifierId);
         review.setMetadata(metadata);
 
         destinationReviewRepository.save(review);
 
-        // 7. Return updated destination (Hibernate handles the relationship refresh)
-        return destinationRepository.findById(destinationId).get();
+        return destinationRepository.findById(destinationId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Destination not found: " + destinationId));
     }
     @Transactional
     public List<DestinationReviewAlertDTO> getLowRatedReviewAlerts(Double maxRating) {
