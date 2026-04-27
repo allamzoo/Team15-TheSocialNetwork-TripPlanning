@@ -4,10 +4,7 @@ import com.team15.tripplanning.userservice.dto.SavedDestinationProfileDTO;
 import com.team15.tripplanning.userservice.dto.TopTravelerDTO;
 import com.team15.tripplanning.userservice.dto.UserProfileDTO;
 import com.team15.tripplanning.userservice.dto.UserTripSummaryDTO;
-import com.team15.tripplanning.userservice.entity.SavedDestination;
-import com.team15.tripplanning.userservice.entity.User;
-import com.team15.tripplanning.userservice.entity.UserRole;
-import com.team15.tripplanning.userservice.entity.UserStatus;
+import com.team15.tripplanning.userservice.entity.*;
 import com.team15.tripplanning.userservice.repository.UserRepository;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -36,7 +33,7 @@ public class UserService {
         return userRepository.findAll();
     }
 
-    public List<User> search(String name, String email, UserRole role) {
+    public List<User> search(String name, String email, Role role) {
         String normalizedName = normalize(name);
         String normalizedEmail = normalize(email);
         String normalizedRole = role != null ? role.name() : null;
@@ -253,7 +250,7 @@ public class UserService {
             );
         }
 
-        user.setStatus(UserStatus.DEACTIVATED);
+        user.setStatus(Status.DEACTIVATED);
         return userRepository.save(user);
     }
 

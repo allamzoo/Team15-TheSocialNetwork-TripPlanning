@@ -40,11 +40,11 @@ public class User {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private UserRole role;
+    private Role role;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private UserStatus status = UserStatus.ACTIVE;
+    private Status status = Status.ACTIVE;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb", nullable = false)
@@ -65,7 +65,7 @@ public class User {
             createdAt = LocalDateTime.now();
         }
         if (status == null) {
-            status = UserStatus.ACTIVE;
+            status = Status.ACTIVE;
         }
         if (preferences == null) {
             preferences = new HashMap<>();
@@ -112,19 +112,19 @@ public class User {
         this.phone = phone;
     }
 
-    public UserRole getRole() {
+    public Role getRole() {
         return role;
     }
 
-    public void setRole(UserRole role) {
+    public void setRole(Role role) {
         this.role = role;
     }
 
-    public UserStatus getStatus() {
+    public Status getStatus() {
         return status;
     }
 
-    public void setStatus(UserStatus status) {
+    public void setStatus(Status status) {
         this.status = status;
     }
 

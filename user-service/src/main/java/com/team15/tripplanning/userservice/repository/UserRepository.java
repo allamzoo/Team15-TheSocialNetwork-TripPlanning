@@ -1,7 +1,7 @@
 package com.team15.tripplanning.userservice.repository;
 
 import com.team15.tripplanning.userservice.entity.User;
-import com.team15.tripplanning.userservice.entity.UserStatus;
+import com.team15.tripplanning.userservice.entity.Status;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -15,7 +15,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByPhone(String phone);
 
-    List<User> findByStatus(UserStatus status);
+    List<User> findByStatus(Status status);
 
     @Query(value = """
             SELECT DISTINCT u

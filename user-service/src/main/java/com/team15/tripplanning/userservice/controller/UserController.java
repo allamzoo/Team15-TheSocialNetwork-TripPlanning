@@ -5,7 +5,7 @@ import com.team15.tripplanning.userservice.dto.UserProfileDTO;
 import com.team15.tripplanning.userservice.dto.UserTripSummaryDTO;
 import com.team15.tripplanning.userservice.entity.SavedDestination;
 import com.team15.tripplanning.userservice.entity.User;
-import com.team15.tripplanning.userservice.entity.UserRole;
+import com.team15.tripplanning.userservice.entity.Role;
 import com.team15.tripplanning.userservice.service.SavedDestinationService;
 import com.team15.tripplanning.userservice.service.UserService;
 import java.time.LocalDate;
@@ -163,12 +163,12 @@ public class UserController {
         return ResponseEntity.ok(userService.deactivate(id));
     }
 
-    private UserRole parseRole(String role) {
+    private Role parseRole(String role) {
         if (role == null || role.isBlank()) {
             return null;
         }
         try {
-            return UserRole.valueOf(role.trim().toUpperCase());
+            return Role.valueOf(role.trim().toUpperCase());
         } catch (IllegalArgumentException ex) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid role: " + role);
         }
