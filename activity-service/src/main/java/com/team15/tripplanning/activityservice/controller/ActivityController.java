@@ -136,15 +136,11 @@ public class ActivityController {
 
     // ---------- S4-F5 ----------
     @GetMapping("/metadata/search")
-    public ResponseEntity<MetadataFilterResponseDTO> searchByMetadata(
+    public ResponseEntity<List<Activity>> searchByMetadata(
             @RequestParam String key,
             @RequestParam String operator,
             @RequestParam String value) {
-        List<Activity> activities = activityService.filterActivityByMetadata(key, operator, value);
-        MetadataFilterResponseDTO response = new MetadataFilterResponseDTO(
-                activities.size(),
-                activities);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(activityService.filterActivityByMetadata(key, operator, value));
     }
 
     // ---------- S4-F6 ----------
