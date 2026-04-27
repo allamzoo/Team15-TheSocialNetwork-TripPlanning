@@ -1,6 +1,6 @@
 package com.team15.tripplanning.userservice.controller;
 
-import com.team15.tripplanning.userservice.entity.SavedDestination;
+import com.team15.tripplanning.userservice.model.SavedDestination;
 import com.team15.tripplanning.userservice.service.SavedDestinationService;
 import java.util.List;
 import org.springframework.http.ResponseEntity;

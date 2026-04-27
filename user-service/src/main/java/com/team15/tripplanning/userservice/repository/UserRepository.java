@@ -1,7 +1,7 @@
 package com.team15.tripplanning.userservice.repository;
 
-import com.team15.tripplanning.userservice.entity.User;
-import com.team15.tripplanning.userservice.entity.Status;
+import com.team15.tripplanning.userservice.model.User;
+import com.team15.tripplanning.userservice.model.Status;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;

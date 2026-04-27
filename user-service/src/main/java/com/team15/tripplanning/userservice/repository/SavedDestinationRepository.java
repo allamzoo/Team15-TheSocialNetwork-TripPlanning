@@ -1,6 +1,6 @@
 package com.team15.tripplanning.userservice.repository;
 
-import com.team15.tripplanning.userservice.entity.SavedDestination;
+import com.team15.tripplanning.userservice.model.SavedDestination;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;

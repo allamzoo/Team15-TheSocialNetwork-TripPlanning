@@ -4,7 +4,7 @@ import com.team15.tripplanning.userservice.dto.SavedDestinationProfileDTO;
 import com.team15.tripplanning.userservice.dto.TopTravelerDTO;
 import com.team15.tripplanning.userservice.dto.UserProfileDTO;
 import com.team15.tripplanning.userservice.dto.UserTripSummaryDTO;
-import com.team15.tripplanning.userservice.entity.*;
+import com.team15.tripplanning.userservice.model.*;
 import com.team15.tripplanning.userservice.repository.UserRepository;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -256,5 +256,9 @@ public class UserService {
 
     private String normalize(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    public String health() {
+        return "OK";
     }
 }

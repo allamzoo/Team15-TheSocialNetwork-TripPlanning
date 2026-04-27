@@ -1,4 +1,4 @@
-package com.team15.tripplanning.userservice.entity;
+package com.team15.tripplanning.userservice.model;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
