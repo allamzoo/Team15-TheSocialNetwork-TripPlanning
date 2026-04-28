@@ -2,7 +2,7 @@ package com.team15.tripplanning.destinationservice.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
+import javax.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
@@ -21,6 +21,7 @@ import java.util.Map;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+@jakarta.persistence.Entity
 @Entity
 @Table(name = "destination_reviews")
 public class DestinationReview {
