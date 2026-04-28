@@ -47,18 +47,32 @@ public class ActivityService {
 
     public Activity findById(Long id) {
         return activityRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Activity not found: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Activity not found: " + id));
     }
 
     public Activity update(Long id, Activity activity) {
         Activity existing = findById(id);
-        existing.setItineraryId(activity.getItineraryId());
-        existing.setName(activity.getName());
-        existing.setCategory(activity.getCategory());
-        existing.setLatitude(activity.getLatitude());
-        existing.setLongitude(activity.getLongitude());
-        existing.setScheduledTime(activity.getScheduledTime());
-        existing.setMetadata(activity.getMetadata());
+        if (activity.getItineraryId() != null) {
+            existing.setItineraryId(activity.getItineraryId());
+        }
+        if (activity.getName() != null) {
+            existing.setName(activity.getName());
+        }
+        if (activity.getCategory() != null) {
+            existing.setCategory(activity.getCategory());
+        }
+        if (activity.getLatitude() != null) {
+            existing.setLatitude(activity.getLatitude());
+        }
+        if (activity.getLongitude() != null) {
+            existing.setLongitude(activity.getLongitude());
+        }
+        if (activity.getScheduledTime() != null) {
+            existing.setScheduledTime(activity.getScheduledTime());
+        }
+        if (activity.getMetadata() != null) {
+            existing.setMetadata(activity.getMetadata());
+        }
         return activityRepository.save(existing);
     }
 
