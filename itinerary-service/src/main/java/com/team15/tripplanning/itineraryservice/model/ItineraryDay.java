@@ -71,7 +71,6 @@ public class ItineraryDay {
         if (metadata == null) {
             metadata = new HashMap<>();
         }
-        // ADD THIS: ensure dayOrder is never null at persist time
         if (dayOrder == null) {
             dayOrder = 1;
         }

@@ -84,12 +84,13 @@ public class ItineraryController {
     }
 
     // S3-F2
-    @PutMapping("/{itineraryId}/assign")
+    @PutMapping("/{id}/assign")
     public ResponseEntity<Itinerary> assignDestination(
-            @PathVariable Long itineraryId,
-            @RequestParam Long destinationId
-    ) {
-        return ResponseEntity.ok(itineraryService.assignDestination(itineraryId, destinationId));
+            @PathVariable Long id,
+            @RequestParam Long destinationId) {
+
+        Itinerary result = itineraryService.assignDestination(id, destinationId);
+        return ResponseEntity.ok(result);
     }
 
     // S3-F3

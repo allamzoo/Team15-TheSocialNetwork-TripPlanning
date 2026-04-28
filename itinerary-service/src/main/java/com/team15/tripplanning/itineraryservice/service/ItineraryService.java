@@ -21,10 +21,11 @@ import org.springframework.web.server.ResponseStatusException;
 public class ItineraryService {
     private final ItineraryRepository itineraryRepository;
 
-    public ItineraryService(ItineraryRepository itineraryRepository) {
+    public ItineraryService(ItineraryRepository itineraryRepository
+                             ) {
         this.itineraryRepository = itineraryRepository;
-    }
 
+    }
     public Itinerary create(Itinerary itinerary) {
         return itineraryRepository.save(itinerary);
     }
@@ -67,41 +68,29 @@ public class ItineraryService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Itinerary not found"));
 
-        if (itinerary.getStatus() != Itinerary.ItineraryStatus.DRAFT) {
+        // ✅ STRICT check (use equals instead of !=)
+        if (!Itinerary.ItineraryStatus.DRAFT.equals(itinerary.getStatus())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Itinerary must be in DRAFT status to assign a destination");
+                    "Only DRAFT itineraries can be assigned");
         }
 
-        // Validate destination existence and status only if the destinations table is accessible.
-        // Each query is wrapped separately so a table-not-found error is swallowed at the query level,
-        // not after we've already decided to throw a logic exception.
-        boolean destinationTableReachable = true;
-        boolean destinationExists = false;
-        boolean destinationActive = false;
-
-        try {
-            destinationExists = itineraryRepository.countDestinationById(destinationId) > 0;
-        } catch (Exception e) {
-            destinationTableReachable = false;
+        // ✅ Validate destination exists
+        if (itineraryRepository.countDestinationById(destinationId) == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Destination not found");
         }
 
-        if (destinationTableReachable) {
-            if (!destinationExists) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Destination not found");
-            }
-            try {
-                destinationActive = itineraryRepository.countActiveDestinationById(destinationId) > 0;
-            } catch (Exception e) {
-                destinationTableReachable = false;
-            }
-            if (destinationTableReachable && !destinationActive) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Destination must be ACTIVE");
-            }
+        // ✅ Validate destination is ACTIVE
+        if (itineraryRepository.countActiveDestinationById(destinationId) == 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Destination must be ACTIVE");
         }
 
+        // ✅ APPLY CHANGES
         itinerary.setDestinationId(destinationId);
         itinerary.setStatus(Itinerary.ItineraryStatus.PLANNED);
-        return itineraryRepository.save(itinerary);
+
+        // ✅ FORCE SAVE + FLUSH (important for tests)
+        return itineraryRepository.saveAndFlush(itinerary);
     }
 
 
