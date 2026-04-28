@@ -7,7 +7,9 @@ import com.team15.tripplanning.bookingservice.repository.BookingCouponRepository
 import com.team15.tripplanning.bookingservice.repository.BookingRepository;
 import com.team15.tripplanning.bookingservice.repository.CouponRepository;
 import java.util.List;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class BookingCouponService {
@@ -37,7 +39,7 @@ public class BookingCouponService {
 
     public BookingCoupon findById(Long id) {
         return bookingCouponRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("BookingCoupon not found: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "BookingCoupon not found: " + id));
     }
 
     public BookingCoupon update(Long id, BookingCoupon bookingCoupon) {
@@ -61,17 +63,17 @@ public class BookingCouponService {
 
     private Booking resolveBooking(Long bookingId) {
         if (bookingId == null) {
-            throw new RuntimeException("bookingId is required for BookingCoupon");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "bookingId is required for BookingCoupon");
         }
         return bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException("Booking not found: " + bookingId));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found: " + bookingId));
     }
 
     private Coupon resolveCoupon(Long couponId) {
         if (couponId == null) {
-            throw new RuntimeException("couponId is required for BookingCoupon");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "couponId is required for BookingCoupon");
         }
         return couponRepository.findById(couponId)
-                .orElseThrow(() -> new RuntimeException("Coupon not found: " + couponId));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Coupon not found: " + couponId));
     }
 }

@@ -61,7 +61,7 @@ public class BookingController {
             @PathVariable Long bookingId,
             @PathVariable Long couponId
     ) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(bookingService.applyCoupon(bookingId, couponId));
+        return ResponseEntity.ok(bookingService.applyCoupon(bookingId, couponId));
     }
 
     @GetMapping
@@ -111,9 +111,9 @@ public class BookingController {
     @PutMapping("/{id}/cancel")
     public ResponseEntity<Booking> cancelBooking(
             @PathVariable Long id,
-            @RequestBody Map<String, String> body
+            @RequestBody(required = false) Map<String, String> body
     ) {
-        String reason = body.get("reason");
+        String reason = body != null ? body.get("reason") : null;
         Booking updated = bookingService.cancelBooking(id, reason);
         return ResponseEntity.ok(updated);
     }

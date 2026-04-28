@@ -40,9 +40,6 @@ public class BookingService {
 
     // ===== CRUD =====
     public Booking create(Booking booking) {
-        if (booking.getItineraryId() != null) {
-            validateItineraryAllowsBooking(booking.getItineraryId());
-        }
         if (booking.getStatus() == null) {
             booking.setStatus(Booking.BookingStatus.PENDING);
         }
@@ -51,16 +48,24 @@ public class BookingService {
 
     @Transactional
     public Booking createFromRequest(CreateBookingRequest request) {
-        if (request.getItineraryId() == null || request.getUserId() == null
+        if (request.getItineraryId() == null
                 || request.getAmount() == null || request.getType() == null || request.getType().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "itineraryId, userId, amount and type are required");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "itineraryId, amount and type are required");
         }
 
         validateItineraryAllowsBooking(request.getItineraryId());
 
+        Long userId = request.getUserId();
+        if (userId == null) {
+            userId = bookingRepository.getItineraryUserId(request.getItineraryId());
+        }
+        if (userId == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found");
+        }
+
         Booking booking = new Booking();
         booking.setItineraryId(request.getItineraryId());
-        booking.setUserId(request.getUserId());
+        booking.setUserId(userId);
         booking.setAmount(request.getAmount());
 
         try {
@@ -94,12 +99,25 @@ public class BookingService {
 
     public Booking update(Long id, Booking booking) {
         Booking existing = findById(id);
-        existing.setItineraryId(booking.getItineraryId());
-        existing.setUserId(booking.getUserId());
-        existing.setAmount(booking.getAmount());
-        existing.setType(booking.getType());
-        existing.setStatus(booking.getStatus());
-        existing.setBookingDetails(booking.getBookingDetails());
+        // Only update fields that are provided (allow partial updates)
+        if (booking.getItineraryId() != null) {
+            existing.setItineraryId(booking.getItineraryId());
+        }
+        if (booking.getUserId() != null) {
+            existing.setUserId(booking.getUserId());
+        }
+        if (booking.getAmount() != null) {
+            existing.setAmount(booking.getAmount());
+        }
+        if (booking.getType() != null) {
+            existing.setType(booking.getType());
+        }
+        if (booking.getStatus() != null) {
+            existing.setStatus(booking.getStatus());
+        }
+        if (booking.getBookingDetails() != null) {
+            existing.setBookingDetails(booking.getBookingDetails());
+        }
         return bookingRepository.save(existing);
     }
 
@@ -109,6 +127,9 @@ public class BookingService {
 
     // ===== S5-F3: User Booking Summary =====
     public UserBookingSummaryDTO getUserBookingSummary(Long userId) {
+        if (bookingRepository.countUserById(userId) == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found: " + userId);
+        }
 
         // 1️⃣ Get all bookings for user (can be empty)
         List<Booking> userBookings = bookingRepository.findByUserId(userId);

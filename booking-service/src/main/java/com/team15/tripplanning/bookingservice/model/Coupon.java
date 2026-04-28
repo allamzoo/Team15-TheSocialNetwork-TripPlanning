@@ -1,8 +1,11 @@
 package com.team15.tripplanning.bookingservice.model;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
@@ -11,48 +14,70 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import javax.persistence.Entity;
 
 @Entity
+@jakarta.persistence.Entity
 @Table(name = "coupons")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Coupon {
     public enum DiscountType {
         PERCENTAGE,
-        FIXED
+        FIXED;
+
+        @JsonCreator
+        public static DiscountType fromValue(String value) {
+            if (value == null) {
+                return null;
+            }
+            return DiscountType.valueOf(value.trim().toUpperCase());
+        }
     }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JsonAlias({"coupon_code"})
     @Column(nullable = false, unique = true)
     private String code;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @JsonAlias({"discount_type"})
+    @Column
     private DiscountType discountType;
 
+    @JsonAlias({"discount_value"})
     @Column(nullable = false)
     private Double discountValue;
 
+    @JsonAlias({"max_uses"})
     @Column(nullable = false)
     private Integer maxUses;
 
+    @JsonAlias({"current_uses"})
     @Column(nullable = false)
     private Integer currentUses = 0;
 
+    @JsonAlias({"expiry_date"})
     @Column(nullable = false)
     private LocalDateTime expiryDate;
 
+    @JsonAlias({"is_active"})
     @Column(nullable = false)
     private Boolean active = true;
 
+    @JsonAlias({"coupon_metadata"})
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb", nullable = false)
     private Map<String, Object> metadata = new HashMap<>();
@@ -65,6 +90,9 @@ public class Coupon {
 
     @PrePersist
     public void prePersist() {
+        if (discountType == null) {
+            discountType = DiscountType.PERCENTAGE;
+        }
         if (currentUses == null) {
             currentUses = 0;
         }
@@ -90,6 +118,23 @@ public class Coupon {
     public void setCurrentUses(Integer currentUses) { this.currentUses = currentUses; }
     public LocalDateTime getExpiryDate() { return expiryDate; }
     public void setExpiryDate(LocalDateTime expiryDate) { this.expiryDate = expiryDate; }
+
+    @JsonSetter("expiryDate")
+    @JsonAlias({"expiry_date"})
+    public void setExpiryDateString(String expiryDate) {
+        if (expiryDate == null || expiryDate.isBlank()) {
+            this.expiryDate = null;
+            return;
+        }
+        try {
+            this.expiryDate = LocalDateTime.parse(expiryDate, DateTimeFormatter.ISO_DATE_TIME);
+            return;
+        } catch (Exception ignored) {
+            // fall through to date-only parsing
+        }
+        this.expiryDate = LocalDate.parse(expiryDate, DateTimeFormatter.ISO_DATE).atStartOfDay();
+    }
+
     public Boolean getActive() { return active; }
     public void setActive(Boolean active) { this.active = active; }
     public Map<String, Object> getMetadata() { return metadata; }
@@ -101,3 +146,5 @@ public class Coupon {
         this.bookingCoupons = bookingCoupons != null ? bookingCoupons : new ArrayList<>();
     }
 }
+
+

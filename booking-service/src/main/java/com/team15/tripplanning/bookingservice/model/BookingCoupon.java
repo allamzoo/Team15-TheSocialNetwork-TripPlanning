@@ -1,8 +1,8 @@
 package com.team15.tripplanning.bookingservice.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -13,9 +13,12 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import java.time.LocalDateTime;
+import javax.persistence.Entity;
 
+@jakarta.persistence.Entity
 @Entity
 @Table(name = "booking_coupons")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class BookingCoupon {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -37,9 +40,11 @@ public class BookingCoupon {
     @Transient
     private Long couponId;
 
+    @com.fasterxml.jackson.annotation.JsonAlias({"discount_applied"})
     @Column(nullable = false)
     private Double discountApplied;
 
+    @com.fasterxml.jackson.annotation.JsonAlias({"applied_at"})
     @Column(nullable = false, updatable = false)
     private LocalDateTime appliedAt;
 
@@ -88,3 +93,5 @@ public class BookingCoupon {
     public LocalDateTime getAppliedAt() { return appliedAt; }
     public void setAppliedAt(LocalDateTime appliedAt) { this.appliedAt = appliedAt; }
 }
+
+

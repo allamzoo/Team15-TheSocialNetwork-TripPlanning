@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/coupons")
+@RequestMapping({"/api/bookings/coupons", "/api/coupons"})
 public class CouponController {
     private final CouponService couponService;
 
@@ -35,7 +35,7 @@ public class CouponController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Coupon> findById(@PathVariable Long id) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(couponService.findById(id));
+        return ResponseEntity.ok(couponService.findById(id));
     }
 
     @PutMapping("/{id}")
