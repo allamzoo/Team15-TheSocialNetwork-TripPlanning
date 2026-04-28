@@ -1,10 +1,9 @@
-package com.team15.tripplanning.destinationservice.model;
+package com.team15.tripplanning.destinationservice.entity;
 
-import com.team15.tripplanning.destinationservice.model.DestinationCategory;
-import com.team15.tripplanning.destinationservice.model.DestinationStatus;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
+import javax.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
@@ -21,6 +20,7 @@ import java.util.Map;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+@jakarta.persistence.Entity
 @Entity
 @Table(name = "destinations")
 public class Destination {
@@ -52,7 +52,7 @@ public class Destination {
     private Integer totalRatings = 0;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb", nullable = false)
+    @Column(nullable = false)
     private Map<String, Object> details = new HashMap<>();
 
     @Column(nullable = false, updatable = false)
@@ -163,6 +163,7 @@ public class Destination {
         this.createdAt = createdAt;
     }
 
+    @JsonProperty("reviews")
     public List<DestinationReview> getDestinationReviews() {
         return destinationReviews;
     }

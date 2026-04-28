@@ -1,7 +1,7 @@
 package com.team15.tripplanning.destinationservice.dto;
 
-import com.team15.tripplanning.destinationservice.model.DestinationReview;
-import com.team15.tripplanning.destinationservice.model.DestinationStatus;
+import com.team15.tripplanning.destinationservice.entity.DestinationReview;
+import com.team15.tripplanning.destinationservice.entity.DestinationStatus;
 import java.util.List;
 
 public class DestinationReviewAlertDTO {

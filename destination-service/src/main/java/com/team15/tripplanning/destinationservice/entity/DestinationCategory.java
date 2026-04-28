@@ -1,4 +1,4 @@
-package com.team15.tripplanning.destinationservice.model;
+package com.team15.tripplanning.destinationservice.entity;
 
 public enum DestinationCategory {
     BEACH,

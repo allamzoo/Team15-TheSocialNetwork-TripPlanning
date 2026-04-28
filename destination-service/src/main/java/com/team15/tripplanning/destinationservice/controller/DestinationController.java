@@ -4,8 +4,8 @@ import com.team15.tripplanning.destinationservice.dto.DestinationRateRequest;
 import com.team15.tripplanning.destinationservice.dto.DestinationReviewAlertDTO;
 import com.team15.tripplanning.destinationservice.dto.DestinationRevenueDTO;
 import com.team15.tripplanning.destinationservice.dto.TopDestinationDTO;
-import com.team15.tripplanning.destinationservice.model.Destination;
-import com.team15.tripplanning.destinationservice.model.DestinationCategory;
+import com.team15.tripplanning.destinationservice.entity.Destination;
+import com.team15.tripplanning.destinationservice.entity.DestinationCategory;
 import com.team15.tripplanning.destinationservice.service.DestinationService;
 import java.time.LocalDate;
 import java.util.List;
@@ -107,12 +107,11 @@ public class DestinationController {
     }
 
     @PostMapping("/{id}/rate")
-    public ResponseEntity<Void> rateDestination(
+    public ResponseEntity<Destination> rateDestination(
             @PathVariable Long id,
             @RequestBody DestinationRateRequest request
     ) {
-        destinationService.rateDestination(id, request);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(destinationService.rateDestination(id, request));
     }
 
     @GetMapping({"/reviews/low-rated", "/low-rated", "/reports/low-rated"})

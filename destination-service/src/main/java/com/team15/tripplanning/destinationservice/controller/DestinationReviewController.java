@@ -1,7 +1,8 @@
 package com.team15.tripplanning.destinationservice.controller;
 
 import com.team15.tripplanning.destinationservice.dto.VerifyReviewRequest;
-import com.team15.tripplanning.destinationservice.model.DestinationReview;
+import com.team15.tripplanning.destinationservice.entity.Destination;
+import com.team15.tripplanning.destinationservice.entity.DestinationReview;
 import com.team15.tripplanning.destinationservice.service.DestinationReviewService;
 import com.team15.tripplanning.destinationservice.service.DestinationService;
 import java.util.List;
@@ -93,22 +94,20 @@ public class DestinationReviewController {
     }
 
     @PutMapping("/destinations/{destinationId}/reviews/{reviewId}/verify")
-    public ResponseEntity<Void> verifyReviewPut(
+    public ResponseEntity<Destination> verifyReviewPut(
             @PathVariable Long destinationId,
             @PathVariable Long reviewId,
             @RequestBody VerifyReviewRequest request
     ) {
-        destinationService.verifyReview(destinationId, reviewId, request.getVerifiedBy());
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(destinationService.verifyReview(destinationId, reviewId, request.getVerifiedBy()));
     }
 
     @PostMapping("/destinations/{destinationId}/reviews/{reviewId}/verify")
-    public ResponseEntity<Void> verifyReviewPost(
+    public ResponseEntity<Destination> verifyReviewPost(
             @PathVariable Long destinationId,
             @PathVariable Long reviewId,
             @RequestBody VerifyReviewRequest request
     ) {
-        destinationService.verifyReview(destinationId, reviewId, request.getVerifiedBy());
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(destinationService.verifyReview(destinationId, reviewId, request.getVerifiedBy()));
     }
 }

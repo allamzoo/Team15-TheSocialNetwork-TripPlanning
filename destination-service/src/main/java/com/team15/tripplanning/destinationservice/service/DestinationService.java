@@ -1,35 +1,25 @@
 package com.team15.tripplanning.destinationservice.service;
 
 import com.team15.tripplanning.destinationservice.dto.DestinationRateRequest;
+import com.team15.tripplanning.destinationservice.dto.DestinationRevenueDTO;
 import com.team15.tripplanning.destinationservice.dto.DestinationReviewAlertDTO;
-import com.team15.tripplanning.destinationservice.model.Destination;
-import com.team15.tripplanning.destinationservice.model.DestinationReview;
+import com.team15.tripplanning.destinationservice.dto.TopDestinationDTO;
+import com.team15.tripplanning.destinationservice.entity.Destination;
+import com.team15.tripplanning.destinationservice.entity.DestinationCategory;
+import com.team15.tripplanning.destinationservice.entity.DestinationReview;
+import com.team15.tripplanning.destinationservice.entity.DestinationStatus;
 import com.team15.tripplanning.destinationservice.repository.DestinationRepository;
-import com.team15.tripplanning.destinationservice.model.DestinationCategory;
-import jakarta.transaction.Transactional;
 import com.team15.tripplanning.destinationservice.repository.DestinationReviewRepository;
-import jakarta.transaction.Transactional;
-import jakarta.transaction.Transactional;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.server.ResponseStatusException;
-
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.Map;
-import com.team15.tripplanning.destinationservice.dto.DestinationRevenueDTO;
-import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
-
 import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
-
 import org.springframework.stereotype.Service;
-import org.springframework.http.HttpStatus;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import com.team15.tripplanning.destinationservice.model.DestinationStatus;
 
 @Service
 public class DestinationService {
@@ -99,7 +89,7 @@ public class DestinationService {
         return destinationRepository.save(destination);
     }
 
-    @org.springframework.transaction.annotation.Transactional
+    @Transactional
     public Destination updateDestinationStatus(Long id, String statusStr) {
         if (statusStr == null || statusStr.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status is required");
@@ -170,8 +160,7 @@ public class DestinationService {
         String normalizedStatus = null;
         if (status != null && !status.isBlank()) {
             try {
-                normalizedStatus = com.team15.tripplanning.destinationservice.model.DestinationStatus
-                        .valueOf(status.toUpperCase()).name();
+                normalizedStatus = DestinationStatus.valueOf(status.toUpperCase()).name();
             } catch (IllegalArgumentException e) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Invalid status. Must be one of ACTIVE, SEASONAL, INACTIVE");
@@ -181,14 +170,14 @@ public class DestinationService {
         return destinationRepository.findByDetailAttribute(key, value, normalizedStatus);
     }
 
-    public List<com.team15.tripplanning.destinationservice.dto.TopDestinationDTO> getTopRatedDestinations(int limit) {
+    public List<TopDestinationDTO> getTopRatedDestinations(int limit) {
         if (limit <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "limit must be greater than 0");
         }
 
         List<Object[]> rows = destinationRepository.findTopRatedWithBookingCount(limit);
 
-        return rows.stream().map(row -> new com.team15.tripplanning.destinationservice.dto.TopDestinationDTO(
+        return rows.stream().map(row -> new TopDestinationDTO(
                 ((Number) row[0]).longValue(),
                 (String) row[1],
                 row[2] == null ? 0.0 : ((Number) row[2]).doubleValue(),
@@ -197,67 +186,54 @@ public class DestinationService {
     }
 
     @Transactional
-    public void rateDestination(Long destinationId, DestinationRateRequest request) {
-        // 1. Validate rating range (1-5)
+    public Destination rateDestination(Long destinationId, DestinationRateRequest request) {
         if (request.rating() < 1 || request.rating() > 5) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Rating must be between 1 and 5");
         }
 
-        // 2. Find Destination - Throw 404 if not found
         Destination destination = destinationRepository.findById(destinationId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Destination not found"));
 
-        // 3. Verify Itinerary existence (Throw 404 if missing)
         if (destinationRepository.countItineraryById(request.itineraryId()) == 0) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found");
         }
 
-        // 4. Verify itinerary references destination and is COMPLETED (Throw 400)
         if (destinationRepository.countValidItinerary(request.itineraryId(), destinationId) == 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Itinerary is either not completed or for a different destination");
         }
 
-        // 5. Recalculate Running Average
         double currentAvg = (destination.getRating() != null) ? destination.getRating() : 0.0;
         int currentTotal = (destination.getTotalRatings() != null) ? destination.getTotalRatings() : 0;
 
         double newAvg = ((currentAvg * currentTotal) + request.rating()) / (currentTotal + 1);
 
-        // 6. Update and Save
         destination.setRating(newAvg);
         destination.setTotalRatings(currentTotal + 1);
-        destinationRepository.save(destination);
+        return destinationRepository.save(destination);
     }
 
 
     @Transactional
     public Destination verifyReview(Long destinationId, Long reviewId, Long verifierId) {
-        // 1. Find Destination (404 if not found)
         Destination destination = destinationRepository.findById(destinationId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Destination not found"));
 
-        // 2. Find Review (404 if not found)
-        // You'll need to inject DestinationReviewRepository into this service
         DestinationReview review = destinationReviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Review not found"));
 
-        // 3. Verify relationship (400 if mismatch)
         if (!review.getDestination().getId().equals(destinationId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Review does not belong to this destination");
         }
 
-        // 4. Check visitDate (400 if in the future)
         if (review.getVisitDate().isAfter(LocalDate.now())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot verify a review for a future visit");
         }
 
-        // 5. Verify Admin status (403 if not Admin)
         String role = destinationRepository.findUserRoleById(verifierId);
         if (role == null || !role.equalsIgnoreCase("ADMIN")) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User is not an Admin");
         }
 
-        // 6. Update review status and JSONB metadata
         review.setVerified(true);
         Map<String, Object> metadata = review.getMetadata();
         if (metadata == null) {
@@ -266,11 +242,10 @@ public class DestinationService {
         metadata.put("verifiedAt", LocalDateTime.now().toString());
         metadata.put("verifiedBy", verifierId);
         review.setMetadata(metadata);
-
         destinationReviewRepository.save(review);
 
-        return destinationRepository.findById(destinationId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Destination not found: " + destinationId));
+        destination.getDestinationReviews().size();
+        return destination;
     }
     @Transactional
     public List<DestinationReviewAlertDTO> getLowRatedReviewAlerts(Double maxRating) {
