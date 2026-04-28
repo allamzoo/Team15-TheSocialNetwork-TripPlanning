@@ -1,14 +1,16 @@
 package com.team15.tripplanning.destinationservice.repository;
 
-import com.team15.tripplanning.destinationservice.model.DestinationReview;
-import com.team15.tripplanning.destinationservice.model.DestinationReviewType;
+import com.team15.tripplanning.destinationservice.entity.DestinationReview;
+import com.team15.tripplanning.destinationservice.entity.DestinationReviewType;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+@Repository
 public interface DestinationReviewRepository extends JpaRepository<DestinationReview, Long> {
     List<DestinationReview> findByDestination_Id(Long destinationId);
 

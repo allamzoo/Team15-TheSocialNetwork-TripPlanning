@@ -1,4 +1,4 @@
-package com.team15.tripplanning.destinationservice.model;
+package com.team15.tripplanning.destinationservice.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
@@ -53,7 +53,7 @@ public class DestinationReview {
     private Boolean verified = false;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb", nullable = false)
+    @Column(nullable = false)
     private Map<String, Object> metadata = new HashMap<>();
 
     @Column(nullable = false, updatable = false)

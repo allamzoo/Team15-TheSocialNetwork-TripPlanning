@@ -1,7 +1,6 @@
-package com.team15.tripplanning.destinationservice.model;
+package com.team15.tripplanning.destinationservice.entity;
 
-import com.team15.tripplanning.destinationservice.model.DestinationCategory;
-import com.team15.tripplanning.destinationservice.model.DestinationStatus;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -52,7 +51,7 @@ public class Destination {
     private Integer totalRatings = 0;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb", nullable = false)
+    @Column(nullable = false)
     private Map<String, Object> details = new HashMap<>();
 
     @Column(nullable = false, updatable = false)
@@ -163,6 +162,7 @@ public class Destination {
         this.createdAt = createdAt;
     }
 
+    @JsonProperty("reviews")
     public List<DestinationReview> getDestinationReviews() {
         return destinationReviews;
     }

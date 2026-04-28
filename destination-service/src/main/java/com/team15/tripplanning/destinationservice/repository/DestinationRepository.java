@@ -1,16 +1,18 @@
 package com.team15.tripplanning.destinationservice.repository;
 
-import com.team15.tripplanning.destinationservice.model.Destination;
-import com.team15.tripplanning.destinationservice.model.DestinationStatus;
-import com.team15.tripplanning.destinationservice.model.DestinationCategory;
+import com.team15.tripplanning.destinationservice.entity.Destination;
+import com.team15.tripplanning.destinationservice.entity.DestinationStatus;
+import com.team15.tripplanning.destinationservice.entity.DestinationCategory;
 import java.util.List;
 import java.time.LocalDate;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+@Repository
 public interface DestinationRepository extends JpaRepository<Destination, Long> {
     List<Destination> findByCountry(String country);
 
