@@ -1,13 +1,18 @@
 package com.team15.tripplanning.bookingservice.model;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
@@ -17,11 +22,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.persistence.Entity;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+@jakarta.persistence.Entity
 @Entity
 @Table(name = "bookings")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Booking {
     public enum BookingType {
         ACCOMMODATION,
@@ -40,28 +48,37 @@ public class Booking {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "itinerary_id")
+    @JsonAlias({"itinerary_id"})
+    @Column(name = "itin_id", nullable = false)
     private Long itineraryId;
 
-    // Backward-compatibility for tests/scripts that insert itin_id directly.
-    @Column(name = "itin_id")
-    private Long legacyItinId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "itin_id", referencedColumnName = "id", insertable = false, updatable = false,
+            foreignKey = @ForeignKey(name = "fk_bookings_itineraries"))
+    private ItineraryRef itinerary;
 
+    @JsonAlias({"user_id"})
     @Column(nullable = false)
     private Long userId;
 
+    @JsonAlias({"booking_amount"})
     @Column(nullable = false)
     private Double amount;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @JsonAlias({"booking_type"})
     @Column(nullable = false)
     private BookingType type;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @JsonAlias({"booking_status"})
     @Column(nullable = false)
     private BookingStatus status = BookingStatus.PENDING;
 
     @JdbcTypeCode(SqlTypes.JSON)
+    @JsonAlias({"booking_details"})
     @Column(columnDefinition = "jsonb default '{}'::jsonb")
     private Map<String, Object> bookingDetails = new HashMap<>();
 
@@ -85,33 +102,16 @@ public class Booking {
         if (bookingDetails == null) {
             bookingDetails = new HashMap<>();
         }
-        syncItineraryColumns();
     }
 
     @PreUpdate
     public void preUpdate() {
-        syncItineraryColumns();
-    }
-
-    private void syncItineraryColumns() {
-        if (itineraryId == null && legacyItinId != null) {
-            itineraryId = legacyItinId;
-        }
-        if (legacyItinId == null && itineraryId != null) {
-            legacyItinId = itineraryId;
-        }
     }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-    public Long getItineraryId() {
-        return itineraryId != null ? itineraryId : legacyItinId;
-    }
-
-    public void setItineraryId(Long itineraryId) {
-        this.itineraryId = itineraryId;
-        this.legacyItinId = itineraryId;
-    }
+    public Long getItineraryId() { return itineraryId; }
+    public void setItineraryId(Long itineraryId) { this.itineraryId = itineraryId; }
     public Long getUserId() { return userId; }
     public void setUserId(Long userId) { this.userId = userId; }
     public Double getAmount() { return amount; }
@@ -131,3 +131,5 @@ public class Booking {
         this.bookingCoupons = bookingCoupons != null ? bookingCoupons : new ArrayList<>();
     }
 }
+
+

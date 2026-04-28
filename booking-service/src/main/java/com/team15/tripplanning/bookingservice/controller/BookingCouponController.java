@@ -3,6 +3,7 @@ package com.team15.tripplanning.bookingservice.controller;
 import com.team15.tripplanning.bookingservice.model.BookingCoupon;
 import com.team15.tripplanning.bookingservice.service.BookingCouponService;
 import java.util.List;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,7 +25,7 @@ public class BookingCouponController {
 
     @PostMapping
     public ResponseEntity<BookingCoupon> create(@RequestBody BookingCoupon bookingCoupon) {
-        return ResponseEntity.ok(bookingCouponService.create(bookingCoupon));
+        return ResponseEntity.status(HttpStatus.CREATED).body(bookingCouponService.create(bookingCoupon));
     }
 
     @GetMapping
