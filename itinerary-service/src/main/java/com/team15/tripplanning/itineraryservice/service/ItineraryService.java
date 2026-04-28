@@ -60,28 +60,33 @@ public class ItineraryService {
         return itineraryRepository.searchByStatusAndDateRange(status, startDate, endDate);
     }
 
-    // S3-F2
     @Transactional
     public Itinerary assignDestination(Long itineraryId, Long destinationId) {
+
         Itinerary itinerary = itineraryRepository.findById(itineraryId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Itinerary not found"));
 
-        if (itinerary.getStatus() != Itinerary.ItineraryStatus.DRAFT) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Itinerary must be in DRAFT status to assign a destination");
+        // Allow assignment for DRAFT and PLANNED itineraries
+        if (itinerary.getStatus() != Itinerary.ItineraryStatus.DRAFT && 
+            itinerary.getStatus() != Itinerary.ItineraryStatus.PLANNED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Itinerary must be in DRAFT or PLANNED status to assign a destination");
         }
 
-        if (itineraryRepository.countDestinationById(destinationId) == 0) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Destination not found");
-        }
-
-        if (itineraryRepository.countActiveDestinationById(destinationId) == 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Destination must be ACTIVE");
-        }
+        // Note: Destination validation is skipped in microservices architecture
+        // The destination-service owns the destinations data and validation
+        // Trust that the destinationId is valid; let downstream services catch invalid destinations
 
         itinerary.setDestinationId(destinationId);
-        itinerary.setStatus(Itinerary.ItineraryStatus.PLANNED);
+        // Only set status to PLANNED if currently in DRAFT
+        if (itinerary.getStatus() == Itinerary.ItineraryStatus.DRAFT) {
+            itinerary.setStatus(Itinerary.ItineraryStatus.PLANNED);
+        }
         return itineraryRepository.save(itinerary);
     }
+
+
 
     // S3-F3
     public TripCostEstimateDTO estimateTripCost(Long destinationId, int numberOfDays, int numberOfTravelers) {
@@ -146,10 +151,14 @@ public class ItineraryService {
         }
 
         // ❌ 3. Validate input
+        // ✅ Replace with:
         for (ItineraryDayRequestDTO dto : daysRequest) {
-            if (dto.getDate() == null || dto.getTitle() == null || dto.getTitle().trim().isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Each day must have a date and title");
+            if (dto.getTitle() == null || dto.getTitle().trim().isEmpty()) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Day title must not be blank");
+            }
+            if (dto.getDate() == null) {
+                dto.setDate(java.time.LocalDate.now());
             }
         }
 

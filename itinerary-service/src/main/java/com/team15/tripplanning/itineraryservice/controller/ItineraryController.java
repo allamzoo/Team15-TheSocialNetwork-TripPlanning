@@ -4,6 +4,7 @@ import com.team15.tripplanning.itineraryservice.dto.EstimateRequest;
 import com.team15.tripplanning.itineraryservice.dto.ItineraryAnalyticsDTO;
 import com.team15.tripplanning.itineraryservice.dto.TripCostEstimateDTO;
 import com.team15.tripplanning.itineraryservice.model.Itinerary;
+import com.team15.tripplanning.itineraryservice.model.ItineraryDay;
 import com.team15.tripplanning.itineraryservice.service.ItineraryService;
 import java.time.LocalDate;
 import java.util.List;
@@ -84,11 +85,22 @@ public class ItineraryController {
 
     // S3-F2
     @PutMapping("/{itineraryId}/assign")
-    public ResponseEntity<Itinerary> assignDestination(
+    public ResponseEntity<?> assignDestination(
             @PathVariable Long itineraryId,
             @RequestParam Long destinationId
     ) {
-        return ResponseEntity.ok(itineraryService.assignDestination(itineraryId, destinationId));
+        try {
+            Itinerary result = itineraryService.assignDestination(itineraryId, destinationId);
+            return ResponseEntity.ok(result);
+        } catch (org.springframework.web.server.ResponseStatusException e) {
+            int statusCode = e.getStatusCode() != null ? e.getStatusCode().value() : 400;
+            return ResponseEntity.status(statusCode).body(e.getReason());
+        } catch (RuntimeException e) {
+            if (e.getMessage() != null && e.getMessage().toLowerCase().contains("not found")) {
+                return ResponseEntity.status(404).body(e.getMessage());
+            }
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     // S3-F3
@@ -112,7 +124,17 @@ public class ItineraryController {
     public ResponseEntity<Itinerary> cancelItinerary(@PathVariable Long id) {
         return ResponseEntity.ok(itineraryService.cancelItinerary(id));
     }
+    @GetMapping("/{itineraryId}/days")
+    public ResponseEntity<List<ItineraryDay>> getDays(@PathVariable Long itineraryId) {
+        Itinerary itinerary = itineraryService.findById(itineraryId);
 
+        List<ItineraryDay> days = itinerary.getItineraryDays();
+        if (days == null) {
+            days = new java.util.ArrayList<>();
+        }
+
+        return ResponseEntity.ok(days);
+    }
     @PutMapping("/{id}/complete")
     public ResponseEntity<Itinerary> completeItinerary(@PathVariable Long id) {
         return ResponseEntity.ok(itineraryService.completeItinerary(id));

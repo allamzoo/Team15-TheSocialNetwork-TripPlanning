@@ -6,6 +6,7 @@ import com.team15.tripplanning.itineraryservice.repository.ItineraryDayRepositor
 import com.team15.tripplanning.itineraryservice.repository.ItineraryRepository;
 import java.util.List;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class ItineraryDayService {
@@ -21,7 +22,28 @@ public class ItineraryDayService {
     }
 
     public ItineraryDay create(ItineraryDay itineraryDay) {
-        itineraryDay.setItinerary(resolveItinerary(itineraryDay.getItineraryId()));
+        Long itineraryId = itineraryDay.getItineraryId();
+        Itinerary itinerary = resolveItinerary(itineraryId);
+        itineraryDay.setItinerary(itinerary);
+
+        // Default title if missing (direct creation endpoint is more lenient)
+        if (itineraryDay.getTitle() == null || itineraryDay.getTitle().isBlank()) {
+            itineraryDay.setTitle("Day Plan");
+        }
+
+        if (itineraryDay.getDayOrder() == null) {
+            int maxOrder = itineraryDayRepository.findAll().stream()
+                    .filter(d -> itineraryId.equals(d.getItineraryId()))
+                    .mapToInt(ItineraryDay::getDayOrder)
+                    .max()
+                    .orElse(0);
+            itineraryDay.setDayOrder(maxOrder + 1);
+        }
+
+        if (itineraryDay.getDate() == null) {
+            itineraryDay.setDate(java.time.LocalDate.now());
+        }
+
         return itineraryDayRepository.save(itineraryDay);
     }
 
@@ -54,9 +76,13 @@ public class ItineraryDayService {
 
     private Itinerary resolveItinerary(Long itineraryId) {
         if (itineraryId == null) {
-            throw new RuntimeException("itineraryId is required for ItineraryDay");
+            throw new ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST,
+                    "itineraryId is required");
         }
         return itineraryRepository.findById(itineraryId)
-                .orElseThrow(() -> new RuntimeException("Itinerary not found: " + itineraryId));
+                .orElseThrow(() -> new ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND,
+                        "Itinerary not found: " + itineraryId));
     }
 }
