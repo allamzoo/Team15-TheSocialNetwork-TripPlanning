@@ -67,22 +67,40 @@ public class ItineraryService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Itinerary not found"));
 
-        // Allow assignment for DRAFT and PLANNED itineraries
-        if (itinerary.getStatus() != Itinerary.ItineraryStatus.DRAFT && 
-            itinerary.getStatus() != Itinerary.ItineraryStatus.PLANNED) {
+        if (itinerary.getStatus() != Itinerary.ItineraryStatus.DRAFT) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Itinerary must be in DRAFT or PLANNED status to assign a destination");
+                    "Itinerary must be in DRAFT status to assign a destination");
         }
 
-        // Note: Destination validation is skipped in microservices architecture
-        // The destination-service owns the destinations data and validation
-        // Trust that the destinationId is valid; let downstream services catch invalid destinations
+        // Validate destination existence and status only if the destinations table is accessible.
+        // Each query is wrapped separately so a table-not-found error is swallowed at the query level,
+        // not after we've already decided to throw a logic exception.
+        boolean destinationTableReachable = true;
+        boolean destinationExists = false;
+        boolean destinationActive = false;
+
+        try {
+            destinationExists = itineraryRepository.countDestinationById(destinationId) > 0;
+        } catch (Exception e) {
+            destinationTableReachable = false;
+        }
+
+        if (destinationTableReachable) {
+            if (!destinationExists) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Destination not found");
+            }
+            try {
+                destinationActive = itineraryRepository.countActiveDestinationById(destinationId) > 0;
+            } catch (Exception e) {
+                destinationTableReachable = false;
+            }
+            if (destinationTableReachable && !destinationActive) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Destination must be ACTIVE");
+            }
+        }
 
         itinerary.setDestinationId(destinationId);
-        // Only set status to PLANNED if currently in DRAFT
-        if (itinerary.getStatus() == Itinerary.ItineraryStatus.DRAFT) {
-            itinerary.setStatus(Itinerary.ItineraryStatus.PLANNED);
-        }
+        itinerary.setStatus(Itinerary.ItineraryStatus.PLANNED);
         return itineraryRepository.save(itinerary);
     }
 

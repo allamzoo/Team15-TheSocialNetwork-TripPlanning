@@ -85,22 +85,11 @@ public class ItineraryController {
 
     // S3-F2
     @PutMapping("/{itineraryId}/assign")
-    public ResponseEntity<?> assignDestination(
+    public ResponseEntity<Itinerary> assignDestination(
             @PathVariable Long itineraryId,
             @RequestParam Long destinationId
     ) {
-        try {
-            Itinerary result = itineraryService.assignDestination(itineraryId, destinationId);
-            return ResponseEntity.ok(result);
-        } catch (org.springframework.web.server.ResponseStatusException e) {
-            int statusCode = e.getStatusCode() != null ? e.getStatusCode().value() : 400;
-            return ResponseEntity.status(statusCode).body(e.getReason());
-        } catch (RuntimeException e) {
-            if (e.getMessage() != null && e.getMessage().toLowerCase().contains("not found")) {
-                return ResponseEntity.status(404).body(e.getMessage());
-            }
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        return ResponseEntity.ok(itineraryService.assignDestination(itineraryId, destinationId));
     }
 
     // S3-F3
