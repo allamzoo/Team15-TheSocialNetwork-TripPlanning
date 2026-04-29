@@ -1,8 +1,8 @@
 package com.team15.tripplanning.destinationservice.controller;
 
 import com.team15.tripplanning.destinationservice.dto.VerifyReviewRequest;
-import com.team15.tripplanning.destinationservice.entity.Destination;
-import com.team15.tripplanning.destinationservice.entity.DestinationReview;
+import com.team15.tripplanning.destinationservice.model.Destination;
+import com.team15.tripplanning.destinationservice.model.DestinationReview;
 import com.team15.tripplanning.destinationservice.service.DestinationReviewService;
 import com.team15.tripplanning.destinationservice.service.DestinationService;
 import java.util.List;

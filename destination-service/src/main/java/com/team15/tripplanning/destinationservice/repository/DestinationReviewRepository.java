@@ -1,7 +1,7 @@
 package com.team15.tripplanning.destinationservice.repository;
 
-import com.team15.tripplanning.destinationservice.entity.DestinationReview;
-import com.team15.tripplanning.destinationservice.entity.DestinationReviewType;
+import com.team15.tripplanning.destinationservice.model.DestinationReview;
+import com.team15.tripplanning.destinationservice.model.DestinationReviewType;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;

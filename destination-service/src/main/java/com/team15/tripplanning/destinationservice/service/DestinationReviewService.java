@@ -1,7 +1,7 @@
 package com.team15.tripplanning.destinationservice.service;
 
-import com.team15.tripplanning.destinationservice.entity.Destination;
-import com.team15.tripplanning.destinationservice.entity.DestinationReview;
+import com.team15.tripplanning.destinationservice.model.Destination;
+import com.team15.tripplanning.destinationservice.model.DestinationReview;
 import com.team15.tripplanning.destinationservice.repository.DestinationRepository;
 import com.team15.tripplanning.destinationservice.repository.DestinationReviewRepository;
 import java.util.List;

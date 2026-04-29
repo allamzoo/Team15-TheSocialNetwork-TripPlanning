@@ -1,4 +1,4 @@
-package com.team15.tripplanning.destinationservice.entity;
+package com.team15.tripplanning.destinationservice.model;
 
 public enum DestinationReviewType {
     VISITOR,
