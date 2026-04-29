@@ -5,6 +5,7 @@ import com.team15.tripplanning.activityservice.dto.ActivitySummaryDTO;
 import com.team15.tripplanning.activityservice.dto.BudgetActivityDTO;
 import com.team15.tripplanning.activityservice.model.Activity;
 import com.team15.tripplanning.activityservice.repository.ActivityRepository;
+import com.team15.tripplanning.shared.observer.EntityObserver;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 
@@ -12,7 +13,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 
@@ -32,13 +36,35 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class ActivityService {
     private final ActivityRepository activityRepository;
+    private final List<EntityObserver> observers = new ArrayList<>();
 
-    public ActivityService(ActivityRepository activityRepository) {
+    public ActivityService(ActivityRepository activityRepository,
+                           MongoEventLogger mongoEventLogger) {
         this.activityRepository = activityRepository;
+        register(mongoEventLogger);
+    }
+
+    public void register(EntityObserver observer) {
+        observers.add(observer);
+    }
+
+    public void unregister(EntityObserver observer) {
+        observers.remove(observer);
+    }
+
+    private void notifyObservers(String eventType, Map<String, Object> payload) {
+        for (EntityObserver observer : observers) {
+            observer.onEvent(eventType, payload);
+        }
     }
 
     public Activity create(Activity activity) {
-        return activityRepository.save(activity);
+        Activity saved = activityRepository.save(activity);
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("activityId", saved.getId());
+        payload.put("itineraryId", saved.getItineraryId());
+        notifyObservers("ACTIVITY_CREATED", payload);
+        return saved;
     }
 
     public List<Activity> findAll() {
@@ -73,7 +99,12 @@ public class ActivityService {
         if (activity.getMetadata() != null) {
             existing.setMetadata(activity.getMetadata());
         }
-        return activityRepository.save(existing);
+        Activity saved = activityRepository.save(existing);
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("activityId", saved.getId());
+        payload.put("itineraryId", saved.getItineraryId());
+        notifyObservers("ACTIVITY_UPDATED", payload);
+        return saved;
     }
 
     @Transactional
@@ -82,7 +113,12 @@ public class ActivityService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found");
         }
         activity.setItineraryId(itineraryId);
-        return activityRepository.save(activity);
+        Activity saved = activityRepository.save(activity);
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("activityId", saved.getId());
+        payload.put("itineraryId", itineraryId);
+        notifyObservers("ACTIVITY_CREATED", payload);
+        return saved;
     }
 
     public List<NearbyActivityDTO> findNearbyActivities(Double lat, Double lon, Double radiusKm) {
@@ -108,7 +144,12 @@ public class ActivityService {
     }
 
     public void delete(Long id) {
-        activityRepository.delete(findById(id));
+        Activity activity = findById(id);
+        activityRepository.delete(activity);
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("activityId", id);
+        payload.put("itineraryId", activity.getItineraryId());
+        notifyObservers("ACTIVITY_DELETED", payload);
     }
 
     // ---------- S4-F1 ----------
@@ -198,6 +239,10 @@ public class ActivityService {
         LocalDateTime cutoff = LocalDateTime.now().minusDays(olderThanDays);
         int count = activityRepository.countByScheduledTimeBefore(cutoff);
         activityRepository.deleteByScheduledTimeBefore(cutoff);
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("olderThanDays", olderThanDays);
+        payload.put("purgedCount", count);
+        notifyObservers("ACTIVITIES_PURGED", payload);
         return count;
     }
 
@@ -220,7 +265,12 @@ public class ActivityService {
             activity.setItineraryId(itineraryId);
         }
 
-        return activityRepository.saveAll(activities);
+        List<Activity> saved = activityRepository.saveAll(activities);
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("itineraryId", itineraryId);
+        payload.put("count", saved.size());
+        notifyObservers("ACTIVITIES_BATCH_CREATED", payload);
+        return saved;
     }
     private void validateCoordinates(Activity activity) {
         Double latitude = activity.getLatitude();
