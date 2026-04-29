@@ -1,4 +1,4 @@
-package com.team15.tripplanning.bookingservice.entity;
+package com.team15.tripplanning.bookingservice.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

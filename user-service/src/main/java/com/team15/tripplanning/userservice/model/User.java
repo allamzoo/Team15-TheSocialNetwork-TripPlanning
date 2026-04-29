@@ -1,5 +1,6 @@
-package com.team15.tripplanning.userservice.entity;
+package com.team15.tripplanning.userservice.model;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -41,6 +42,7 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
+
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

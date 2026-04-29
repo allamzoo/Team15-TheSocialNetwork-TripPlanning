@@ -1,7 +1,7 @@
 package com.team15.tripplanning.userservice.service;
 
-import com.team15.tripplanning.userservice.entity.SavedDestination;
-import com.team15.tripplanning.userservice.entity.User;
+import com.team15.tripplanning.userservice.model.SavedDestination;
+import com.team15.tripplanning.userservice.model.User;
 import com.team15.tripplanning.userservice.repository.SavedDestinationRepository;
 import com.team15.tripplanning.userservice.repository.UserRepository;
 import java.util.List;

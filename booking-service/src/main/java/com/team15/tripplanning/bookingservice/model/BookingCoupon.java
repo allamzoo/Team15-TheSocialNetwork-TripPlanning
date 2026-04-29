@@ -1,4 +1,4 @@
-package com.team15.tripplanning.bookingservice.entity;
+package com.team15.tripplanning.bookingservice.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;

@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:16
+    image: postgres:17
     container_name: tripplanning-db
     environment:
       POSTGRES_USER: postgres
@@ -17,6 +17,94 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  mongodb:
+    image: mongo:7
+    container_name: tripplanning-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  redis:
+    image: redis:7-alpine
+    container_name: tripplanning-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    container_name: tripplanning-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms256m -Xmx256m
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  neo4j:
+    image: neo4j:5
+    container_name: tripplanning-neo4j
+    environment:
+      NEO4J_AUTH: neo4j/password
+      NEO4J_server_memory_heap_initial__size: 256m
+      NEO4J_server_memory_heap_max__size: 256m
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4jdata:/data
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  cassandra:
+    image: cassandra:4
+    container_name: tripplanning-cassandra
+    environment:
+      CASSANDRA_CLUSTER_NAME: tripplanning-cluster
+      JVM_OPTS: -Xms256m -Xmx256m
+    ports:
+      - "9042:9042"
+    volumes:
+      - cassandradata:/var/lib/cassandra
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   user-service:
     build: ./user-service
@@ -75,3 +163,8 @@ services:
 
 volumes:
   pgdata:
+  mongodata:
+  redisdata:
+  esdata:
+  neo4jdata:
+  cassandradata:
