@@ -15,6 +15,7 @@
     </properties>
     <packaging>pom</packaging>
     <modules>
+        <module>shared-lib</module>
         <module>user-service</module>
         <module>destination-service</module>
         <module>itinerary-service</module>
