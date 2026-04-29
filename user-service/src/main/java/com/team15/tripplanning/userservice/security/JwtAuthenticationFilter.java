@@ -33,16 +33,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
-        AuthContext ctx = new AuthContext(request, response);
+        String header = request.getHeader("Authorization");
+        if (header == null || !header.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
-        TokenExtractionHandler extraction = new TokenExtractionHandler();
+        AuthContext ctx = new AuthContext(request, response);
+        ctx.setToken(header.substring(7));
+
         SignatureValidationHandler validation = new SignatureValidationHandler(jwtService);
         UserLoaderHandler userLoader = new UserLoaderHandler(userRepository);
-
-        extraction.setNext(validation);
         validation.setNext(userLoader);
 
-        boolean passed = extraction.handle(ctx);
+        boolean passed = validation.handle(ctx);
 
         if (!passed) {
             return;

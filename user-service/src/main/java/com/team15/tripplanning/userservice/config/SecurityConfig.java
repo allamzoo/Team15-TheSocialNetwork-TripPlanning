@@ -35,7 +35,8 @@ public class SecurityConfig {
                                 "/api/destinations/health",
                                 "/api/itineraries/health",
                                 "/api/activities/health",
-                                "/api/bookings/health"
+                                "/api/bookings/health",
+                                "/error"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
