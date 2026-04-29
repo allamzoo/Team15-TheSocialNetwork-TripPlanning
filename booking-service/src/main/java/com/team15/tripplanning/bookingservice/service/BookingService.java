@@ -12,6 +12,7 @@ import com.team15.tripplanning.bookingservice.model.Coupon;
 import com.team15.tripplanning.bookingservice.repository.BookingCouponRepository;
 import com.team15.tripplanning.bookingservice.repository.BookingRepository;
 import com.team15.tripplanning.bookingservice.repository.CouponRepository;
+import com.team15.tripplanning.shared.observer.EntityObserver;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,11 +32,30 @@ public class BookingService {
     private final BookingCouponRepository bookingCouponRepository;
     private final CouponRepository couponRepository;
 
+    private final List<EntityObserver> observers = new ArrayList<>();
+
     public BookingService(BookingRepository bookingRepository,
-                          BookingCouponRepository bookingCouponRepository, CouponRepository couponRepository) {
+                          BookingCouponRepository bookingCouponRepository,
+                          CouponRepository couponRepository,
+                          MongoEventLogger mongoEventLogger) {
         this.bookingRepository = bookingRepository;
         this.bookingCouponRepository = bookingCouponRepository;
         this.couponRepository = couponRepository;
+        register(mongoEventLogger);
+    }
+
+    public void register(EntityObserver observer) {
+        observers.add(observer);
+    }
+
+    public void unregister(EntityObserver observer) {
+        observers.remove(observer);
+    }
+
+    private void notifyObservers(String eventType, Object payload) {
+        for (EntityObserver observer : observers) {
+            observer.onEvent(eventType, payload);
+        }
     }
 
     // ===== CRUD =====
@@ -43,7 +63,16 @@ public class BookingService {
         if (booking.getStatus() == null) {
             booking.setStatus(Booking.BookingStatus.PENDING);
         }
-        return bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("bookingId", saved.getId());
+        payload.put("userId", saved.getUserId());
+        payload.put("amount", saved.getAmount());
+        payload.put("method", saved.getType() != null ? saved.getType().name() : null);
+        notifyObservers("BOOKING_CREATED", payload);
+
+        return saved;
     }
 
     @Transactional
@@ -82,7 +111,16 @@ public class BookingService {
         }
         booking.setBookingDetails(details);
 
-        return bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("bookingId", saved.getId());
+        payload.put("userId", saved.getUserId());
+        payload.put("amount", saved.getAmount());
+        payload.put("method", saved.getType() != null ? saved.getType().name() : null);
+        notifyObservers("BOOKING_CREATED", payload);
+
+        return saved;
     }
 
     public List<Booking> findAll() {
@@ -211,7 +249,15 @@ public class BookingService {
         booking.setBookingDetails(details);
 
         // e) Save
-        return bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("bookingId", saved.getId());
+        payload.put("userId", saved.getUserId());
+        payload.put("amount", saved.getAmount());
+        notifyObservers("BOOKING_RETRIED", payload);
+
+        return saved;
     }
 
     @Transactional
@@ -431,6 +477,13 @@ public class BookingService {
         couponRepository.save(coupon);
         bookingRepository.save(booking);
 
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("bookingId", bookingId);
+        payload.put("userId", booking.getUserId());
+        payload.put("amount", discount);
+        payload.put("method", coupon.getDiscountType().name());
+        notifyObservers("COUPON_APPLIED", payload);
+
         // j) Return updated booking
         return booking;
     }
@@ -466,7 +519,16 @@ public class BookingService {
         booking.setBookingDetails(details);
 
         // 5) Save and return
-        return bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("bookingId", saved.getId());
+        payload.put("userId", saved.getUserId());
+        payload.put("amount", saved.getAmount());
+        payload.put("method", "CANCELLATION");
+        notifyObservers("BOOKING_CANCELLED", payload);
+
+        return saved;
     }
 
     private void validateItineraryAllowsBooking(Long itineraryId) {
