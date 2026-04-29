@@ -4,13 +4,15 @@ import com.team15.tripplanning.itineraryservice.dto.ItineraryAnalyticsDTO;
 import com.team15.tripplanning.itineraryservice.dto.TripCostEstimateDTO;
 import com.team15.tripplanning.itineraryservice.model.Itinerary;
 import com.team15.tripplanning.itineraryservice.repository.ItineraryRepository;
+import com.team15.tripplanning.shared.observer.EntityObserver;
 import java.util.List;
 import com.team15.tripplanning.itineraryservice.dto.ItineraryDayRequestDTO;
 import com.team15.tripplanning.itineraryservice.model.ItineraryDay;
 import java.util.ArrayList;
 import com.team15.tripplanning.itineraryservice.dto.ItineraryDayDTO;
 import com.team15.tripplanning.itineraryservice.dto.ItineraryDetailsDTO;
-
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Comparator;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -21,13 +23,36 @@ import org.springframework.web.server.ResponseStatusException;
 public class ItineraryService {
     private final ItineraryRepository itineraryRepository;
 
-    public ItineraryService(ItineraryRepository itineraryRepository
-                             ) {
-        this.itineraryRepository = itineraryRepository;
+    private final List<EntityObserver> observers = new ArrayList<>();
 
+    public ItineraryService(ItineraryRepository itineraryRepository,
+                            MongoEventLogger mongoEventLogger) {
+        this.itineraryRepository = itineraryRepository;
+        register(mongoEventLogger);
+    }
+
+    public void register(EntityObserver observer) {
+        observers.add(observer);
+    }
+
+    public void unregister(EntityObserver observer) {
+        observers.remove(observer);
+    }
+
+    private void notifyObservers(String eventType, Object payload) {
+        for (EntityObserver observer : observers) {
+            observer.onEvent(eventType, payload);
+        }
     }
     public Itinerary create(Itinerary itinerary) {
-        return itineraryRepository.save(itinerary);
+        Itinerary saved = itineraryRepository.save(itinerary);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("itineraryId", saved.getId());
+        payload.put("userId", saved.getUserId());
+        notifyObservers("ITINERARY_CREATED", payload);
+
+        return saved;
     }
 
     public List<Itinerary> findAll() {
@@ -49,11 +74,24 @@ public class ItineraryService {
         existing.setMetadata(itinerary.getMetadata());
         existing.setStartDate(itinerary.getStartDate());
         existing.setEndDate(itinerary.getEndDate());
-        return itineraryRepository.save(existing);
+        Itinerary saved = itineraryRepository.save(existing);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("itineraryId", saved.getId());
+        payload.put("userId", saved.getUserId());
+        notifyObservers("ITINERARY_UPDATED", payload);
+
+        return saved;
     }
 
     public void delete(Long id) {
-        itineraryRepository.delete(findById(id));
+        Itinerary itinerary = findById(id);
+        itineraryRepository.delete(itinerary);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("itineraryId", id);
+        payload.put("userId", itinerary.getUserId());
+        notifyObservers("ITINERARY_DELETED", payload);
     }
 
     // S3-F1
@@ -90,7 +128,14 @@ public class ItineraryService {
         itinerary.setStatus(Itinerary.ItineraryStatus.PLANNED);
 
         // ✅ FORCE SAVE + FLUSH (important for tests)
-        return itineraryRepository.saveAndFlush(itinerary);
+        Itinerary saved = itineraryRepository.saveAndFlush(itinerary);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("itineraryId", saved.getId());
+        payload.put("destinationId", destinationId);
+        notifyObservers("DESTINATION_ASSIGNED", payload);
+
+        return saved;
     }
 
 
@@ -133,7 +178,14 @@ public class ItineraryService {
             itinerary.setEstimatedBudget(total != null ? total : 0.0);
         }
 
-        return itineraryRepository.save(itinerary);
+        Itinerary saved = itineraryRepository.save(itinerary);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("itineraryId", saved.getId());
+        payload.put("userId", saved.getUserId());
+        notifyObservers("ITINERARY_COMPLETED", payload);
+
+        return saved;
     }
 
     public List<Itinerary> filterByMetadata(String key, String value) {
@@ -206,7 +258,14 @@ public class ItineraryService {
         itinerary.getItineraryDays().addAll(newDays);
 
         // 💾 7. Save
-        return itineraryRepository.save(itinerary);
+        Itinerary saved = itineraryRepository.save(itinerary);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("itineraryId", saved.getId());
+        payload.put("daysAdded", daysRequest.size());
+        notifyObservers("DAYS_ADDED", payload);
+
+        return saved;
     }
     public ItineraryDetailsDTO getItineraryDetails(Long id) {
 
@@ -303,6 +362,11 @@ public class ItineraryService {
             itinerary.setStatus(Itinerary.ItineraryStatus.CANCELLED);
             itineraryRepository.cancelPendingBookings(id);
             itinerary = itineraryRepository.save(itinerary);
+
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("itineraryId", itinerary.getId());
+            payload.put("userId", itinerary.getUserId());
+            notifyObservers("ITINERARY_CANCELLED", payload);
         }
 
         return itinerary;
