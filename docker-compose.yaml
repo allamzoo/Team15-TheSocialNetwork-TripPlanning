@@ -107,7 +107,9 @@ services:
         condition: service_healthy
 
   user-service:
-    build: ./user-service
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
     container_name: user-service
     ports:
       - "8081:8080"

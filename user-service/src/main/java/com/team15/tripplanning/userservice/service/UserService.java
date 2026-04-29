@@ -18,18 +18,20 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class UserService {
-
     private final UserRepository userRepository;
     private final List<EntityObserver> observers = new ArrayList<>();
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository, MongoEventLogger mongoEventLogger) {
+    public UserService(UserRepository userRepository, MongoEventLogger mongoEventLogger, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
         register(mongoEventLogger);
     }
 
@@ -48,6 +50,9 @@ public class UserService {
     }
 
     public User create(User user) {
+        if (user.getPassword() != null) {
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+        }
         User saved = userRepository.save(user);
         Map<String, Object> payload = new HashMap<>();
         payload.put("userId", saved.getId());
@@ -162,6 +167,8 @@ public class UserService {
         return new UserTripSummaryDTO(userId, name, totalTrips, completedTrips, cancelledTrips, totalSpent, averageBudget);
     }
 
+
+
     public void delete(Long id) {
         findById(id);
         userRepository.deleteById(id);
@@ -187,6 +194,8 @@ public class UserService {
                 .toList();
     }
 
+
+
     public List<User> searchByPreference(String key, String value) {
         if (key == null || key.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Preference key cannot be blank");
@@ -204,6 +213,7 @@ public class UserService {
         if (minTrips < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "minTrips cannot be negative");
         }
+
         return userRepository.findByTravelStyleWithMinimumCompletedTrips(style, minTrips);
     }
 
@@ -217,6 +227,7 @@ public class UserService {
                     "Cannot deactivate user with active itineraries"
             );
         }
+
         user.setStatus(Status.DEACTIVATED);
         User saved = userRepository.save(user);
         Map<String, Object> payload = new HashMap<>();
