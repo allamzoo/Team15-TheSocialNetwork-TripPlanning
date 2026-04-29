@@ -1,4 +1,4 @@
-package com.team15.tripplanning.bookingservice.model;
+package com.team15.tripplanning.bookingservice.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -13,12 +13,13 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import java.time.LocalDateTime;
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
 
-@jakarta.persistence.Entity
-@Entity
+
+
 @Table(name = "booking_coupons")
 @JsonIgnoreProperties(ignoreUnknown = true)
+@Entity
 public class BookingCoupon {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

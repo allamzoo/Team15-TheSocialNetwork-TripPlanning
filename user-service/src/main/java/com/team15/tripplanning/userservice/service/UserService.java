@@ -4,7 +4,7 @@ import com.team15.tripplanning.userservice.dto.SavedDestinationProfileDTO;
 import com.team15.tripplanning.userservice.dto.TopTravelerDTO;
 import com.team15.tripplanning.userservice.dto.UserProfileDTO;
 import com.team15.tripplanning.userservice.dto.UserTripSummaryDTO;
-import com.team15.tripplanning.userservice.model.*;
+import com.team15.tripplanning.userservice.entity.*;
 import com.team15.tripplanning.userservice.repository.UserRepository;
 import java.time.LocalDate;
 import java.util.ArrayList;

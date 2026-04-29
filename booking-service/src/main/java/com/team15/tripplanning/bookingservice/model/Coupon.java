@@ -1,4 +1,4 @@
-package com.team15.tripplanning.bookingservice.model;
+package com.team15.tripplanning.bookingservice.entity;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -23,12 +23,13 @@ import java.util.List;
 import java.util.Map;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
 
-@Entity
-@jakarta.persistence.Entity
+
+
 @Table(name = "coupons")
 @JsonIgnoreProperties(ignoreUnknown = true)
+@Entity
 public class Coupon {
     public enum DiscountType {
         PERCENTAGE,
