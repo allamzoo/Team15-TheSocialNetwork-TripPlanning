@@ -10,8 +10,10 @@ import com.team15.tripplanning.destinationservice.entity.DestinationReview;
 import com.team15.tripplanning.destinationservice.entity.DestinationStatus;
 import com.team15.tripplanning.destinationservice.repository.DestinationRepository;
 import com.team15.tripplanning.destinationservice.repository.DestinationReviewRepository;
+import com.team15.tripplanning.shared.observer.EntityObserver;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,14 +27,40 @@ import org.springframework.web.server.ResponseStatusException;
 public class DestinationService {
     private final DestinationRepository destinationRepository;
     private final DestinationReviewRepository destinationReviewRepository;
+
+    private final List<EntityObserver> observers = new ArrayList<>();
+
     public DestinationService(DestinationRepository destinationRepository,
-                              DestinationReviewRepository destinationReviewRepository) {
+                              DestinationReviewRepository destinationReviewRepository,
+                              MongoEventLogger mongoEventLogger) {
         this.destinationRepository = destinationRepository;
         this.destinationReviewRepository = destinationReviewRepository;
+        register(mongoEventLogger);
+    }
+
+    public void register(EntityObserver observer) {
+        observers.add(observer);
+    }
+
+    public void unregister(EntityObserver observer) {
+        observers.remove(observer);
+    }
+
+    private void notifyObservers(String eventType, Object payload) {
+        for (EntityObserver observer : observers) {
+            observer.onEvent(eventType, payload);
+        }
     }
 
     public Destination create(Destination destination) {
-        return destinationRepository.save(destination);
+        Destination saved = destinationRepository.save(destination);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("destinationId", saved.getId());
+        payload.put("name", saved.getName());
+        notifyObservers("DESTINATION_CREATED", payload);
+
+        return saved;
     }
 
     public List<Destination> findAll() {
@@ -54,11 +82,23 @@ public class DestinationService {
         existing.setRating(destination.getRating());
         existing.setTotalRatings(destination.getTotalRatings());
         existing.setDetails(destination.getDetails());
-        return destinationRepository.save(existing);
+        Destination saved = destinationRepository.save(existing);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("destinationId", saved.getId());
+        payload.put("name", saved.getName());
+        notifyObservers("DESTINATION_UPDATED", payload);
+
+        return saved;
     }
 
     public void delete(Long id) {
-        destinationRepository.delete(findById(id));
+        Destination destination = findById(id);
+        destinationRepository.delete(destination);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("destinationId", id);
+        notifyObservers("DESTINATION_DELETED", payload);
     }
 
     public List<Destination> searchDestinations(DestinationCategory category, Double minRating, Double maxRating) {
@@ -116,7 +156,14 @@ public class DestinationService {
         }
 
         destination.setStatus(newStatus);
-        return destinationRepository.save(destination);
+        Destination saved = destinationRepository.save(destination);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("destinationId", saved.getId());
+        payload.put("status", newStatus.name());
+        notifyObservers("DESTINATION_STATUS_UPDATED", payload);
+
+        return saved;
     }
 
     public DestinationRevenueDTO getDestinationRevenueSummary(Long id, LocalDate startDate, LocalDate endDate) {
@@ -209,7 +256,14 @@ public class DestinationService {
 
         destination.setRating(newAvg);
         destination.setTotalRatings(currentTotal + 1);
-        return destinationRepository.save(destination);
+        Destination saved = destinationRepository.save(destination);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("destinationId", saved.getId());
+        payload.put("rating", request.rating());
+        notifyObservers("DESTINATION_RATED", payload);
+
+        return saved;
     }
 
 
@@ -243,6 +297,12 @@ public class DestinationService {
         metadata.put("verifiedBy", verifierId);
         review.setMetadata(metadata);
         destinationReviewRepository.save(review);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("destinationId", destinationId);
+        payload.put("reviewId", reviewId);
+        payload.put("verifiedBy", verifierId);
+        notifyObservers("REVIEW_VERIFIED", payload);
 
         destination.getDestinationReviews().size();
         return destination;
