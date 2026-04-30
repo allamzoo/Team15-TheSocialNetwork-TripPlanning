@@ -102,15 +102,15 @@ public class UserService {
                 .map(this::mapSavedDestinationToDto)
                 .toList();
 
-        return new UserProfileDTO(
-                user.getId(),
-                user.getName(),
-                user.getEmail(),
-                user.getPhone(),
-                user.getPreferences(),
-                savedDestinationDtos,
-                (long) savedDestinationDtos.size()
-        );
+        return UserProfileDTO.builder()
+                .userId(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .phone(user.getPhone())
+                .preferences(user.getPreferences())
+                .savedDestinations(savedDestinationDtos)
+                .totalSavedDestinations((long) savedDestinationDtos.size())
+                .build();
     }
 
     public User update(Long id, User user) {
@@ -152,7 +152,14 @@ public class UserService {
         findById(id);
         var result = userRepository.getUserTripSummary(id);
         if (result.isEmpty()) {
-            return new UserTripSummaryDTO(id, null, 0L, 0L, 0L, 0.0, 0.0);
+            return UserTripSummaryDTO.builder()
+                    .userId(id)
+                    .totalTrips(0L)
+                    .completedTrips(0L)
+                    .cancelledTrips(0L)
+                    .totalSpent(0.0)
+                    .averageBudget(0.0)
+                    .build();
         }
 
         Object[] row = unwrapRow(result.get(0));
@@ -164,7 +171,15 @@ public class UserService {
         Double totalSpent = toDouble(row[5]);
         Double averageBudget = toDouble(row[6]);
 
-        return new UserTripSummaryDTO(userId, name, totalTrips, completedTrips, cancelledTrips, totalSpent, averageBudget);
+        return UserTripSummaryDTO.builder()
+                .userId(userId)
+                .name(name)
+                .totalTrips(totalTrips)
+                .completedTrips(completedTrips)
+                .cancelledTrips(cancelledTrips)
+                .totalSpent(totalSpent)
+                .averageBudget(averageBudget)
+                .build();
     }
 
 
@@ -270,18 +285,23 @@ public class UserService {
         String name = row[1] != null ? row[1].toString() : null;
         Double totalSpent = row[2] != null ? ((Number) row[2]).doubleValue() : 0.0;
         Long tripCount = row[3] != null ? ((Number) row[3]).longValue() : 0L;
-        return new TopTravelerDTO(userId, name, totalSpent, tripCount);
+        return TopTravelerDTO.builder()
+                .userId(userId)
+                .name(name)
+                .totalSpent(totalSpent)
+                .tripCount(tripCount)
+                .build();
     }
 
     private SavedDestinationProfileDTO mapSavedDestinationToDto(SavedDestination sd) {
-        return new SavedDestinationProfileDTO(
-                sd.getLabel(),
-                sd.getDestinationName(),
-                sd.getCountry(),
-                sd.getLatitude(),
-                sd.getLongitude(),
-                sd.getIsDefault(),
-                sd.getMetadata()
-        );
+        return SavedDestinationProfileDTO.builder()
+                .label(sd.getLabel())
+                .destinationName(sd.getDestinationName())
+                .country(sd.getCountry())
+                .latitude(sd.getLatitude())
+                .longitude(sd.getLongitude())
+                .isDefault(sd.getIsDefault())
+                .metadata(sd.getMetadata())
+                .build();
     }
 }

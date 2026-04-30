@@ -11,75 +11,73 @@ public class SavedDestinationProfileDTO {
     private Boolean isDefault;
     private Map<String, Object> metadata;
 
-    public SavedDestinationProfileDTO() {
+    private SavedDestinationProfileDTO() {}
+
+    public static Builder builder() {
+        return new Builder();
     }
 
-    public SavedDestinationProfileDTO(String label, String destinationName, String country,
-                                      Double latitude, Double longitude, Boolean isDefault,
-                                      Map<String, Object> metadata) {
-        this.label = label;
-        this.destinationName = destinationName;
-        this.country = country;
-        this.latitude = latitude;
-        this.longitude = longitude;
-        this.isDefault = isDefault;
-        this.metadata = metadata;
+    public static class Builder {
+        private final SavedDestinationProfileDTO dto = new SavedDestinationProfileDTO();
+
+        public Builder label(String label) {
+            dto.label = label;
+            return this;
+        }
+
+        public Builder destinationName(String destinationName) {
+            dto.destinationName = destinationName;
+            return this;
+        }
+
+        public Builder country(String country) {
+            dto.country = country;
+            return this;
+        }
+
+        public Builder latitude(Double latitude) {
+            dto.latitude = latitude;
+            return this;
+        }
+
+        public Builder longitude(Double longitude) {
+            dto.longitude = longitude;
+            return this;
+        }
+
+        public Builder isDefault(Boolean isDefault) {
+            dto.isDefault = isDefault;
+            return this;
+        }
+
+        public Builder metadata(Map<String, Object> metadata) {
+            dto.metadata = metadata;
+            return this;
+        }
+
+        public SavedDestinationProfileDTO build() {
+            return dto;
+        }
     }
 
-    public String getLabel() {
-        return label;
-    }
+    public String getLabel() { return label; }
+    public void setLabel(String label) { this.label = label; }
 
-    public void setLabel(String label) {
-        this.label = label;
-    }
+    public String getDestinationName() { return destinationName; }
+    public void setDestinationName(String destinationName) { this.destinationName = destinationName; }
 
-    public String getDestinationName() {
-        return destinationName;
-    }
+    public String getCountry() { return country; }
+    public void setCountry(String country) { this.country = country; }
 
-    public void setDestinationName(String destinationName) {
-        this.destinationName = destinationName;
-    }
+    public Double getLatitude() { return latitude; }
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
 
-    public String getCountry() {
-        return country;
-    }
+    public Double getLongitude() { return longitude; }
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
 
-    public void setCountry(String country) {
-        this.country = country;
-    }
+    public Boolean getIsDefault() { return isDefault; }
+    public void setIsDefault(Boolean isDefault) { this.isDefault = isDefault; }
 
-    public Double getLatitude() {
-        return latitude;
-    }
-
-    public void setLatitude(Double latitude) {
-        this.latitude = latitude;
-    }
-
-    public Double getLongitude() {
-        return longitude;
-    }
-
-    public void setLongitude(Double longitude) {
-        this.longitude = longitude;
-    }
-
-    public Boolean getIsDefault() {
-        return isDefault;
-    }
-
-    public void setIsDefault(Boolean isDefault) {
-        this.isDefault = isDefault;
-    }
-
-    public Map<String, Object> getMetadata() {
-        return metadata;
-    }
-
-    public void setMetadata(Map<String, Object> metadata) {
-        this.metadata = metadata;
-    }
+    public Map<String, Object> getMetadata() { return metadata; }
+    public void setMetadata(Map<String, Object> metadata) { this.metadata = metadata; }
 }
-

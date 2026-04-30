@@ -9,74 +9,73 @@ public class UserTripSummaryDTO {
     private Double totalSpent;
     private Double averageBudget;
 
-    public UserTripSummaryDTO() {
+    private UserTripSummaryDTO() {}
+
+    public static Builder builder() {
+        return new Builder();
     }
 
-    public UserTripSummaryDTO(Long userId, String name, Long totalTrips, Long completedTrips,
-                              Long cancelledTrips, Double totalSpent, Double averageBudget) {
-        this.userId = userId;
-        this.name = name;
-        this.totalTrips = totalTrips;
-        this.completedTrips = completedTrips;
-        this.cancelledTrips = cancelledTrips;
-        this.totalSpent = totalSpent;
-        this.averageBudget = averageBudget;
+    public static class Builder {
+        private final UserTripSummaryDTO dto = new UserTripSummaryDTO();
+
+        public Builder userId(Long userId) {
+            dto.userId = userId;
+            return this;
+        }
+
+        public Builder name(String name) {
+            dto.name = name;
+            return this;
+        }
+
+        public Builder totalTrips(Long totalTrips) {
+            dto.totalTrips = totalTrips;
+            return this;
+        }
+
+        public Builder completedTrips(Long completedTrips) {
+            dto.completedTrips = completedTrips;
+            return this;
+        }
+
+        public Builder cancelledTrips(Long cancelledTrips) {
+            dto.cancelledTrips = cancelledTrips;
+            return this;
+        }
+
+        public Builder totalSpent(Double totalSpent) {
+            dto.totalSpent = totalSpent;
+            return this;
+        }
+
+        public Builder averageBudget(Double averageBudget) {
+            dto.averageBudget = averageBudget;
+            return this;
+        }
+
+        public UserTripSummaryDTO build() {
+            return dto;
+        }
     }
 
-    public Long getUserId() {
-        return userId;
-    }
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
 
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
-    public String getName() {
-        return name;
-    }
+    public Long getTotalTrips() { return totalTrips; }
+    public void setTotalTrips(Long totalTrips) { this.totalTrips = totalTrips; }
 
-    public void setName(String name) {
-        this.name = name;
-    }
+    public Long getCompletedTrips() { return completedTrips; }
+    public void setCompletedTrips(Long completedTrips) { this.completedTrips = completedTrips; }
 
-    public Long getTotalTrips() {
-        return totalTrips;
-    }
+    public Long getCancelledTrips() { return cancelledTrips; }
+    public void setCancelledTrips(Long cancelledTrips) { this.cancelledTrips = cancelledTrips; }
 
-    public void setTotalTrips(Long totalTrips) {
-        this.totalTrips = totalTrips;
-    }
+    public Double getTotalSpent() { return totalSpent; }
+    public void setTotalSpent(Double totalSpent) { this.totalSpent = totalSpent; }
 
-    public Long getCompletedTrips() {
-        return completedTrips;
-    }
-
-    public void setCompletedTrips(Long completedTrips) {
-        this.completedTrips = completedTrips;
-    }
-
-    public Long getCancelledTrips() {
-        return cancelledTrips;
-    }
-
-    public void setCancelledTrips(Long cancelledTrips) {
-        this.cancelledTrips = cancelledTrips;
-    }
-
-    public Double getTotalSpent() {
-        return totalSpent;
-    }
-
-    public void setTotalSpent(Double totalSpent) {
-        this.totalSpent = totalSpent;
-    }
-
-    public Double getAverageBudget() {
-        return averageBudget;
-    }
-
-    public void setAverageBudget(Double averageBudget) {
-        this.averageBudget = averageBudget;
-    }
+    public Double getAverageBudget() { return averageBudget; }
+    public void setAverageBudget(Double averageBudget) { this.averageBudget = averageBudget; }
 }
-
