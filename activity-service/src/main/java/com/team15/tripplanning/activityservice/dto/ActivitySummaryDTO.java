@@ -1,4 +1,5 @@
 package com.team15.tripplanning.activityservice.dto;
+
 import java.time.LocalDateTime;
 
 public class ActivitySummaryDTO {
@@ -9,19 +10,25 @@ public class ActivitySummaryDTO {
     private LocalDateTime firstScheduledTime;
     private LocalDateTime lastScheduledTime;
 
-    // Constructor
-    public ActivitySummaryDTO(Long itineraryId, int totalActivities, Double averageCost,
-                              Double maxCost, LocalDateTime firstScheduledTime,
-                              LocalDateTime lastScheduledTime) {
-        this.itineraryId = itineraryId;
-        this.totalActivities = totalActivities;
-        this.averageCost = averageCost;
-        this.maxCost = maxCost;
-        this.firstScheduledTime = firstScheduledTime;
-        this.lastScheduledTime = lastScheduledTime;
+    private ActivitySummaryDTO() {}
+
+    public static Builder builder() {
+        return new Builder();
     }
 
-    // Getters and Setters for all fields
+    public static class Builder {
+        private final ActivitySummaryDTO dto = new ActivitySummaryDTO();
+
+        public Builder itineraryId(Long itineraryId) { dto.itineraryId = itineraryId; return this; }
+        public Builder totalActivities(int totalActivities) { dto.totalActivities = totalActivities; return this; }
+        public Builder averageCost(Double averageCost) { dto.averageCost = averageCost; return this; }
+        public Builder maxCost(Double maxCost) { dto.maxCost = maxCost; return this; }
+        public Builder firstScheduledTime(LocalDateTime t) { dto.firstScheduledTime = t; return this; }
+        public Builder lastScheduledTime(LocalDateTime t) { dto.lastScheduledTime = t; return this; }
+
+        public ActivitySummaryDTO build() { return dto; }
+    }
+
     public Long getItineraryId() { return itineraryId; }
     public void setItineraryId(Long itineraryId) { this.itineraryId = itineraryId; }
 

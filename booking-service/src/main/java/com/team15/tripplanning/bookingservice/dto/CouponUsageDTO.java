@@ -10,7 +10,27 @@ public class CouponUsageDTO {
     private Boolean active;
     private Boolean expired;
 
-    // getters & setters
+    private CouponUsageDTO() {}
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private final CouponUsageDTO dto = new CouponUsageDTO();
+
+        public Builder couponId(Long couponId) { dto.couponId = couponId; return this; }
+        public Builder code(String code) { dto.code = code; return this; }
+        public Builder discountType(String discountType) { dto.discountType = discountType; return this; }
+        public Builder discountValue(Double discountValue) { dto.discountValue = discountValue; return this; }
+        public Builder timesUsed(Integer timesUsed) { dto.timesUsed = timesUsed; return this; }
+        public Builder totalDiscountGiven(Double totalDiscountGiven) { dto.totalDiscountGiven = totalDiscountGiven; return this; }
+        public Builder active(Boolean active) { dto.active = active; return this; }
+        public Builder expired(Boolean expired) { dto.expired = expired; return this; }
+
+        public CouponUsageDTO build() { return dto; }
+    }
+
     public Long getCouponId() { return couponId; }
     public void setCouponId(Long couponId) { this.couponId = couponId; }
 

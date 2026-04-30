@@ -11,13 +11,33 @@ public class BookingDetailsDTO {
     private String type;
     private String status;
     private Map<String, Object> bookingDetails;
-
     private List<AppliedCouponDTO> appliedCoupons;
-
     private Double totalDiscount;
     private Double finalAmount;
 
-    // getters & setters
+    private BookingDetailsDTO() {}
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private final BookingDetailsDTO dto = new BookingDetailsDTO();
+
+        public Builder bookingId(Long bookingId) { dto.bookingId = bookingId; return this; }
+        public Builder itineraryId(Long itineraryId) { dto.itineraryId = itineraryId; return this; }
+        public Builder userId(Long userId) { dto.userId = userId; return this; }
+        public Builder originalAmount(Double originalAmount) { dto.originalAmount = originalAmount; return this; }
+        public Builder type(String type) { dto.type = type; return this; }
+        public Builder status(String status) { dto.status = status; return this; }
+        public Builder bookingDetails(Map<String, Object> bookingDetails) { dto.bookingDetails = bookingDetails; return this; }
+        public Builder appliedCoupons(List<AppliedCouponDTO> appliedCoupons) { dto.appliedCoupons = appliedCoupons; return this; }
+        public Builder totalDiscount(Double totalDiscount) { dto.totalDiscount = totalDiscount; return this; }
+        public Builder finalAmount(Double finalAmount) { dto.finalAmount = finalAmount; return this; }
+
+        public BookingDetailsDTO build() { return dto; }
+    }
+
     public Long getBookingId() { return bookingId; }
     public void setBookingId(Long bookingId) { this.bookingId = bookingId; }
 
