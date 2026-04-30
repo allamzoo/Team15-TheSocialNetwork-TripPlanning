@@ -18,6 +18,9 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -30,10 +33,13 @@ public class UserService {
     private final List<EntityObserver> observers = new ArrayList<>();
     private final PasswordEncoder passwordEncoder;
     private final ObjectArrayDtoAdapter adapter = new ObjectArrayDtoAdapter();
+    private final RedisTemplate<String, Object> redisTemplate;
 
-    public UserService(UserRepository userRepository, MongoEventLogger mongoEventLogger, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, MongoEventLogger mongoEventLogger,
+                       PasswordEncoder passwordEncoder, RedisTemplate<String, Object> redisTemplate) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.redisTemplate = redisTemplate;
         register(mongoEventLogger);
     }
 
@@ -51,6 +57,13 @@ public class UserService {
         }
     }
 
+    private void deleteWildcard(String pattern) {
+        Set<String> keys = redisTemplate.keys(pattern);
+        if (keys != null && !keys.isEmpty()) {
+            redisTemplate.delete(keys);
+        }
+    }
+
     public User create(User user) {
         if (user.getPassword() != null) {
             user.setPassword(passwordEncoder.encode(user.getPassword()));
@@ -59,9 +72,12 @@ public class UserService {
         Map<String, Object> payload = new HashMap<>();
         payload.put("userId", saved.getId());
         notifyObservers("USER_CREATED", payload);
+        deleteWildcard("s1-f1-users::*");
+        deleteWildcard("s1-f5-top-travelers::*");
         return saved;
     }
 
+    @Cacheable(value = "s1-f1-users", key = "'S1::S1-F1::all'")
     public List<User> findAll() {
         return userRepository.findAll();
     }
@@ -84,6 +100,7 @@ public class UserService {
                 ));
     }
 
+    @Cacheable(value = "s1-f6-profile", key = "'S1::S1-F6::' + #id")
     public UserProfileDTO getProfile(Long id) {
         User user = userRepository.findByIdWithSavedDestinations(id)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -130,6 +147,9 @@ public class UserService {
         Map<String, Object> payload = new HashMap<>();
         payload.put("userId", saved.getId());
         notifyObservers("USER_UPDATED", payload);
+        deleteWildcard("s1-f1-users::*");
+        deleteWildcard("s1-f6-profile::S1::S1-F6::" + id);
+        deleteWildcard("s1-f3-trip-summary::S1::S1-F3::" + id);
         return saved;
     }
 
@@ -147,9 +167,12 @@ public class UserService {
         Map<String, Object> payload = new HashMap<>();
         payload.put("userId", saved.getId());
         notifyObservers("USER_UPDATED", payload);
+        deleteWildcard("s1-f6-profile::S1::S1-F6::" + id);
+        deleteWildcard("s1-f8-pref-search::*");
         return saved;
     }
 
+    @Cacheable(value = "s1-f3-trip-summary", key = "'S1::S1-F3::' + #id")
     public UserTripSummaryDTO getTripSummary(Long id) {
         findById(id);
         var result = userRepository.getUserTripSummary(id);
@@ -166,16 +189,19 @@ public class UserService {
         return adapter.adapt(result.get(0));
     }
 
-
-
     public void delete(Long id) {
         findById(id);
         userRepository.deleteById(id);
         Map<String, Object> payload = new HashMap<>();
         payload.put("userId", id);
         notifyObservers("USER_DELETED", payload);
+        deleteWildcard("s1-f1-users::*");
+        deleteWildcard("s1-f6-profile::S1::S1-F6::" + id);
+        deleteWildcard("s1-f3-trip-summary::S1::S1-F3::" + id);
+        deleteWildcard("s1-f5-top-travelers::*");
     }
 
+    @Cacheable(value = "s1-f5-top-travelers", key = "'S1::S1-F5::' + #startDate + '::' + #endDate + '::' + #limit")
     public List<TopTravelerDTO> getTopTravelersBySpending(LocalDate startDate, LocalDate endDate, int limit) {
         if (startDate == null || endDate == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "startDate and endDate are required");
@@ -193,8 +219,7 @@ public class UserService {
                 .toList();
     }
 
-
-
+    @Cacheable(value = "s1-f8-pref-search", key = "'S1::S1-F8::' + #key + '::' + #value")
     public List<User> searchByPreference(String key, String value) {
         if (key == null || key.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Preference key cannot be blank");
@@ -205,6 +230,7 @@ public class UserService {
         return userRepository.searchByPreference(key, value);
     }
 
+    @Cacheable(value = "s1-f9-travel-style", key = "'S1::S1-F9::' + #style + '::' + #minTrips")
     public List<User> findByTravelStyleWithMinimumTrips(String style, int minTrips) {
         if (style == null || style.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "style cannot be blank");
@@ -232,6 +258,8 @@ public class UserService {
         Map<String, Object> payload = new HashMap<>();
         payload.put("userId", saved.getId());
         notifyObservers("USER_DEACTIVATED", payload);
+        deleteWildcard("s1-f1-users::*");
+        deleteWildcard("s1-f6-profile::S1::S1-F6::" + id);
         return saved;
     }
 

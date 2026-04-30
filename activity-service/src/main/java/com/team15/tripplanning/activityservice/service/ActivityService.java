@@ -6,41 +6,33 @@ import com.team15.tripplanning.activityservice.dto.BudgetActivityDTO;
 import com.team15.tripplanning.activityservice.model.Activity;
 import com.team15.tripplanning.activityservice.repository.ActivityRepository;
 import com.team15.tripplanning.shared.observer.EntityObserver;
-import org.springframework.transaction.annotation.Transactional;
-import java.time.LocalDateTime;
-
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.springframework.http.HttpStatus;
-
-
-import org.springframework.http.HttpStatus;
+import java.util.Set;
 import java.util.stream.Collectors;
-
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.server.ResponseStatusException;
-import com.team15.tripplanning.activityservice.dto.NearbyActivityDTO;
 import com.team15.tripplanning.activityservice.dto.BatchActivityRequestDTO;
-import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class ActivityService {
     private final ActivityRepository activityRepository;
     private final List<EntityObserver> observers = new ArrayList<>();
+    private final RedisTemplate<String, Object> redisTemplate;
 
     public ActivityService(ActivityRepository activityRepository,
-                           MongoEventLogger mongoEventLogger) {
+                           MongoEventLogger mongoEventLogger,
+                           RedisTemplate<String, Object> redisTemplate) {
         this.activityRepository = activityRepository;
+        this.redisTemplate = redisTemplate;
         register(mongoEventLogger);
     }
 
@@ -58,15 +50,26 @@ public class ActivityService {
         }
     }
 
+    private void deleteWildcard(String pattern) {
+        Set<String> keys = redisTemplate.keys(pattern);
+        if (keys != null && !keys.isEmpty()) {
+            redisTemplate.delete(keys);
+        }
+    }
+
     public Activity create(Activity activity) {
         Activity saved = activityRepository.save(activity);
         Map<String, Object> payload = new HashMap<>();
         payload.put("activityId", saved.getId());
         payload.put("itineraryId", saved.getItineraryId());
         notifyObservers("ACTIVITY_CREATED", payload);
+        deleteWildcard("s4-activities::*");
+        deleteWildcard("s4-f1-latest::S4::S4-F1::" + saved.getItineraryId());
+        deleteWildcard("s4-f8-summary::S4::S4-F8::" + saved.getItineraryId() + "*");
         return saved;
     }
 
+    @Cacheable(value = "s4-activities", key = "'S4::all'")
     public List<Activity> findAll() {
         return activityRepository.findAll();
     }
@@ -104,6 +107,10 @@ public class ActivityService {
         payload.put("activityId", saved.getId());
         payload.put("itineraryId", saved.getItineraryId());
         notifyObservers("ACTIVITY_UPDATED", payload);
+        deleteWildcard("s4-activities::*");
+        deleteWildcard("s4-f1-latest::S4::S4-F1::" + saved.getItineraryId());
+        deleteWildcard("s4-f8-summary::S4::S4-F8::" + saved.getItineraryId() + "*");
+        deleteWildcard("s4-f9-budget::*");
         return saved;
     }
 
@@ -118,11 +125,13 @@ public class ActivityService {
         payload.put("activityId", saved.getId());
         payload.put("itineraryId", itineraryId);
         notifyObservers("ACTIVITY_CREATED", payload);
+        deleteWildcard("s4-activities::*");
+        deleteWildcard("s4-f1-latest::S4::S4-F1::" + itineraryId);
+        deleteWildcard("s4-f8-summary::S4::S4-F8::" + itineraryId + "*");
         return saved;
     }
 
     public List<NearbyActivityDTO> findNearbyActivities(Double lat, Double lon, Double radiusKm) {
-        // Validate input
         if (lat == null || lat < -90 || lat > 90 ||
                 lon == null || lon < -180 || lon > 180 ||
                 radiusKm == null || radiusKm <= 0) {
@@ -150,9 +159,14 @@ public class ActivityService {
         payload.put("activityId", id);
         payload.put("itineraryId", activity.getItineraryId());
         notifyObservers("ACTIVITY_DELETED", payload);
+        deleteWildcard("s4-activities::*");
+        deleteWildcard("s4-f1-latest::S4::S4-F1::" + activity.getItineraryId());
+        deleteWildcard("s4-f8-summary::S4::S4-F8::" + activity.getItineraryId() + "*");
+        deleteWildcard("s4-f9-budget::*");
     }
 
     // ---------- S4-F1 ----------
+    @Cacheable(value = "s4-f1-latest", key = "'S4::S4-F1::' + #itineraryId")
     public Activity getLatestActivityForItinerary(Long itineraryId) {
         if (!activityRepository.itineraryExists(itineraryId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found");
@@ -161,7 +175,9 @@ public class ActivityService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "No activities found for this itinerary"));
     }
+
     // ---------- S4-F9 ----------
+    @Cacheable(value = "s4-f9-budget", key = "'S4::S4-F9::' + #maxCost + '::' + #sinceMinutes")
     public List<BudgetActivityDTO> findBudgetFriendlyActivities(Double maxCost, int sinceMinutes) {
         LocalDateTime since = LocalDateTime.now().minusMinutes(sinceMinutes);
         List<Object[]> results = activityRepository.findBudgetFriendlyActivities(maxCost, since);
@@ -185,11 +201,12 @@ public class ActivityService {
                     .cost(((Number) row[5]).doubleValue())
                     .scheduledTime(scheduledTime)
                     .build();
-        }).collect(java.util.stream.Collectors.toList());
+        }).collect(Collectors.toList());
     }
+
     // ---------- S4-F8 ----------
+    @Cacheable(value = "s4-f8-summary", key = "'S4::S4-F8::' + #itineraryId + '::' + #startDate + '::' + #endDate")
     public ActivitySummaryDTO getActivitySummary(Long itineraryId, LocalDate startDate, LocalDate endDate) {
-        // Verify itinerary exists
         int exists = activityRepository.countItineraryById(itineraryId);
         if (exists == 0) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found");
@@ -200,7 +217,6 @@ public class ActivityService {
 
         List<Object[]> results = activityRepository.getActivitySummary(itineraryId, startDateTime, endDateTime);
 
-        // Guard: no rows returned at all
         if (results == null || results.isEmpty()) {
             return ActivitySummaryDTO.builder()
                     .itineraryId(itineraryId)
@@ -216,7 +232,6 @@ public class ActivityService {
         Double avg = row[1] != null ? ((Number) row[1]).doubleValue() : 0.0;
         Double max = row[2] != null ? ((Number) row[2]).doubleValue() : 0.0;
 
-        // Fix: handle both LocalDateTime and Timestamp since driver version affects return type
         LocalDateTime first = null;
         LocalDateTime last = null;
 
@@ -245,6 +260,7 @@ public class ActivityService {
                 .lastScheduledTime(last)
                 .build();
     }
+
     // ---------- S4-F7 ----------
     @Transactional
     public int purgeOldActivities(int olderThanDays) {
@@ -255,11 +271,14 @@ public class ActivityService {
         payload.put("olderThanDays", olderThanDays);
         payload.put("purgedCount", count);
         notifyObservers("ACTIVITIES_PURGED", payload);
+        deleteWildcard("s4-activities::*");
+        deleteWildcard("s4-f1-latest::*");
+        deleteWildcard("s4-f8-summary::*");
+        deleteWildcard("s4-f9-budget::*");
         return count;
     }
 
     // ---------- S4-F4 ----------
-
     @Transactional
     public List<Activity> batchActivitiyCreation(BatchActivityRequestDTO request) {
         Long itineraryId = request.itineraryId();
@@ -282,8 +301,12 @@ public class ActivityService {
         payload.put("itineraryId", itineraryId);
         payload.put("count", saved.size());
         notifyObservers("ACTIVITIES_BATCH_CREATED", payload);
+        deleteWildcard("s4-activities::*");
+        deleteWildcard("s4-f1-latest::S4::S4-F1::" + itineraryId);
+        deleteWildcard("s4-f8-summary::S4::S4-F8::" + itineraryId + "*");
         return saved;
     }
+
     private void validateCoordinates(Activity activity) {
         Double latitude = activity.getLatitude();
         Double longitude = activity.getLongitude();
@@ -357,5 +380,4 @@ public class ActivityService {
             return activityRepository.findActivitiesInDateRange(startDate, endDate);
         }
     }
-
 }

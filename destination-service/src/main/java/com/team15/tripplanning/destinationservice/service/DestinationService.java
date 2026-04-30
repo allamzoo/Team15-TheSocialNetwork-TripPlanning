@@ -18,6 +18,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,14 +30,16 @@ import org.springframework.web.server.ResponseStatusException;
 public class DestinationService {
     private final DestinationRepository destinationRepository;
     private final DestinationReviewRepository destinationReviewRepository;
-
     private final List<EntityObserver> observers = new ArrayList<>();
+    private final RedisTemplate<String, Object> redisTemplate;
 
     public DestinationService(DestinationRepository destinationRepository,
                               DestinationReviewRepository destinationReviewRepository,
-                              MongoEventLogger mongoEventLogger) {
+                              MongoEventLogger mongoEventLogger,
+                              RedisTemplate<String, Object> redisTemplate) {
         this.destinationRepository = destinationRepository;
         this.destinationReviewRepository = destinationReviewRepository;
+        this.redisTemplate = redisTemplate;
         register(mongoEventLogger);
     }
 
@@ -52,17 +57,26 @@ public class DestinationService {
         }
     }
 
+    private void deleteWildcard(String pattern) {
+        Set<String> keys = redisTemplate.keys(pattern);
+        if (keys != null && !keys.isEmpty()) {
+            redisTemplate.delete(keys);
+        }
+    }
+
     public Destination create(Destination destination) {
         Destination saved = destinationRepository.save(destination);
-
         Map<String, Object> payload = new HashMap<>();
         payload.put("destinationId", saved.getId());
         payload.put("name", saved.getName());
         notifyObservers("DESTINATION_CREATED", payload);
-
+        deleteWildcard("s2-destinations::*");
+        deleteWildcard("s2-top-rated::*");
+        deleteWildcard("s2-dest-search::*");
         return saved;
     }
 
+    @Cacheable(value = "s2-destinations", key = "'S2::all'")
     public List<Destination> findAll() {
         return destinationRepository.findAll();
     }
@@ -83,24 +97,30 @@ public class DestinationService {
         existing.setTotalRatings(destination.getTotalRatings());
         existing.setDetails(destination.getDetails());
         Destination saved = destinationRepository.save(existing);
-
         Map<String, Object> payload = new HashMap<>();
         payload.put("destinationId", saved.getId());
         payload.put("name", saved.getName());
         notifyObservers("DESTINATION_UPDATED", payload);
-
+        deleteWildcard("s2-destinations::*");
+        deleteWildcard("s2-top-rated::*");
+        deleteWildcard("s2-dest-search::*");
+        deleteWildcard("s2-dest-revenue::S2::S2-F*::" + id + "*");
         return saved;
     }
 
     public void delete(Long id) {
         Destination destination = findById(id);
         destinationRepository.delete(destination);
-
         Map<String, Object> payload = new HashMap<>();
         payload.put("destinationId", id);
         notifyObservers("DESTINATION_DELETED", payload);
+        deleteWildcard("s2-destinations::*");
+        deleteWildcard("s2-top-rated::*");
+        deleteWildcard("s2-dest-search::*");
+        deleteWildcard("s2-dest-revenue::S2::S2-F*::" + id + "*");
     }
 
+    @Cacheable(value = "s2-dest-search", key = "'S2::S2-F1::' + #category + '::' + #minRating + '::' + #maxRating")
     public List<Destination> searchDestinations(DestinationCategory category, Double minRating, Double maxRating) {
         if (minRating != null && maxRating != null && minRating > maxRating) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "minRating cannot be greater than maxRating");
@@ -126,7 +146,10 @@ public class DestinationService {
         }
 
         destination.setDetails(existingDetails);
-        return destinationRepository.save(destination);
+        Destination saved = destinationRepository.save(destination);
+        deleteWildcard("s2-destinations::*");
+        deleteWildcard("s2-dest-search::*");
+        return saved;
     }
 
     @Transactional
@@ -157,15 +180,17 @@ public class DestinationService {
 
         destination.setStatus(newStatus);
         Destination saved = destinationRepository.save(destination);
-
         Map<String, Object> payload = new HashMap<>();
         payload.put("destinationId", saved.getId());
         payload.put("status", newStatus.name());
         notifyObservers("DESTINATION_STATUS_UPDATED", payload);
-
+        deleteWildcard("s2-destinations::*");
+        deleteWildcard("s2-top-rated::*");
+        deleteWildcard("s2-dest-search::*");
         return saved;
     }
 
+    @Cacheable(value = "s2-dest-revenue", key = "'S2::S2-F4::' + #id + '::' + #startDate + '::' + #endDate")
     public DestinationRevenueDTO getDestinationRevenueSummary(Long id, LocalDate startDate, LocalDate endDate) {
         if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "startDate cannot be after endDate");
@@ -199,6 +224,7 @@ public class DestinationService {
                 .averageBookingAmount(averageBookingAmount)
                 .build();
     }
+
     public List<Destination> filterByDetailAttribute(String key, String value, String status) {
         if (key == null || key.isBlank() || value == null || value.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "key and value are required");
@@ -217,6 +243,7 @@ public class DestinationService {
         return destinationRepository.findByDetailAttribute(key, value, normalizedStatus);
     }
 
+    @Cacheable(value = "s2-top-rated", key = "'S2::S2-F3::' + #limit")
     public List<TopDestinationDTO> getTopRatedDestinations(int limit) {
         if (limit <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "limit must be greater than 0");
@@ -262,10 +289,11 @@ public class DestinationService {
         payload.put("destinationId", saved.getId());
         payload.put("rating", request.rating());
         notifyObservers("DESTINATION_RATED", payload);
-
+        deleteWildcard("s2-destinations::*");
+        deleteWildcard("s2-top-rated::*");
+        deleteWildcard("s2-dest-search::*");
         return saved;
     }
-
 
     @Transactional
     public Destination verifyReview(Long destinationId, Long reviewId, Long verifierId) {
@@ -307,16 +335,15 @@ public class DestinationService {
         destination.getDestinationReviews().size();
         return destination;
     }
+
     @Transactional
     public List<DestinationReviewAlertDTO> getLowRatedReviewAlerts(Double maxRating) {
         return destinationRepository.findAll().stream()
                 .map(dest -> {
-                    // Filter only the reviews that are <= maxRating
                     List<DestinationReview> lowReviews = dest.getDestinationReviews().stream()
                             .filter(r -> r.getRating() <= maxRating)
                             .toList();
 
-                    // If this destination has low reviews, wrap it in a DTO
                     if (!lowReviews.isEmpty()) {
                         return DestinationReviewAlertDTO.builder()
                                 .destinationId(dest.getId())
@@ -327,7 +354,7 @@ public class DestinationService {
                     }
                     return null;
                 })
-                .filter(Objects::nonNull) // Remove destinations that had no low reviews
+                .filter(Objects::nonNull)
                 .toList();
     }
 }

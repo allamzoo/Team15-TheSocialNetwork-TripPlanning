@@ -14,6 +14,9 @@ import com.team15.tripplanning.itineraryservice.dto.ItineraryDetailsDTO;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Comparator;
+import java.util.Set;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,12 +25,14 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class ItineraryService {
     private final ItineraryRepository itineraryRepository;
-
     private final List<EntityObserver> observers = new ArrayList<>();
+    private final RedisTemplate<String, Object> redisTemplate;
 
     public ItineraryService(ItineraryRepository itineraryRepository,
-                            MongoEventLogger mongoEventLogger) {
+                            MongoEventLogger mongoEventLogger,
+                            RedisTemplate<String, Object> redisTemplate) {
         this.itineraryRepository = itineraryRepository;
+        this.redisTemplate = redisTemplate;
         register(mongoEventLogger);
     }
 
@@ -44,17 +49,26 @@ public class ItineraryService {
             observer.onEvent(eventType, payload);
         }
     }
+
+    private void deleteWildcard(String pattern) {
+        Set<String> keys = redisTemplate.keys(pattern);
+        if (keys != null && !keys.isEmpty()) {
+            redisTemplate.delete(keys);
+        }
+    }
+
     public Itinerary create(Itinerary itinerary) {
         Itinerary saved = itineraryRepository.save(itinerary);
-
         Map<String, Object> payload = new HashMap<>();
         payload.put("itineraryId", saved.getId());
         payload.put("userId", saved.getUserId());
         notifyObservers("ITINERARY_CREATED", payload);
-
+        deleteWildcard("s3-itineraries::*");
+        deleteWildcard("s3-analytics::*");
         return saved;
     }
 
+    @Cacheable(value = "s3-itineraries", key = "'S3::all'")
     public List<Itinerary> findAll() {
         return itineraryRepository.findAll();
     }
@@ -75,23 +89,26 @@ public class ItineraryService {
         existing.setStartDate(itinerary.getStartDate());
         existing.setEndDate(itinerary.getEndDate());
         Itinerary saved = itineraryRepository.save(existing);
-
         Map<String, Object> payload = new HashMap<>();
         payload.put("itineraryId", saved.getId());
         payload.put("userId", saved.getUserId());
         notifyObservers("ITINERARY_UPDATED", payload);
-
+        deleteWildcard("s3-itineraries::*");
+        deleteWildcard("s3-details::S3::S3-F5::" + id);
+        deleteWildcard("s3-analytics::*");
         return saved;
     }
 
     public void delete(Long id) {
         Itinerary itinerary = findById(id);
         itineraryRepository.delete(itinerary);
-
         Map<String, Object> payload = new HashMap<>();
         payload.put("itineraryId", id);
         payload.put("userId", itinerary.getUserId());
         notifyObservers("ITINERARY_DELETED", payload);
+        deleteWildcard("s3-itineraries::*");
+        deleteWildcard("s3-details::S3::S3-F5::" + id);
+        deleteWildcard("s3-analytics::*");
     }
 
     // S3-F1
@@ -101,46 +118,39 @@ public class ItineraryService {
 
     @Transactional
     public Itinerary assignDestination(Long itineraryId, Long destinationId) {
-
         Itinerary itinerary = itineraryRepository.findById(itineraryId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Itinerary not found"));
 
-        // ✅ STRICT check (use equals instead of !=)
         if (!Itinerary.ItineraryStatus.DRAFT.equals(itinerary.getStatus())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Only DRAFT itineraries can be assigned");
         }
 
-        // ✅ Validate destination exists
         if (itineraryRepository.countDestinationById(destinationId) == 0) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Destination not found");
         }
 
-        // ✅ Validate destination is ACTIVE
         if (itineraryRepository.countActiveDestinationById(destinationId) == 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Destination must be ACTIVE");
         }
 
-        // ✅ APPLY CHANGES
         itinerary.setDestinationId(destinationId);
         itinerary.setStatus(Itinerary.ItineraryStatus.PLANNED);
 
-        // ✅ FORCE SAVE + FLUSH (important for tests)
         Itinerary saved = itineraryRepository.saveAndFlush(itinerary);
-
         Map<String, Object> payload = new HashMap<>();
         payload.put("itineraryId", saved.getId());
         payload.put("destinationId", destinationId);
         notifyObservers("DESTINATION_ASSIGNED", payload);
-
+        deleteWildcard("s3-itineraries::*");
+        deleteWildcard("s3-details::S3::S3-F5::" + itineraryId);
         return saved;
     }
 
-
-
     // S3-F3
+    @Cacheable(value = "s3-cost-estimate", key = "'S3::S3-F3::' + #destinationId + '::' + #numberOfDays + '::' + #numberOfTravelers")
     public TripCostEstimateDTO estimateTripCost(Long destinationId, int numberOfDays, int numberOfTravelers) {
         double accommodation = 150.0 * numberOfDays * numberOfTravelers;
         double transport     = 50.0  * numberOfDays * numberOfTravelers;
@@ -160,6 +170,8 @@ public class ItineraryService {
         double total = (accommodation + transport + activities) * seasonMultiplier;
         return new TripCostEstimateDTO(accommodation, transport, activities, total, seasonMultiplier);
     }
+
+    // S3-F4
     @Transactional
     public Itinerary completeItinerary(Long id) {
         Itinerary itinerary = itineraryRepository.findById(id)
@@ -179,12 +191,13 @@ public class ItineraryService {
         }
 
         Itinerary saved = itineraryRepository.save(itinerary);
-
         Map<String, Object> payload = new HashMap<>();
         payload.put("itineraryId", saved.getId());
         payload.put("userId", saved.getUserId());
         notifyObservers("ITINERARY_COMPLETED", payload);
-
+        deleteWildcard("s3-itineraries::*");
+        deleteWildcard("s3-details::S3::S3-F5::" + id);
+        deleteWildcard("s3-analytics::*");
         return saved;
     }
 
@@ -195,22 +208,18 @@ public class ItineraryService {
         }
         return itineraryRepository.findByMetadataKeyValue(key, value);
     }
+
     @Transactional
     public Itinerary addDays(Long itineraryId, List<ItineraryDayRequestDTO> daysRequest) {
-
-        // 🔍 1. Find itinerary
         Itinerary itinerary = itineraryRepository.findById(itineraryId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found"));
 
-        // ❌ 2. Status validation
         if (!(itinerary.getStatus() == Itinerary.ItineraryStatus.DRAFT ||
                 itinerary.getStatus() == Itinerary.ItineraryStatus.PLANNED)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Cannot add days to in-progress or completed itineraries");
         }
 
-        // ❌ 3. Validate input
-        // ✅ Replace with:
         for (ItineraryDayRequestDTO dto : daysRequest) {
             if (dto.getTitle() == null || dto.getTitle().trim().isEmpty()) {
                 throw new ResponseStatusException(
@@ -221,7 +230,6 @@ public class ItineraryService {
             }
         }
 
-        // 🔢 4. Get current max dayOrder
         int currentMax = 0;
         if (itinerary.getItineraryDays() != null && !itinerary.getItineraryDays().isEmpty()) {
             currentMax = itinerary.getItineraryDays()
@@ -231,7 +239,6 @@ public class ItineraryService {
                     .orElse(0);
         }
 
-        // ➕ 5. Create new days
         List<ItineraryDay> newDays = new ArrayList<>();
 
         for (int i = 0; i < daysRequest.size(); i++) {
@@ -242,33 +249,29 @@ public class ItineraryService {
             day.setTitle(dto.getTitle());
             day.setDescription(dto.getDescription());
             day.setMetadata(dto.getMetadata());
-
             day.setDayOrder(currentMax + i + 1);
             day.setStatus(ItineraryDay.ItineraryDayStatus.PLANNED);
-
-            day.setItinerary(itinerary); // 🔗 relationship
+            day.setItinerary(itinerary);
 
             newDays.add(day);
         }
 
-        // 🧩 6. Attach to itinerary
         if (itinerary.getItineraryDays() == null) {
             itinerary.setItineraryDays(new ArrayList<>());
         }
         itinerary.getItineraryDays().addAll(newDays);
 
-        // 💾 7. Save
         Itinerary saved = itineraryRepository.save(itinerary);
-
         Map<String, Object> payload = new HashMap<>();
         payload.put("itineraryId", saved.getId());
         payload.put("daysAdded", daysRequest.size());
         notifyObservers("DAYS_ADDED", payload);
-
+        deleteWildcard("s3-details::S3::S3-F5::" + itineraryId);
         return saved;
     }
-    public ItineraryDetailsDTO getItineraryDetails(Long id) {
 
+    @Cacheable(value = "s3-details", key = "'S3::S3-F5::' + #id")
+    public ItineraryDetailsDTO getItineraryDetails(Long id) {
         Itinerary itinerary = itineraryRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
@@ -279,7 +282,6 @@ public class ItineraryService {
                 ? itinerary.getItineraryDays()
                 : new ArrayList<>();
 
-        // sort by dayOrder
         days.sort(Comparator.comparingInt(ItineraryDay::getDayOrder));
 
         List<ItineraryDayDTO> dayDTOs = new ArrayList<>();
@@ -287,7 +289,6 @@ public class ItineraryService {
 
         for (ItineraryDay day : days) {
             ItineraryDayDTO dto = new ItineraryDayDTO();
-
             dto.setId(day.getId());
             dto.setDayOrder(day.getDayOrder());
             dto.setDate(day.getDate().toString());
@@ -304,7 +305,6 @@ public class ItineraryService {
         }
 
         ItineraryDetailsDTO response = new ItineraryDetailsDTO();
-
         response.setItineraryId(itinerary.getId());
         response.setUserId(itinerary.getUserId());
         response.setDestinationId(itinerary.getDestinationId());
@@ -312,7 +312,6 @@ public class ItineraryService {
         response.setStatus(itinerary.getStatus().name());
         response.setEstimatedBudget(itinerary.getEstimatedBudget());
         response.setMetadata(itinerary.getMetadata());
-
         response.setDays(dayDTOs);
         response.setTotalDays(dayDTOs.size());
         response.setCompletedDays(completedCount);
@@ -320,6 +319,7 @@ public class ItineraryService {
         return response;
     }
 
+    @Cacheable(value = "s3-analytics", key = "'S3::S3-F6::' + #startDate + '::' + #endDate")
     public ItineraryAnalyticsDTO getAnalytics(java.time.LocalDate startDate, java.time.LocalDate endDate) {
         List<Object[]> results = itineraryRepository.getAnalytics(startDate, endDate);
 
@@ -329,9 +329,9 @@ public class ItineraryService {
 
         Object[] row = results.get(0);
 
-        long total       = row[0] != null ? ((Number) row[0]).longValue()   : 0L;
-        long completed   = row[1] != null ? ((Number) row[1]).longValue()   : 0L;
-        long cancelled   = row[2] != null ? ((Number) row[2]).longValue()   : 0L;
+        long total           = row[0] != null ? ((Number) row[0]).longValue()   : 0L;
+        long completed       = row[1] != null ? ((Number) row[1]).longValue()   : 0L;
+        long cancelled       = row[2] != null ? ((Number) row[2]).longValue()   : 0L;
         double totalBudget   = row[3] != null ? ((Number) row[3]).doubleValue() : 0.0;
         double averageBudget = row[4] != null ? ((Number) row[4]).doubleValue() : 0.0;
 
@@ -367,6 +367,9 @@ public class ItineraryService {
             payload.put("itineraryId", itinerary.getId());
             payload.put("userId", itinerary.getUserId());
             notifyObservers("ITINERARY_CANCELLED", payload);
+            deleteWildcard("s3-itineraries::*");
+            deleteWildcard("s3-details::S3::S3-F5::" + id);
+            deleteWildcard("s3-analytics::*");
         }
 
         return itinerary;

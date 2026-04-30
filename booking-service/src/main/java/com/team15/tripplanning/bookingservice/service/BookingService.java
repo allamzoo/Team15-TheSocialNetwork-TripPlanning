@@ -13,6 +13,8 @@ import com.team15.tripplanning.bookingservice.repository.BookingCouponRepository
 import com.team15.tripplanning.bookingservice.repository.BookingRepository;
 import com.team15.tripplanning.bookingservice.repository.CouponRepository;
 import com.team15.tripplanning.shared.observer.EntityObserver;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,22 +27,25 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class BookingService {
     private final BookingRepository bookingRepository;
     private final BookingCouponRepository bookingCouponRepository;
     private final CouponRepository couponRepository;
-
     private final List<EntityObserver> observers = new ArrayList<>();
+    private final RedisTemplate<String, Object> redisTemplate;
 
     public BookingService(BookingRepository bookingRepository,
                           BookingCouponRepository bookingCouponRepository,
                           CouponRepository couponRepository,
-                          MongoEventLogger mongoEventLogger) {
+                          MongoEventLogger mongoEventLogger,
+                          RedisTemplate<String, Object> redisTemplate) {
         this.bookingRepository = bookingRepository;
         this.bookingCouponRepository = bookingCouponRepository;
         this.couponRepository = couponRepository;
+        this.redisTemplate = redisTemplate;
         register(mongoEventLogger);
     }
 
@@ -58,6 +63,13 @@ public class BookingService {
         }
     }
 
+    private void deleteWildcard(String pattern) {
+        Set<String> keys = redisTemplate.keys(pattern);
+        if (keys != null && !keys.isEmpty()) {
+            redisTemplate.delete(keys);
+        }
+    }
+
     // ===== CRUD =====
     public Booking create(Booking booking) {
         if (booking.getStatus() == null) {
@@ -71,6 +83,8 @@ public class BookingService {
         payload.put("amount", saved.getAmount());
         payload.put("method", saved.getType() != null ? saved.getType().name() : null);
         notifyObservers("BOOKING_CREATED", payload);
+        deleteWildcard("s5-booking-summary::S5::S5-F3::" + saved.getUserId());
+        deleteWildcard("s5-revenue-report::*");
 
         return saved;
     }
@@ -119,6 +133,8 @@ public class BookingService {
         payload.put("amount", saved.getAmount());
         payload.put("method", saved.getType() != null ? saved.getType().name() : null);
         notifyObservers("BOOKING_CREATED", payload);
+        deleteWildcard("s5-booking-summary::S5::S5-F3::" + saved.getUserId());
+        deleteWildcard("s5-revenue-report::*");
 
         return saved;
     }
@@ -137,7 +153,6 @@ public class BookingService {
 
     public Booking update(Long id, Booking booking) {
         Booking existing = findById(id);
-        // Only update fields that are provided (allow partial updates)
         if (booking.getItineraryId() != null) {
             existing.setItineraryId(booking.getItineraryId());
         }
@@ -156,46 +171,48 @@ public class BookingService {
         if (booking.getBookingDetails() != null) {
             existing.setBookingDetails(booking.getBookingDetails());
         }
-        return bookingRepository.save(existing);
+        Booking saved = bookingRepository.save(existing);
+        deleteWildcard("s5-booking-summary::S5::S5-F3::" + saved.getUserId());
+        deleteWildcard("s5-booking-details::S5::S5-F4::" + id);
+        deleteWildcard("s5-revenue-report::*");
+        return saved;
     }
 
     public void delete(Long id) {
-        bookingRepository.delete(findById(id));
+        Booking booking = findById(id);
+        bookingRepository.delete(booking);
+        deleteWildcard("s5-booking-summary::S5::S5-F3::" + booking.getUserId());
+        deleteWildcard("s5-booking-details::S5::S5-F4::" + id);
+        deleteWildcard("s5-revenue-report::*");
     }
 
     // ===== S5-F3: User Booking Summary =====
+    @Cacheable(value = "s5-booking-summary", key = "'S5::S5-F3::' + #userId")
     public UserBookingSummaryDTO getUserBookingSummary(Long userId) {
         if (bookingRepository.countUserById(userId) == 0) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found: " + userId);
         }
 
-        // 1️⃣ Get all bookings for user (can be empty)
         List<Booking> userBookings = bookingRepository.findByUserId(userId);
-
-        // 2️⃣ Get grouped data (CONFIRMED only)
         List<Object[]> results = bookingRepository.getBookingSummaryByUser(userId);
 
         Map<String, Double> typeBreakdown = new HashMap<>();
         int totalBookings = 0;
         double totalAmount = 0.0;
 
-        // 3️⃣ Build map + totalAmount
         for (Object[] row : results) {
             String type = row[0].toString();
             double amount = ((Number) row[1]).doubleValue();
-
             typeBreakdown.put(type, amount);
             totalAmount += amount;
         }
 
-        // 4️⃣ Count CONFIRMED bookings
         for (Booking b : userBookings) {
             if (b.getStatus() == Booking.BookingStatus.CONFIRMED) {
                 totalBookings++;
             }
         }
 
-        // 5️⃣ Return DTO (even if user has no bookings, return empty summary with userId)
         return UserBookingSummaryDTO.builder()
                 .userId(userId)
                 .totalBookings(totalBookings)
@@ -206,15 +223,12 @@ public class BookingService {
 
     @Transactional
     public Booking retryBooking(Long id) {
-
-        // a) Find booking → 404
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "Booking not found: " + id
                 ));
 
-        // b) Validate status → 400
         if (booking.getStatus() != Booking.BookingStatus.FAILED) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
@@ -222,12 +236,9 @@ public class BookingService {
             );
         }
 
-        // c) Update status
         booking.setStatus(Booking.BookingStatus.CONFIRMED);
 
-        // d) Update JSONB bookingDetails
         Map<String, Object> details = booking.getBookingDetails();
-
         if (details == null) {
             details = new HashMap<>();
         }
@@ -248,7 +259,6 @@ public class BookingService {
 
         booking.setBookingDetails(details);
 
-        // e) Save
         Booking saved = bookingRepository.save(booking);
 
         Map<String, Object> payload = new HashMap<>();
@@ -256,13 +266,16 @@ public class BookingService {
         payload.put("userId", saved.getUserId());
         payload.put("amount", saved.getAmount());
         notifyObservers("BOOKING_RETRIED", payload);
+        deleteWildcard("s5-booking-summary::S5::S5-F3::" + saved.getUserId());
+        deleteWildcard("s5-booking-details::S5::S5-F4::" + id);
+        deleteWildcard("s5-revenue-report::*");
 
         return saved;
     }
 
     @Transactional
+    @Cacheable(value = "s5-booking-details", key = "'S5::S5-F4::' + #bookingId")
     public BookingDetailsDTO getBookingDetails(Long bookingId) {
-
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
@@ -278,7 +291,6 @@ public class BookingService {
             if (bc.getCoupon() == null) continue;
 
             AppliedCouponDTO dto = new AppliedCouponDTO();
-
             dto.setCouponCode(bc.getCoupon().getCode());
             dto.setDiscountType(bc.getCoupon().getDiscountType().name());
             dto.setDiscountApplied(bc.getDiscountApplied());
@@ -304,9 +316,9 @@ public class BookingService {
                 .finalAmount(finalAmount)
                 .build();
     }
+
     @Transactional
     public void cancelPendingBookingsByItinerary(Long itineraryId) {
-
         List<Booking> bookings = bookingRepository.findByItineraryId(itineraryId);
 
         for (Booking booking : bookings) {
@@ -316,8 +328,10 @@ public class BookingService {
         }
 
         bookingRepository.saveAll(bookings);
+        deleteWildcard("s5-revenue-report::*");
     }
 
+    @Cacheable(value = "s5-top-coupons", key = "'S5::S5-F5::' + #limit")
     public List<CouponUsageDTO> getTopUsedCoupons(int limit) {
         List<Object[]> results = bookingCouponRepository.findTopUsedCoupons(limit);
 
@@ -348,8 +362,8 @@ public class BookingService {
         return response;
     }
 
+    @Cacheable(value = "s5-revenue-report", key = "'S5::S5-F6::' + #startDate + '::' + #endDate")
     public RevenueReportDTO getRevenueReport(LocalDate startDate, LocalDate endDate) {
-
         if (startDate.isAfter(endDate)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Start date after end date");
         }
@@ -359,7 +373,6 @@ public class BookingService {
 
         Object[] result = bookingRepository.getRevenueStats(start, end);
 
-        // 🔥 FIX: unwrap nested array
         Object[] row;
         if (result.length == 1 && result[0] instanceof Object[]) {
             row = (Object[]) result[0];
@@ -385,29 +398,24 @@ public class BookingService {
 
     // ===== S5-F1: FINAL SAFE LOGIC =====
     public List<Booking> getBookings(String statusStr, LocalDateTime startDateTime, LocalDateTime endDateTime) {
-
         Booking.BookingStatus status = null;
 
         if (statusStr != null && !statusStr.isBlank()) {
             status = Booking.BookingStatus.valueOf(statusStr.toUpperCase());
         }
 
-        // Case 1: status + date range
         if (status != null && startDateTime != null && endDateTime != null) {
             return bookingRepository.searchBookings(status, startDateTime, endDateTime);
         }
 
-        //  Case 2: date range only
         if (startDateTime != null && endDateTime != null) {
             return bookingRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(startDateTime, endDateTime);
         }
 
-        //  Case 3: status only
         if (status != null) {
             return bookingRepository.findByStatus(status);
         }
 
-        //  Case 4: no filters
         return bookingRepository.findAll();
     }
 
@@ -417,11 +425,9 @@ public class BookingService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "bookingId and couponId are required");
         }
 
-        // a) Find booking
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
 
-        // b) Validate booking status
         if (booking.getStatus() == Booking.BookingStatus.CONFIRMED
                 || booking.getStatus() == Booking.BookingStatus.CANCELLED) {
             throw new ResponseStatusException(
@@ -430,11 +436,9 @@ public class BookingService {
             );
         }
 
-        // c) Find coupon
         Coupon coupon = couponRepository.findById(couponId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Coupon not found"));
 
-        // d) Validate coupon
         if (!coupon.getActive()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Coupon not active");
         }
@@ -445,12 +449,10 @@ public class BookingService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Coupon usage limit reached");
         }
 
-        // e) Check duplicate coupon on same booking
         if (bookingCouponRepository.existsByBooking_IdAndCoupon_Id(bookingId, couponId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "coupon already applied");
         }
 
-        // f) Calculate discount
         double discount;
         if (coupon.getDiscountType() == Coupon.DiscountType.PERCENTAGE) {
             discount = booking.getAmount() * coupon.getDiscountValue() / 100;
@@ -459,16 +461,13 @@ public class BookingService {
         }
         discount = Math.min(discount, booking.getAmount());
 
-        // g) Create join entity
         BookingCoupon bookingCoupon = new BookingCoupon();
         bookingCoupon.setBooking(booking);
         bookingCoupon.setCoupon(coupon);
         bookingCoupon.setDiscountApplied(discount);
 
-        // h) Update coupon usage
         coupon.setCurrentUses(coupon.getCurrentUses() + 1);
 
-        // i) Save everything
         booking.getBookingCoupons().add(bookingCoupon);
         bookingCouponRepository.save(bookingCoupon);
         couponRepository.save(coupon);
@@ -480,22 +479,20 @@ public class BookingService {
         payload.put("amount", discount);
         payload.put("method", coupon.getDiscountType().name());
         notifyObservers("COUPON_APPLIED", payload);
+        deleteWildcard("s5-booking-details::S5::S5-F4::" + bookingId);
+        deleteWildcard("s5-top-coupons::*");
 
-        // j) Return updated booking
         return booking;
     }
 
     @Transactional
     public Booking cancelBooking(Long id, String reason) {
-
-        // 1) Find booking
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "Booking not found: " + id
                 ));
 
-        // 2) Only CONFIRMED bookings can be cancelled
         if (booking.getStatus() != Booking.BookingStatus.CONFIRMED) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
@@ -503,10 +500,8 @@ public class BookingService {
             );
         }
 
-        // 3) Set status to CANCELLED
         booking.setStatus(Booking.BookingStatus.CANCELLED);
 
-        // 4) Update booking details payload
         Map<String, Object> details = booking.getBookingDetails();
         if (details == null) {
             details = new HashMap<>();
@@ -515,7 +510,6 @@ public class BookingService {
         details.put("cancelledAt", LocalDateTime.now().toString());
         booking.setBookingDetails(details);
 
-        // 5) Save and return
         Booking saved = bookingRepository.save(booking);
 
         Map<String, Object> payload = new HashMap<>();
@@ -524,6 +518,9 @@ public class BookingService {
         payload.put("amount", saved.getAmount());
         payload.put("method", "CANCELLATION");
         notifyObservers("BOOKING_CANCELLED", payload);
+        deleteWildcard("s5-booking-summary::S5::S5-F3::" + saved.getUserId());
+        deleteWildcard("s5-booking-details::S5::S5-F4::" + id);
+        deleteWildcard("s5-revenue-report::*");
 
         return saved;
     }
