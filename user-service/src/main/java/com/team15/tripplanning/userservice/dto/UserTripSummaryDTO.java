@@ -23,6 +23,59 @@ public class UserTripSummaryDTO {
         this.averageBudget = averageBudget;
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private Long userId;
+        private String name;
+        private Long totalTrips;
+        private Long completedTrips;
+        private Long cancelledTrips;
+        private Double totalSpent;
+        private Double averageBudget;
+
+        public Builder userId(Long userId) {
+            this.userId = userId;
+            return this;
+        }
+
+        public Builder name(String name) {
+            this.name = name;
+            return this;
+        }
+
+        public Builder totalTrips(Long totalTrips) {
+            this.totalTrips = totalTrips;
+            return this;
+        }
+
+        public Builder completedTrips(Long completedTrips) {
+            this.completedTrips = completedTrips;
+            return this;
+        }
+
+        public Builder cancelledTrips(Long cancelledTrips) {
+            this.cancelledTrips = cancelledTrips;
+            return this;
+        }
+
+        public Builder totalSpent(Double totalSpent) {
+            this.totalSpent = totalSpent;
+            return this;
+        }
+
+        public Builder averageBudget(Double averageBudget) {
+            this.averageBudget = averageBudget;
+            return this;
+        }
+
+        public UserTripSummaryDTO build() {
+            return new UserTripSummaryDTO(userId, name, totalTrips, completedTrips, cancelledTrips, totalSpent, averageBudget);
+        }
+    }
+
     public Long getUserId() {
         return userId;
     }

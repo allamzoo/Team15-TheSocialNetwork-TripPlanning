@@ -16,6 +16,38 @@ public class TopDestinationDTO {
         this.totalBookings = totalBookings;
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private final TopDestinationDTO dto = new TopDestinationDTO();
+
+        public Builder destinationId(Long destinationId) {
+            dto.destinationId = destinationId;
+            return this;
+        }
+
+        public Builder name(String name) {
+            dto.name = name;
+            return this;
+        }
+
+        public Builder rating(Double rating) {
+            dto.rating = rating;
+            return this;
+        }
+
+        public Builder totalBookings(Long totalBookings) {
+            dto.totalBookings = totalBookings;
+            return this;
+        }
+
+        public TopDestinationDTO build() {
+            return dto;
+        }
+    }
+
     public Long getDestinationId() {
         return destinationId;
     }

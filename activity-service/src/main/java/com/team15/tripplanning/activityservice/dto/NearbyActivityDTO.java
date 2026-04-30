@@ -18,6 +18,53 @@ public class NearbyActivityDTO {
         this.distanceKm = distanceKm;
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private Long activityId;
+        private String name;
+        private String category;
+        private Double latitude;
+        private Double longitude;
+        private Double distanceKm;
+
+        public Builder activityId(Long activityId) {
+            this.activityId = activityId;
+            return this;
+        }
+
+        public Builder name(String name) {
+            this.name = name;
+            return this;
+        }
+
+        public Builder category(String category) {
+            this.category = category;
+            return this;
+        }
+
+        public Builder latitude(Double latitude) {
+            this.latitude = latitude;
+            return this;
+        }
+
+        public Builder longitude(Double longitude) {
+            this.longitude = longitude;
+            return this;
+        }
+
+        public Builder distanceKm(Double distanceKm) {
+            this.distanceKm = distanceKm;
+            return this;
+        }
+
+        public NearbyActivityDTO build() {
+            return new NearbyActivityDTO(activityId, name, category, latitude, longitude, distanceKm);
+        }
+    }
+
     // Getters and setters (required for JSON serialization)
     // Getters and setters
     public Long getActivityId() { return activityId; }
