@@ -1,4 +1,5 @@
 package com.team15.tripplanning.activityservice.dto;
+
 import java.time.LocalDateTime;
 
 public class BudgetActivityDTO {
@@ -10,19 +11,26 @@ public class BudgetActivityDTO {
     private Double cost;
     private LocalDateTime scheduledTime;
 
-    public BudgetActivityDTO(Long activityId, String name, String category,
-                             Double latitude, Double longitude,
-                             Double cost, LocalDateTime scheduledTime) {
-        this.activityId = activityId;
-        this.name = name;
-        this.category = category;
-        this.latitude = latitude;
-        this.longitude = longitude;
-        this.cost = cost;
-        this.scheduledTime = scheduledTime;
+    private BudgetActivityDTO() {}
+
+    public static Builder builder() {
+        return new Builder();
     }
 
-    // Getters and Setters
+    public static class Builder {
+        private final BudgetActivityDTO dto = new BudgetActivityDTO();
+
+        public Builder activityId(Long activityId) { dto.activityId = activityId; return this; }
+        public Builder name(String name) { dto.name = name; return this; }
+        public Builder category(String category) { dto.category = category; return this; }
+        public Builder latitude(Double latitude) { dto.latitude = latitude; return this; }
+        public Builder longitude(Double longitude) { dto.longitude = longitude; return this; }
+        public Builder cost(Double cost) { dto.cost = cost; return this; }
+        public Builder scheduledTime(LocalDateTime scheduledTime) { dto.scheduledTime = scheduledTime; return this; }
+
+        public BudgetActivityDTO build() { return dto; }
+    }
+
     public Long getActivityId() { return activityId; }
     public void setActivityId(Long activityId) { this.activityId = activityId; }
 

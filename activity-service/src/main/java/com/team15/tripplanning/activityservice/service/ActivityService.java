@@ -132,14 +132,14 @@ public class ActivityService {
 
         List<Object[]> rows = activityRepository.findNearbyActivitiesRaw(lat, lon, radiusKm);
         return rows.stream()
-                .map(row -> new NearbyActivityDTO(
-                        ((Number) row[0]).longValue(),   // activityId
-                        (String) row[1],                 // name
-                        (String) row[2],                 // category
-                        (Double) row[3],                 // latitude
-                        (Double) row[4],                 // longitude
-                        (Double) row[5]                  // distanceKm
-                ))
+                .map(row -> NearbyActivityDTO.builder()
+                        .activityId(((Number) row[0]).longValue())
+                        .name((String) row[1])
+                        .category((String) row[2])
+                        .latitude((Double) row[3])
+                        .longitude((Double) row[4])
+                        .distanceKm((Double) row[5])
+                        .build())
                 .collect(Collectors.toList());
     }
 
@@ -176,15 +176,15 @@ public class ActivityService {
                 }
             }
 
-            return new BudgetActivityDTO(
-                    ((Number) row[0]).longValue(),      // activityId
-                    (String) row[1],                     // name
-                    (String) row[2],                     // category
-                    ((Number) row[3]).doubleValue(),      // latitude
-                    ((Number) row[4]).doubleValue(),      // longitude
-                    ((Number) row[5]).doubleValue(),      // cost
-                    scheduledTime                         // scheduledTime
-            );
+            return BudgetActivityDTO.builder()
+                    .activityId(((Number) row[0]).longValue())
+                    .name((String) row[1])
+                    .category((String) row[2])
+                    .latitude(((Number) row[3]).doubleValue())
+                    .longitude(((Number) row[4]).doubleValue())
+                    .cost(((Number) row[5]).doubleValue())
+                    .scheduledTime(scheduledTime)
+                    .build();
         }).collect(java.util.stream.Collectors.toList());
     }
     // ---------- S4-F8 ----------
@@ -202,7 +202,12 @@ public class ActivityService {
 
         // Guard: no rows returned at all
         if (results == null || results.isEmpty()) {
-            return new ActivitySummaryDTO(itineraryId, 0, 0.0, 0.0, null, null);
+            return ActivitySummaryDTO.builder()
+                    .itineraryId(itineraryId)
+                    .totalActivities(0)
+                    .averageCost(0.0)
+                    .maxCost(0.0)
+                    .build();
         }
 
         Object[] row = results.get(0);
@@ -231,7 +236,14 @@ public class ActivityService {
             }
         }
 
-        return new ActivitySummaryDTO(itineraryId, total, avg, max, first, last);
+        return ActivitySummaryDTO.builder()
+                .itineraryId(itineraryId)
+                .totalActivities(total)
+                .averageCost(avg)
+                .maxCost(max)
+                .firstScheduledTime(first)
+                .lastScheduledTime(last)
+                .build();
     }
     // ---------- S4-F7 ----------
     @Transactional
