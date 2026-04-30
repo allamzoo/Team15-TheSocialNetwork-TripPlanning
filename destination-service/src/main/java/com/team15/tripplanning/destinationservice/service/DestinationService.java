@@ -147,6 +147,9 @@ public class DestinationService {
 
         destination.setDetails(existingDetails);
         Destination saved = destinationRepository.save(destination);
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("destinationId", saved.getId());
+        notifyObservers("DETAILS_UPDATED", payload);
         deleteWildcard("s2-destinations::*");
         deleteWildcard("s2-dest-search::*");
         return saved;
@@ -183,7 +186,7 @@ public class DestinationService {
         Map<String, Object> payload = new HashMap<>();
         payload.put("destinationId", saved.getId());
         payload.put("status", newStatus.name());
-        notifyObservers("DESTINATION_STATUS_UPDATED", payload);
+        notifyObservers("STATUS_CHANGED", payload);
         deleteWildcard("s2-destinations::*");
         deleteWildcard("s2-top-rated::*");
         deleteWildcard("s2-dest-search::*");
@@ -288,7 +291,7 @@ public class DestinationService {
         Map<String, Object> payload = new HashMap<>();
         payload.put("destinationId", saved.getId());
         payload.put("rating", request.rating());
-        notifyObservers("DESTINATION_RATED", payload);
+        notifyObservers("RATING_ADDED", payload);
         deleteWildcard("s2-destinations::*");
         deleteWildcard("s2-top-rated::*");
         deleteWildcard("s2-dest-search::*");

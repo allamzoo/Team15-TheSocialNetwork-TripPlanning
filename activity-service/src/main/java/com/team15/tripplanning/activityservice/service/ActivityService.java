@@ -270,7 +270,7 @@ public class ActivityService {
         Map<String, Object> payload = new HashMap<>();
         payload.put("olderThanDays", olderThanDays);
         payload.put("purgedCount", count);
-        notifyObservers("ACTIVITIES_PURGED", payload);
+        notifyObservers("OLD_DATA_PURGED", payload);
         deleteWildcard("s4-activities::*");
         deleteWildcard("s4-f1-latest::*");
         deleteWildcard("s4-f8-summary::*");

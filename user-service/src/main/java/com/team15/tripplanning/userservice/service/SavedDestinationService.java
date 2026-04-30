@@ -2,9 +2,14 @@ package com.team15.tripplanning.userservice.service;
 
 import com.team15.tripplanning.userservice.model.SavedDestination;
 import com.team15.tripplanning.userservice.model.User;
+import com.team15.tripplanning.userservice.observer.EntityObserver;
+import com.team15.tripplanning.userservice.observer.MongoEventLogger;
 import com.team15.tripplanning.userservice.repository.SavedDestinationRepository;
 import com.team15.tripplanning.userservice.repository.UserRepository;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -15,13 +20,30 @@ import org.springframework.web.server.ResponseStatusException;
 public class SavedDestinationService {
     private final SavedDestinationRepository savedDestinationRepository;
     private final UserRepository userRepository;
+    private final List<EntityObserver> observers = new ArrayList<>();
 
     public SavedDestinationService(
             SavedDestinationRepository savedDestinationRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            MongoEventLogger mongoEventLogger
     ) {
         this.savedDestinationRepository = savedDestinationRepository;
         this.userRepository = userRepository;
+        register(mongoEventLogger);
+    }
+
+    public void register(EntityObserver observer) {
+        observers.add(observer);
+    }
+
+    public void unregister(EntityObserver observer) {
+        observers.remove(observer);
+    }
+
+    private void notifyObservers(String eventType, Object payload) {
+        for (EntityObserver observer : observers) {
+            observer.onEvent(eventType, payload);
+        }
     }
 
     @Transactional
@@ -68,7 +90,6 @@ public class SavedDestinationService {
     @Transactional
     public SavedDestination update(Long id, SavedDestination savedDestination) {
         SavedDestination existing = findById(id);
-        // Owner relation is set on create via userId path parameter.
         existing.setLabel(savedDestination.getLabel());
         existing.setDestinationName(savedDestination.getDestinationName());
         existing.setCountry(savedDestination.getCountry());
@@ -125,6 +146,11 @@ public class SavedDestinationService {
         clearDefaultFlags(userId);
         target.setIsDefault(true);
         savedDestinationRepository.save(target);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("userId", userId);
+        payload.put("destinationId", destinationId);
+        notifyObservers("DEFAULT_DESTINATION_SET", payload);
 
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(

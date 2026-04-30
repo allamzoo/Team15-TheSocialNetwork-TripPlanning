@@ -265,7 +265,8 @@ public class BookingService {
         payload.put("bookingId", saved.getId());
         payload.put("userId", saved.getUserId());
         payload.put("amount", saved.getAmount());
-        notifyObservers("BOOKING_RETRIED", payload);
+        notifyObservers("RETRY_ATTEMPTED", payload);
+        notifyObservers("BOOKING_COMPLETED", payload);
         deleteWildcard("s5-booking-summary::S5::S5-F3::" + saved.getUserId());
         deleteWildcard("s5-booking-details::S5::S5-F4::" + id);
         deleteWildcard("s5-revenue-report::*");
@@ -517,7 +518,7 @@ public class BookingService {
         payload.put("userId", saved.getUserId());
         payload.put("amount", saved.getAmount());
         payload.put("method", "CANCELLATION");
-        notifyObservers("BOOKING_CANCELLED", payload);
+        notifyObservers("REFUNDED", payload);
         deleteWildcard("s5-booking-summary::S5::S5-F3::" + saved.getUserId());
         deleteWildcard("s5-booking-details::S5::S5-F4::" + id);
         deleteWildcard("s5-revenue-report::*");
