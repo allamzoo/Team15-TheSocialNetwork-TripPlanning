@@ -7,6 +7,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -18,6 +20,14 @@ public class SecurityConfig {
 
     public SecurityConfig(JwtAuthenticationFilter jwtFilter) {
         this.jwtFilter = jwtFilter;
+    }
+
+    @Bean
+    public UserDetailsService userDetailsService() {
+        // Provide a dummy UserDetailsService since JWT is handling authentication
+        return username -> {
+            throw new UsernameNotFoundException("User not found - using JWT authentication");
+        };
     }
 
     @Bean

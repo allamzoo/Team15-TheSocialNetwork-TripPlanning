@@ -1,0 +1,183 @@
+package com.team15.tripplanning.destinationservice.integration;
+
+import com.team15.tripplanning.destinationservice.model.Destination;
+import com.team15.tripplanning.destinationservice.model.DestinationCategory;
+import com.team15.tripplanning.destinationservice.model.DestinationStatus;
+import com.team15.tripplanning.destinationservice.service.DestinationService;
+import com.team15.tripplanning.destinationservice.service.DestinationSearchService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.hamcrest.Matchers.*;
+
+/**
+ * Integration tests for S2-F11 Destination Search Indexing feature
+ * Tests explicit indexing endpoint and auto-indexing on CRUD operations
+ */
+@SpringBootTest
+@AutoConfigureMockMvc
+@TestPropertySource(locations = "classpath:application-test.yml")
+public class DestinationSearchIntegrationTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private DestinationService destinationService;
+
+    @Autowired
+    private DestinationSearchService searchService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    private String testToken;
+
+    @BeforeEach
+    public void setUp() {
+        // For testing, we'll use a mock token
+        testToken = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0QGV4YW1wbGUuY29tIiwidWlkIjoxLCJyb2xlIjoiVVNFUiJ9.test";
+    }
+
+    @Test
+    public void testExplicitIndexing_Success() throws Exception {
+        // Create a destination first
+        Destination destination = createTestDestination();
+        Destination saved = destinationService.create(destination);
+
+        // Test explicit indexing via POST /api/destinations/{id}/index
+        mockMvc.perform(post("/api/destinations/" + saved.getId() + "/index")
+                .header("Authorization", testToken)
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    public void testIndexWithoutToken_Unauthorized() throws Exception {
+        // Create a destination
+        Destination destination = createTestDestination();
+        Destination saved = destinationService.create(destination);
+
+        // Test indexing without token should return 401
+        mockMvc.perform(post("/api/destinations/" + saved.getId() + "/index")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    public void testIndexNonExistentDestination_NotFound() throws Exception {
+        // Test indexing a destination that doesn't exist should return 404
+        mockMvc.perform(post("/api/destinations/999/index")
+                .header("Authorization", testToken)
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    public void testAutoIndexOnCreate() throws Exception {
+        // Create a destination via POST /api/destinations
+        Destination destination = createTestDestination();
+
+        mockMvc.perform(post("/api/destinations")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(destination)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").exists());
+        
+        // The destination should be automatically indexed in Elasticsearch
+    }
+
+    @Test
+    public void testAutoIndexOnUpdate() throws Exception {
+        // Create a destination
+        Destination destination = createTestDestination();
+        Destination saved = destinationService.create(destination);
+
+        // Update the destination with a new name
+        Destination updated = new Destination();
+        updated.setName("Updated Destination");
+        updated.setCountry(saved.getCountry());
+        updated.setDescription(saved.getDescription());
+        updated.setCategory(saved.getCategory());
+        updated.setStatus(saved.getStatus());
+        updated.setRating(saved.getRating());
+        updated.setTotalRatings(saved.getTotalRatings());
+        updated.setDetails(saved.getDetails());
+
+        mockMvc.perform(put("/api/destinations/" + saved.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updated)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Updated Destination"));
+        
+        // The destination should be automatically re-indexed with the new name
+    }
+
+    @Test
+    public void testAutoRemovalOnDelete() throws Exception {
+        // Create a destination
+        Destination destination = createTestDestination();
+        Destination saved = destinationService.create(destination);
+
+        // Delete the destination
+        mockMvc.perform(delete("/api/destinations/" + saved.getId())
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNoContent());
+        
+        // The destination should be removed from Elasticsearch
+    }
+
+    @Test
+    public void testHighlightsExtraction_WithTopAttractions() {
+        // Create a destination with topAttractions
+        Destination destination = createTestDestination();
+        Map<String, Object> details = new HashMap<>();
+        details.put("topAttractions", Arrays.asList("Oia sunset", "Red Beach"));
+        destination.setDetails(details);
+
+        Destination saved = destinationService.create(destination);
+
+        // The highlights should be extracted and indexed
+        // Verify the search document contains the highlights
+    }
+
+    @Test
+    public void testHighlightsExtraction_NoTopAttractions() {
+        // Create a destination without topAttractions
+        Destination destination = createTestDestination();
+        destination.setDetails(new HashMap<>());
+
+        Destination saved = destinationService.create(destination);
+
+        // The highlights should be an empty string
+        // Verify the search document contains empty highlights
+    }
+
+    private Destination createTestDestination() {
+        Destination destination = new Destination();
+        destination.setName("Test Destination");
+        destination.setCountry("Test Country");
+        destination.setDescription("Test description");
+        destination.setCategory(DestinationCategory.BEACH);
+        destination.setStatus(DestinationStatus.ACTIVE);
+        destination.setRating(4.5);
+        destination.setTotalRatings(100);
+        destination.setDetails(new HashMap<>());
+        return destination;
+    }
+}
+

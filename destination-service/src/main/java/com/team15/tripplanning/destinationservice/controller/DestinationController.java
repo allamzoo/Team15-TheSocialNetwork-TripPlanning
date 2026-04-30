@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -55,6 +56,13 @@ public class DestinationController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         destinationService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/index")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> indexDestination(@PathVariable Long id) {
+        destinationService.indexDestinationExplicit(id);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/{id}/revenue")
