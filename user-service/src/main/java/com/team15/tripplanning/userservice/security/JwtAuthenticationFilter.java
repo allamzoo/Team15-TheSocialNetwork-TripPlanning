@@ -2,7 +2,6 @@ package com.team15.tripplanning.userservice.security;
 
 import com.team15.tripplanning.userservice.repository.UserRepository;
 import com.team15.tripplanning.userservice.security.handler.SignatureValidationHandler;
-import com.team15.tripplanning.userservice.security.handler.TokenExtractionHandler;
 import com.team15.tripplanning.userservice.security.handler.UserLoaderHandler;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -49,6 +48,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         boolean passed = validation.handle(ctx);
 
         if (!passed) {
+            response.setContentType("application/json");
+            response.getWriter().write("{\"status\":" + response.getStatus() + ",\"message\":\"Unauthorized\"}");
             return;
         }
 

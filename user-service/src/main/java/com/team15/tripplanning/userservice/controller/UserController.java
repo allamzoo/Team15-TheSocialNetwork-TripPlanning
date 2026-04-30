@@ -158,6 +158,21 @@ public class UserController {
         return ResponseEntity.ok(userService.findByTravelStyleWithMinimumTrips(style, minTrips));
     }
 
+    @PutMapping("/{id}/role")
+    public ResponseEntity<User> updateRole(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        String roleStr = body.get("role");
+        if (roleStr == null || roleStr.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "role field is required");
+        }
+        try {
+            User update = new User();
+            update.setRole(Role.valueOf(roleStr.trim().toUpperCase()));
+            return ResponseEntity.ok(userService.update(id, update));
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid role: " + roleStr);
+        }
+    }
+
     @PutMapping("/{id}/deactivate")
     public ResponseEntity<User> deactivate(@PathVariable Long id) {
         return ResponseEntity.ok(userService.deactivate(id));
