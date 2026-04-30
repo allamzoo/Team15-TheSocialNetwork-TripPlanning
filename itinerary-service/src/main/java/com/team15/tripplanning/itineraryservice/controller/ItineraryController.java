@@ -8,6 +8,7 @@ import com.team15.tripplanning.itineraryservice.model.ItineraryDay;
 import com.team15.tripplanning.itineraryservice.service.ItineraryService;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import com.team15.tripplanning.itineraryservice.dto.ItineraryDetailsDTO;
 import com.team15.tripplanning.itineraryservice.dto.ItineraryDayRequestDTO;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -143,5 +144,10 @@ public class ItineraryController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
         return ResponseEntity.ok(itineraryService.getAnalytics(startDate, endDate));
+    }
+
+    @PostMapping("/{itineraryId}/record-visit")
+    public ResponseEntity<Map<String, Object>> recordVisit(@PathVariable Long itineraryId) {
+        return ResponseEntity.ok(itineraryService.recordVisit(itineraryId));
     }
 }
