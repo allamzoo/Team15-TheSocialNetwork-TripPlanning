@@ -32,14 +32,17 @@ public class DestinationService {
     private final DestinationReviewRepository destinationReviewRepository;
     private final List<EntityObserver> observers = new ArrayList<>();
     private final RedisTemplate<String, Object> redisTemplate;
+    private final DestinationSearchService searchService;
 
     public DestinationService(DestinationRepository destinationRepository,
                               DestinationReviewRepository destinationReviewRepository,
                               MongoEventLogger mongoEventLogger,
-                              RedisTemplate<String, Object> redisTemplate) {
+                              RedisTemplate<String, Object> redisTemplate,
+                              DestinationSearchService searchService) {
         this.destinationRepository = destinationRepository;
         this.destinationReviewRepository = destinationReviewRepository;
         this.redisTemplate = redisTemplate;
+        this.searchService = searchService;
         register(mongoEventLogger);
     }
 
@@ -66,10 +69,17 @@ public class DestinationService {
 
     public Destination create(Destination destination) {
         Destination saved = destinationRepository.save(destination);
+        
+        // Auto-index in Elasticsearch
+        Map<String, Object> indexResult = searchService.indexDestination(saved, "auto_crud_create");
+        
         Map<String, Object> payload = new HashMap<>();
         payload.put("destinationId", saved.getId());
         payload.put("name", saved.getName());
-        notifyObservers("DESTINATION_CREATED", payload);
+        payload.put("indexedFields", indexResult.get("indexedFields"));
+        payload.put("source", "auto_crud_create");
+        notifyObservers("INDEXED", payload);
+        
         deleteWildcard("s2-destinations::*");
         deleteWildcard("s2-top-rated::*");
         deleteWildcard("s2-dest-search::*");
@@ -97,10 +107,17 @@ public class DestinationService {
         existing.setTotalRatings(destination.getTotalRatings());
         existing.setDetails(destination.getDetails());
         Destination saved = destinationRepository.save(existing);
+        
+        // Auto-index in Elasticsearch
+        Map<String, Object> indexResult = searchService.indexDestination(saved, "auto_crud_update");
+        
         Map<String, Object> payload = new HashMap<>();
         payload.put("destinationId", saved.getId());
         payload.put("name", saved.getName());
-        notifyObservers("DESTINATION_UPDATED", payload);
+        payload.put("indexedFields", indexResult.get("indexedFields"));
+        payload.put("source", "auto_crud_update");
+        notifyObservers("INDEXED", payload);
+        
         deleteWildcard("s2-destinations::*");
         deleteWildcard("s2-top-rated::*");
         deleteWildcard("s2-dest-search::*");
@@ -111,9 +128,15 @@ public class DestinationService {
     public void delete(Long id) {
         Destination destination = findById(id);
         destinationRepository.delete(destination);
+        
+        // Remove from Elasticsearch
+        searchService.removeDestination(id);
+        
         Map<String, Object> payload = new HashMap<>();
         payload.put("destinationId", id);
+        payload.put("source", "auto_crud_delete");
         notifyObservers("DESTINATION_DELETED", payload);
+        
         deleteWildcard("s2-destinations::*");
         deleteWildcard("s2-top-rated::*");
         deleteWildcard("s2-dest-search::*");
@@ -359,5 +382,25 @@ public class DestinationService {
                 })
                 .filter(Objects::nonNull)
                 .toList();
+    }
+
+    /**
+     * Explicitly index a destination (invoked via POST /api/destinations/{id}/index)
+     * Finds the destination by ID, indexes it in Elasticsearch, and logs an INDEXED event with source="explicit"
+     *
+     * @param id the destination ID
+     * @throws ResponseStatusException if destination not found (404) or indexing fails
+     */
+    public void indexDestinationExplicit(Long id) {
+        Destination destination = findById(id);
+        
+        // Index in Elasticsearch with source="explicit"
+        Map<String, Object> indexResult = searchService.indexDestination(destination, "explicit");
+        
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("destinationId", destination.getId());
+        payload.put("indexedFields", indexResult.get("indexedFields"));
+        payload.put("source", "explicit");
+        notifyObservers("INDEXED", payload);
     }
 }
