@@ -8,32 +8,65 @@ public class ItineraryAnalyticsDTO {
     private Double averageBudget;
     private Double completionRate;
 
-    public ItineraryAnalyticsDTO(Long totalItineraries, Long completedItineraries,
-                                 Long cancelledItineraries, Double totalBudget,
-                                 Double averageBudget, Double completionRate) {
-        this.totalItineraries = totalItineraries;
-        this.completedItineraries = completedItineraries;
-        this.cancelledItineraries = cancelledItineraries;
-        this.totalBudget = totalBudget;
-        this.averageBudget = averageBudget;
-        this.completionRate = completionRate;
+    private ItineraryAnalyticsDTO() {}
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private final ItineraryAnalyticsDTO dto = new ItineraryAnalyticsDTO();
+
+        public Builder totalItineraries(Long v) {
+            dto.totalItineraries = v;
+            return this;
+        }
+
+        public Builder completedItineraries(Long v) {
+            dto.completedItineraries = v;
+            return this;
+        }
+
+        public Builder cancelledItineraries(Long v) {
+            dto.cancelledItineraries = v;
+            return this;
+        }
+
+        public Builder totalBudget(Double v) {
+            dto.totalBudget = v;
+            return this;
+        }
+
+        public Builder averageBudget(Double v) {
+            dto.averageBudget = v;
+            return this;
+        }
+
+        public Builder completionRate(Double v) {
+            dto.completionRate = v;
+            return this;
+        }
+
+        public ItineraryAnalyticsDTO build() {
+            return dto;
+        }
     }
 
     public Long getTotalItineraries() { return totalItineraries; }
-    public void setTotalItineraries(Long totalItineraries) { this.totalItineraries = totalItineraries; }
+    public void setTotalItineraries(Long v) { this.totalItineraries = v; }
 
     public Long getCompletedItineraries() { return completedItineraries; }
-    public void setCompletedItineraries(Long completedItineraries) { this.completedItineraries = completedItineraries; }
+    public void setCompletedItineraries(Long v) { this.completedItineraries = v; }
 
     public Long getCancelledItineraries() { return cancelledItineraries; }
-    public void setCancelledItineraries(Long cancelledItineraries) { this.cancelledItineraries = cancelledItineraries; }
+    public void setCancelledItineraries(Long v) { this.cancelledItineraries = v; }
 
     public Double getTotalBudget() { return totalBudget; }
-    public void setTotalBudget(Double totalBudget) { this.totalBudget = totalBudget; }
+    public void setTotalBudget(Double v) { this.totalBudget = v; }
 
     public Double getAverageBudget() { return averageBudget; }
-    public void setAverageBudget(Double averageBudget) { this.averageBudget = averageBudget; }
+    public void setAverageBudget(Double v) { this.averageBudget = v; }
 
     public Double getCompletionRate() { return completionRate; }
-    public void setCompletionRate(Double completionRate) { this.completionRate = completionRate; }
+    public void setCompletionRate(Double v) { this.completionRate = v; }
 }

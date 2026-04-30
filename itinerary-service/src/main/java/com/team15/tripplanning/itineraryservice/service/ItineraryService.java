@@ -168,7 +168,13 @@ public class ItineraryService {
         }
 
         double total = (accommodation + transport + activities) * seasonMultiplier;
-        return new TripCostEstimateDTO(accommodation, transport, activities, total, seasonMultiplier);
+        return TripCostEstimateDTO.builder()
+                .estimatedAccommodation(accommodation)
+                .estimatedTransport(transport)
+                .estimatedActivities(activities)
+                .estimatedTotal(total)
+                .seasonMultiplier(seasonMultiplier)
+                .build();
     }
 
     // S3-F4
@@ -304,19 +310,18 @@ public class ItineraryService {
             dayDTOs.add(dto);
         }
 
-        ItineraryDetailsDTO response = new ItineraryDetailsDTO();
-        response.setItineraryId(itinerary.getId());
-        response.setUserId(itinerary.getUserId());
-        response.setDestinationId(itinerary.getDestinationId());
-        response.setTitle(itinerary.getTitle());
-        response.setStatus(itinerary.getStatus().name());
-        response.setEstimatedBudget(itinerary.getEstimatedBudget());
-        response.setMetadata(itinerary.getMetadata());
-        response.setDays(dayDTOs);
-        response.setTotalDays(dayDTOs.size());
-        response.setCompletedDays(completedCount);
-
-        return response;
+        return ItineraryDetailsDTO.builder()
+                .itineraryId(itinerary.getId())
+                .userId(itinerary.getUserId())
+                .destinationId(itinerary.getDestinationId())
+                .title(itinerary.getTitle())
+                .status(itinerary.getStatus().name())
+                .estimatedBudget(itinerary.getEstimatedBudget())
+                .metadata(itinerary.getMetadata())
+                .days(dayDTOs)
+                .totalDays(dayDTOs.size())
+                .completedDays(completedCount)
+                .build();
     }
 
     @Cacheable(value = "s3-analytics", key = "'S3::S3-F6::' + #startDate + '::' + #endDate")
@@ -324,7 +329,14 @@ public class ItineraryService {
         List<Object[]> results = itineraryRepository.getAnalytics(startDate, endDate);
 
         if (results.isEmpty()) {
-            return new ItineraryAnalyticsDTO(0L, 0L, 0L, 0.0, 0.0, 0.0);
+            return ItineraryAnalyticsDTO.builder()
+                    .totalItineraries(0L)
+                    .completedItineraries(0L)
+                    .cancelledItineraries(0L)
+                    .totalBudget(0.0)
+                    .averageBudget(0.0)
+                    .completionRate(0.0)
+                    .build();
         }
 
         Object[] row = results.get(0);
@@ -337,14 +349,14 @@ public class ItineraryService {
 
         double completionRate = total == 0 ? 0.0 : (completed * 100.0 / total);
 
-        return new ItineraryAnalyticsDTO(
-                total,
-                completed,
-                cancelled,
-                totalBudget,
-                averageBudget,
-                completionRate
-        );
+        return ItineraryAnalyticsDTO.builder()
+                .totalItineraries(total)
+                .completedItineraries(completed)
+                .cancelledItineraries(cancelled)
+                .totalBudget(totalBudget)
+                .averageBudget(averageBudget)
+                .completionRate(completionRate)
+                .build();
     }
 
     @Transactional

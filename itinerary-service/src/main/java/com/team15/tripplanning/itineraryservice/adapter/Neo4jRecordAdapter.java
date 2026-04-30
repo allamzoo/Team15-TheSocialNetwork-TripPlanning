@@ -12,7 +12,13 @@ public class Neo4jRecordAdapter {
         double multiplier    = record.getSeasonMultiplier() != null ? record.getSeasonMultiplier() : 1.0;
         double total         = (accommodation + transport + activities) * multiplier;
 
-        return new TripCostEstimateDTO(accommodation, transport, activities, total, multiplier);
+        return TripCostEstimateDTO.builder()
+                .estimatedAccommodation(accommodation)
+                .estimatedTransport(transport)
+                .estimatedActivities(activities)
+                .estimatedTotal(total)
+                .seasonMultiplier(multiplier)
+                .build();
     }
 
     private double orZero(Double value) {
