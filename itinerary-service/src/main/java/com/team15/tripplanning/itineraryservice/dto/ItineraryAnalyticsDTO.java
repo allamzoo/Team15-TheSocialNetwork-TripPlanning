@@ -8,7 +8,49 @@ public class ItineraryAnalyticsDTO {
     private Double averageBudget;
     private Double completionRate;
 
-    public ItineraryAnalyticsDTO() {}
+    private ItineraryAnalyticsDTO() {}
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private final ItineraryAnalyticsDTO dto = new ItineraryAnalyticsDTO();
+
+        public Builder totalItineraries(Long totalItineraries) {
+            dto.totalItineraries = totalItineraries;
+            return this;
+        }
+
+        public Builder completedItineraries(Long completedItineraries) {
+            dto.completedItineraries = completedItineraries;
+            return this;
+        }
+
+        public Builder cancelledItineraries(Long cancelledItineraries) {
+            dto.cancelledItineraries = cancelledItineraries;
+            return this;
+        }
+
+        public Builder totalBudget(Double totalBudget) {
+            dto.totalBudget = totalBudget;
+            return this;
+        }
+
+        public Builder averageBudget(Double averageBudget) {
+            dto.averageBudget = averageBudget;
+            return this;
+        }
+
+        public Builder completionRate(Double completionRate) {
+            dto.completionRate = completionRate;
+            return this;
+        }
+
+        public ItineraryAnalyticsDTO build() {
+            return dto;
+        }
+    }
 
     public ItineraryAnalyticsDTO(Long totalItineraries, Long completedItineraries,
                                  Long cancelledItineraries, Double totalBudget,
