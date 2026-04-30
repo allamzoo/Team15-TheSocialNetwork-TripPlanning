@@ -98,6 +98,77 @@ public class ItineraryDetailsDTO {
         this.completedDays = completedDays;
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private Long itineraryId;
+        private Long userId;
+        private Long destinationId;
+        private String title;
+        private String status;
+        private Double estimatedBudget;
+        private Object metadata;
+        private List<ItineraryDayDTO> days;
+        private int totalDays;
+        private int completedDays;
+
+        public Builder itineraryId(Long itineraryId) {
+            this.itineraryId = itineraryId;
+            return this;
+        }
+
+        public Builder userId(Long userId) {
+            this.userId = userId;
+            return this;
+        }
+
+        public Builder destinationId(Long destinationId) {
+            this.destinationId = destinationId;
+            return this;
+        }
+
+        public Builder title(String title) {
+            this.title = title;
+            return this;
+        }
+
+        public Builder status(String status) {
+            this.status = status;
+            return this;
+        }
+
+        public Builder estimatedBudget(Double estimatedBudget) {
+            this.estimatedBudget = estimatedBudget;
+            return this;
+        }
+
+        public Builder metadata(Object metadata) {
+            this.metadata = metadata;
+            return this;
+        }
+
+        public Builder days(List<ItineraryDayDTO> days) {
+            this.days = days;
+            return this;
+        }
+
+        public Builder totalDays(int totalDays) {
+            this.totalDays = totalDays;
+            return this;
+        }
+
+        public Builder completedDays(int completedDays) {
+            this.completedDays = completedDays;
+            return this;
+        }
+
+        public ItineraryDetailsDTO build() {
+            return new ItineraryDetailsDTO(itineraryId, userId, destinationId, title, status, estimatedBudget, metadata, days, totalDays, completedDays);
+        }
+    }
+
     // ✅ Getters and Setters
 
     public Long getItineraryId() {

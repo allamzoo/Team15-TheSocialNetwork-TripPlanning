@@ -18,6 +18,43 @@ public class DestinationRevenueDTO {
         this.averageBookingAmount = averageBookingAmount;
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private final DestinationRevenueDTO dto = new DestinationRevenueDTO();
+
+        public Builder destinationId(Long destinationId) {
+            dto.destinationId = destinationId;
+            return this;
+        }
+
+        public Builder name(String name) {
+            dto.name = name;
+            return this;
+        }
+
+        public Builder totalBookings(Long totalBookings) {
+            dto.totalBookings = totalBookings;
+            return this;
+        }
+
+        public Builder totalRevenue(Double totalRevenue) {
+            dto.totalRevenue = totalRevenue;
+            return this;
+        }
+
+        public Builder averageBookingAmount(Double averageBookingAmount) {
+            dto.averageBookingAmount = averageBookingAmount;
+            return this;
+        }
+
+        public DestinationRevenueDTO build() {
+            return dto;
+        }
+    }
+
     public Long getDestinationId() {
         return destinationId;
     }

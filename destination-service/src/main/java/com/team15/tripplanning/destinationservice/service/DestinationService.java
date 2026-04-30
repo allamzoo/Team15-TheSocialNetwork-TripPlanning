@@ -191,13 +191,13 @@ public class DestinationService {
             }
         }
 
-        return new DestinationRevenueDTO(
-                destination.getId(),
-                destination.getName(),
-                totalBookings,
-                totalRevenue,
-                averageBookingAmount
-        );
+        return DestinationRevenueDTO.builder()
+                .destinationId(destination.getId())
+                .name(destination.getName())
+                .totalBookings(totalBookings)
+                .totalRevenue(totalRevenue)
+                .averageBookingAmount(averageBookingAmount)
+                .build();
     }
     public List<Destination> filterByDetailAttribute(String key, String value, String status) {
         if (key == null || key.isBlank() || value == null || value.isBlank()) {
@@ -224,12 +224,12 @@ public class DestinationService {
 
         List<Object[]> rows = destinationRepository.findTopRatedWithBookingCount(limit);
 
-        return rows.stream().map(row -> new TopDestinationDTO(
-                ((Number) row[0]).longValue(),
-                (String) row[1],
-                row[2] == null ? 0.0 : ((Number) row[2]).doubleValue(),
-                row[3] == null ? 0L : ((Number) row[3]).longValue()
-        )).toList();
+        return rows.stream().map(row -> TopDestinationDTO.builder()
+                .destinationId(((Number) row[0]).longValue())
+                .name((String) row[1])
+                .rating(row[2] == null ? 0.0 : ((Number) row[2]).doubleValue())
+                .totalBookings(row[3] == null ? 0L : ((Number) row[3]).longValue())
+                .build()).toList();
     }
 
     @Transactional
@@ -318,12 +318,12 @@ public class DestinationService {
 
                     // If this destination has low reviews, wrap it in a DTO
                     if (!lowReviews.isEmpty()) {
-                        return new DestinationReviewAlertDTO(
-                                dest.getId(),
-                                dest.getName(),
-                                dest.getStatus(),
-                                lowReviews
-                        );
+                        return DestinationReviewAlertDTO.builder()
+                                .destinationId(dest.getId())
+                                .destinationName(dest.getName())
+                                .destinationStatus(dest.getStatus())
+                                .lowRatedReviews(lowReviews)
+                                .build();
                     }
                     return null;
                 })

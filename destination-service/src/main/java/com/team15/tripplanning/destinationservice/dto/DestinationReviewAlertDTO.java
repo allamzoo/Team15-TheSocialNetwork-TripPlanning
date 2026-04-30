@@ -18,7 +18,47 @@ public class DestinationReviewAlertDTO {
         this.destinationName = destinationName;
         this.destinationStatus = destinationStatus;
         this.lowRatedReviews = lowRatedReviews;
-        this.lowRatedCount = lowRatedReviews.size();
+        this.lowRatedCount = lowRatedReviews == null ? 0 : lowRatedReviews.size();
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private Long destinationId;
+        private String destinationName;
+        private DestinationStatus destinationStatus;
+        private List<DestinationReview> lowRatedReviews;
+
+        public Builder destinationId(Long destinationId) {
+            this.destinationId = destinationId;
+            return this;
+        }
+
+        public Builder destinationName(String destinationName) {
+            this.destinationName = destinationName;
+            return this;
+        }
+
+        public Builder destinationStatus(DestinationStatus destinationStatus) {
+            this.destinationStatus = destinationStatus;
+            return this;
+        }
+
+        public Builder lowRatedReviews(List<DestinationReview> lowRatedReviews) {
+            this.lowRatedReviews = lowRatedReviews;
+            return this;
+        }
+
+        public DestinationReviewAlertDTO build() {
+            return new DestinationReviewAlertDTO(
+                    destinationId,
+                    destinationName,
+                    destinationStatus,
+                    lowRatedReviews
+            );
+        }
     }
 
     // Standard Getters and Setters
