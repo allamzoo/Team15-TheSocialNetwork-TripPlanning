@@ -196,12 +196,12 @@ public class BookingService {
         }
 
         // 5️⃣ Return DTO (even if user has no bookings, return empty summary with userId)
-        return new UserBookingSummaryDTO(
-                userId,
-                totalBookings,
-                totalAmount,
-                typeBreakdown
-        );
+        return UserBookingSummaryDTO.builder()
+                .userId(userId)
+                .totalBookings(totalBookings)
+                .totalAmount(totalAmount)
+                .typeBreakdown(typeBreakdown)
+                .build();
     }
 
     @Transactional
@@ -291,19 +291,18 @@ public class BookingService {
 
         double finalAmount = booking.getAmount() - totalDiscount;
 
-        BookingDetailsDTO result = new BookingDetailsDTO();
-        result.setBookingId(booking.getId());
-        result.setItineraryId(booking.getItineraryId());
-        result.setUserId(booking.getUserId());
-        result.setOriginalAmount(booking.getAmount());
-        result.setType(booking.getType().name());
-        result.setStatus(booking.getStatus().name());
-        result.setBookingDetails(booking.getBookingDetails());
-        result.setAppliedCoupons(appliedCoupons);
-        result.setTotalDiscount(totalDiscount);
-        result.setFinalAmount(finalAmount);
-
-        return result;
+        return BookingDetailsDTO.builder()
+                .bookingId(booking.getId())
+                .itineraryId(booking.getItineraryId())
+                .userId(booking.getUserId())
+                .originalAmount(booking.getAmount())
+                .type(booking.getType().name())
+                .status(booking.getStatus().name())
+                .bookingDetails(booking.getBookingDetails())
+                .appliedCoupons(appliedCoupons)
+                .totalDiscount(totalDiscount)
+                .finalAmount(finalAmount)
+                .build();
     }
     @Transactional
     public void cancelPendingBookingsByItinerary(Long itineraryId) {
@@ -325,16 +324,6 @@ public class BookingService {
         List<CouponUsageDTO> response = new ArrayList<>();
 
         for (Object[] row : results) {
-            CouponUsageDTO dto = new CouponUsageDTO();
-
-            dto.setCouponId(((Number) row[0]).longValue());
-            dto.setCode((String) row[1]);
-            dto.setDiscountType((String) row[2]);
-            dto.setDiscountValue(((Number) row[3]).doubleValue());
-            dto.setTimesUsed(((Number) row[4]).intValue());
-            dto.setTotalDiscountGiven(((Number) row[5]).doubleValue());
-            dto.setActive((Boolean) row[6]);
-
             LocalDateTime expiryDate = null;
             if (row[7] instanceof LocalDateTime ldt) {
                 expiryDate = ldt;
@@ -343,9 +332,17 @@ public class BookingService {
             }
 
             boolean expired = expiryDate != null && expiryDate.isBefore(LocalDateTime.now());
-            dto.setExpired(expired);
 
-            response.add(dto);
+            response.add(CouponUsageDTO.builder()
+                    .couponId(((Number) row[0]).longValue())
+                    .code((String) row[1])
+                    .discountType((String) row[2])
+                    .discountValue(((Number) row[3]).doubleValue())
+                    .timesUsed(((Number) row[4]).intValue())
+                    .totalDiscountGiven(((Number) row[5]).doubleValue())
+                    .active((Boolean) row[6])
+                    .expired(expired)
+                    .build());
         }
 
         return response;
@@ -377,13 +374,13 @@ public class BookingService {
 
         double average = totalBookings == 0 ? 0 : totalRevenue / totalBookings;
 
-        return new RevenueReportDTO(
-                totalRevenue,
-                totalBookings,
-                average,
-                cancelledAmount,
-                cancelledCount
-        );
+        return RevenueReportDTO.builder()
+                .totalRevenue(totalRevenue)
+                .totalBookings(totalBookings)
+                .averageBookingAmount(average)
+                .cancelledAmount(cancelledAmount)
+                .cancelledCount(cancelledCount)
+                .build();
     }
 
     // ===== S5-F1: FINAL SAFE LOGIC =====
