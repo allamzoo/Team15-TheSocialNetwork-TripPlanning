@@ -7,7 +7,44 @@ public class TripCostEstimateDTO {
     private double estimatedTotal;
     private double seasonMultiplier;
 
-    public TripCostEstimateDTO() {}
+    private TripCostEstimateDTO() {}
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private final TripCostEstimateDTO dto = new TripCostEstimateDTO();
+
+        public Builder estimatedAccommodation(double estimatedAccommodation) {
+            dto.estimatedAccommodation = estimatedAccommodation;
+            return this;
+        }
+
+        public Builder estimatedTransport(double estimatedTransport) {
+            dto.estimatedTransport = estimatedTransport;
+            return this;
+        }
+
+        public Builder estimatedActivities(double estimatedActivities) {
+            dto.estimatedActivities = estimatedActivities;
+            return this;
+        }
+
+        public Builder estimatedTotal(double estimatedTotal) {
+            dto.estimatedTotal = estimatedTotal;
+            return this;
+        }
+
+        public Builder seasonMultiplier(double seasonMultiplier) {
+            dto.seasonMultiplier = seasonMultiplier;
+            return this;
+        }
+
+        public TripCostEstimateDTO build() {
+            return dto;
+        }
+    }
 
     public TripCostEstimateDTO(double estimatedAccommodation, double estimatedTransport,
                                double estimatedActivities, double estimatedTotal,

@@ -17,8 +17,68 @@ public class ItineraryDetailsDTO {
     private int totalDays;
     private int completedDays;
 
-    // ✅ Default constructor
-    public ItineraryDetailsDTO() {
+    private ItineraryDetailsDTO() {}
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private final ItineraryDetailsDTO dto = new ItineraryDetailsDTO();
+
+        public Builder itineraryId(Long itineraryId) {
+            dto.itineraryId = itineraryId;
+            return this;
+        }
+
+        public Builder userId(Long userId) {
+            dto.userId = userId;
+            return this;
+        }
+
+        public Builder destinationId(Long destinationId) {
+            dto.destinationId = destinationId;
+            return this;
+        }
+
+        public Builder title(String title) {
+            dto.title = title;
+            return this;
+        }
+
+        public Builder status(String status) {
+            dto.status = status;
+            return this;
+        }
+
+        public Builder estimatedBudget(Double estimatedBudget) {
+            dto.estimatedBudget = estimatedBudget;
+            return this;
+        }
+
+        public Builder metadata(Object metadata) {
+            dto.metadata = metadata;
+            return this;
+        }
+
+        public Builder days(List<ItineraryDayDTO> days) {
+            dto.days = days;
+            return this;
+        }
+
+        public Builder totalDays(int totalDays) {
+            dto.totalDays = totalDays;
+            return this;
+        }
+
+        public Builder completedDays(int completedDays) {
+            dto.completedDays = completedDays;
+            return this;
+        }
+
+        public ItineraryDetailsDTO build() {
+            return dto;
+        }
     }
 
     // ✅ Full constructor
