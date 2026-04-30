@@ -1,5 +1,6 @@
 package com.team15.tripplanning.userservice.service;
 
+import com.team15.tripplanning.userservice.adapter.ObjectArrayDtoAdapter;
 import com.team15.tripplanning.userservice.dto.SavedDestinationProfileDTO;
 import com.team15.tripplanning.userservice.dto.TopTravelerDTO;
 import com.team15.tripplanning.userservice.dto.UserProfileDTO;
@@ -28,6 +29,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final List<EntityObserver> observers = new ArrayList<>();
     private final PasswordEncoder passwordEncoder;
+    private final ObjectArrayDtoAdapter adapter = new ObjectArrayDtoAdapter();
 
     public UserService(UserRepository userRepository, MongoEventLogger mongoEventLogger, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
@@ -161,25 +163,7 @@ public class UserService {
                     .averageBudget(0.0)
                     .build();
         }
-
-        Object[] row = unwrapRow(result.get(0));
-        Long userId = toLong(row[0]);
-        String name = row[1] != null ? row[1].toString() : null;
-        Long totalTrips = toLong(row[2]);
-        Long completedTrips = toLong(row[3]);
-        Long cancelledTrips = toLong(row[4]);
-        Double totalSpent = toDouble(row[5]);
-        Double averageBudget = toDouble(row[6]);
-
-        return UserTripSummaryDTO.builder()
-                .userId(userId)
-                .name(name)
-                .totalTrips(totalTrips)
-                .completedTrips(completedTrips)
-                .cancelledTrips(cancelledTrips)
-                .totalSpent(totalSpent)
-                .averageBudget(averageBudget)
-                .build();
+        return adapter.adapt(result.get(0));
     }
 
 
@@ -253,27 +237,6 @@ public class UserService {
 
     public String health() {
         return "OK";
-    }
-
-    private Object[] unwrapRow(Object rawRow) {
-        if (rawRow instanceof Object[] row) {
-            if (row.length == 1 && row[0] instanceof Object[] nestedRow) {
-                return nestedRow;
-            }
-            return row;
-        }
-        throw new ResponseStatusException(
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                "Unexpected trip summary row format"
-        );
-    }
-
-    private Long toLong(Object value) {
-        return value == null ? 0L : ((Number) value).longValue();
-    }
-
-    private Double toDouble(Object value) {
-        return value == null ? 0.0 : ((Number) value).doubleValue();
     }
 
     private String normalize(String value) {
