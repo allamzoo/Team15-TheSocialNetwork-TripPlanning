@@ -17,6 +17,8 @@ public class AuthEvent implements MongoEvent {
     private LocalDateTime timestamp;
     private Map<String, Object> details;
 
+    public AuthEvent() {}
+
     public AuthEvent(Map<String, Object> params) {
         this.userId = (Long) params.get("userId");
         this.action = (String) params.get("action");
