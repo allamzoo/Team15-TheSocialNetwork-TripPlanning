@@ -1,11 +1,17 @@
 package com.team15.tripplanning.activityservice.service;
 
+import com.team15.tripplanning.activityservice.dto.ActivityLifecycleEventDTO;
 import com.team15.tripplanning.activityservice.dto.NearbyActivityDTO;
 import com.team15.tripplanning.activityservice.dto.ActivitySummaryDTO;
 import com.team15.tripplanning.activityservice.dto.BudgetActivityDTO;
+import com.team15.tripplanning.activityservice.dto.RecordEventRequest;
 import com.team15.tripplanning.activityservice.model.Activity;
+import com.team15.tripplanning.activityservice.model.cassandra.ActivityLifecycleEvent;
+import com.team15.tripplanning.activityservice.model.cassandra.ActivityLifecycleEventKey;
+import com.team15.tripplanning.activityservice.repository.ActivityLifecycleEventRepository;
 import com.team15.tripplanning.activityservice.repository.ActivityRepository;
 import com.team15.tripplanning.shared.observer.EntityObserver;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -25,13 +31,19 @@ import com.team15.tripplanning.activityservice.dto.BatchActivityRequestDTO;
 @Service
 public class ActivityService {
     private final ActivityRepository activityRepository;
+    private final ActivityLifecycleEventRepository lifecycleEventRepository;
     private final List<EntityObserver> observers = new ArrayList<>();
     private final RedisTemplate<String, Object> redisTemplate;
 
+    private static final Set<String> VALID_LIFECYCLE_STATUSES =
+            Set.of("BOOKED", "STARTED", "COMPLETED", "CANCELLED");
+
     public ActivityService(ActivityRepository activityRepository,
+                           ActivityLifecycleEventRepository lifecycleEventRepository,
                            MongoEventLogger mongoEventLogger,
                            RedisTemplate<String, Object> redisTemplate) {
         this.activityRepository = activityRepository;
+        this.lifecycleEventRepository = lifecycleEventRepository;
         this.redisTemplate = redisTemplate;
         register(mongoEventLogger);
     }
@@ -379,5 +391,51 @@ public class ActivityService {
         } else {
             return activityRepository.findActivitiesInDateRange(startDate, endDate);
         }
+    }
+
+    // ---------- S4-F11 ----------
+    public ActivityLifecycleEventDTO recordLifecycleEvent(Long activityId, RecordEventRequest request) {
+        // b) Find activity in PostgreSQL — throws 404 if not found
+        Activity activity = findById(activityId);
+
+        // c) Validate status
+        String rawStatus = request.getStatus();
+        if (rawStatus == null || !VALID_LIFECYCLE_STATUSES.contains(rawStatus.toUpperCase())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Invalid status. Must be one of: BOOKED, STARTED, COMPLETED, CANCELLED");
+        }
+        String status = rawStatus.toUpperCase();
+
+        // d) Store lifecycle event in Cassandra
+        Instant now = Instant.now();
+        ActivityLifecycleEventKey key = new ActivityLifecycleEventKey(activityId, now);
+        ActivityLifecycleEvent event = new ActivityLifecycleEvent();
+        event.setKey(key);
+        event.setStatus(status);
+        event.setCategory(activity.getCategory().name());
+        event.setLatitude(activity.getLatitude());
+        event.setLongitude(activity.getLongitude());
+        event.setNotes(request.getNotes());
+        lifecycleEventRepository.save(event);
+
+        // e) Fire observer → logs EVENT_RECORDED to MongoDB activity_events
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("activityId", activityId);
+        payload.put("itineraryId", activity.getItineraryId());
+        payload.put("status", status);
+        payload.put("category", activity.getCategory().name());
+        payload.put("notes", request.getNotes());
+        notifyObservers("EVENT_RECORDED", payload);
+
+        // f) Return DTO (caller responds with 201)
+        return ActivityLifecycleEventDTO.builder()
+                .activityId(activityId)
+                .eventTimestamp(now)
+                .status(status)
+                .category(activity.getCategory().name())
+                .latitude(activity.getLatitude())
+                .longitude(activity.getLongitude())
+                .notes(request.getNotes())
+                .build();
     }
 }
