@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.team15.tripplanning.userservice.controller.UserController;
 import com.team15.tripplanning.userservice.dto.UserTripSummaryDTO;
+import com.team15.tripplanning.userservice.security.JwtService;
 import com.team15.tripplanning.userservice.service.SavedDestinationService;
 import com.team15.tripplanning.userservice.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,7 +26,8 @@ class UserTripSummaryEndpointIntegrationTest {
     void setUp() {
         userService = Mockito.mock(UserService.class);
         SavedDestinationService savedDestinationService = Mockito.mock(SavedDestinationService.class);
-        mockMvc = MockMvcBuilders.standaloneSetup(new UserController(userService, savedDestinationService)).build();
+        JwtService jwtService = Mockito.mock(JwtService.class);
+        mockMvc = MockMvcBuilders.standaloneSetup(new UserController(userService, savedDestinationService, jwtService)).build();
     }
 
     @Test
