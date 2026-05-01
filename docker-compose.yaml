@@ -136,10 +136,13 @@ services:
       SPRING_DATA_MONGODB_URI: mongodb://tripplanning-mongo:27017/tripplanningdb
       SPRING_REDIS_HOST: tripplanning-redis
       SPRING_REDIS_PORT: 6379
+      SPRING_ELASTICSEARCH_URIS: http://tripplanning-elasticsearch:9200
     depends_on:
       postgres:
         condition: service_healthy
       mongodb:
+        condition: service_started
+      elasticsearch:
         condition: service_started
 
   itinerary-service:
@@ -151,9 +154,19 @@ services:
       - "8083:8080"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tripplanningdb
+      SPRING_DATA_MONGODB_URI: mongodb://tripplanning-mongo:27017/tripplanningdb
+      SPRING_REDIS_HOST: tripplanning-redis
+      SPRING_REDIS_PORT: 6379
+      SPRING_NEO4J_URI: bolt://tripplanning-neo4j:7687
+      SPRING_NEO4J_AUTHENTICATION_USERNAME: neo4j
+      SPRING_NEO4J_AUTHENTICATION_PASSWORD: password
     depends_on:
       postgres:
         condition: service_healthy
+      mongodb:
+        condition: service_started
+      neo4j:
+        condition: service_started
 
   activity-service:
     build:
@@ -164,9 +177,14 @@ services:
       - "8084:8080"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tripplanningdb
+      SPRING_DATA_MONGODB_URI: mongodb://tripplanning-mongo:27017/tripplanningdb
+      SPRING_REDIS_HOST: tripplanning-redis
+      SPRING_REDIS_PORT: 6379
     depends_on:
       postgres:
         condition: service_healthy
+      mongodb:
+        condition: service_started
 
   booking-service:
     build:
