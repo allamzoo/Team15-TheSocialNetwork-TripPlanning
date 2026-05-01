@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.team15.tripplanning.bookingservice.dto.RefundCancellationRequest;
 
 @RestController
 @RequestMapping("/api/bookings")
@@ -152,5 +153,18 @@ public class BookingController {
 
         List<Booking> bookings = bookingService.getBookings(status, startDateTime, endDateTime);
         return ResponseEntity.ok(bookings);
+    }
+
+    @PostMapping("/{id}/refund-cancellation-tier")
+    public ResponseEntity<Booking> refundCancellationTier(
+            @PathVariable Long id,
+            @RequestBody(required = false) RefundCancellationRequest request
+    ) {
+        if (request == null) {
+            request = new RefundCancellationRequest();
+        }
+
+        Booking updated = bookingService.processRefundCancellationTier(id, request);
+        return ResponseEntity.ok(updated);
     }
 }

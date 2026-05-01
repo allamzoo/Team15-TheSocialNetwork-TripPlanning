@@ -82,4 +82,11 @@ WHERE b.createdAt BETWEEN :startDate AND :endDate
 
     @Query(value = "SELECT COUNT(*) FROM users WHERE id = :userId", nativeQuery = true)
     int countUserById(@Param("userId") Long userId);
+
+    @Query(value = """
+    SELECT i.id, i.status, i.start_date
+    FROM itineraries i
+    WHERE i.id = :itineraryId
+    """, nativeQuery = true)
+    Object[] findItineraryRefundInfoRaw(@Param("itineraryId") Long itineraryId);
 }
