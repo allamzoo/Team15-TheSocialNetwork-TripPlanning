@@ -1,6 +1,8 @@
 package com.team15.tripplanning.userservice.service;
 
 import com.team15.tripplanning.userservice.adapter.ObjectArrayDtoAdapter;
+import com.team15.tripplanning.userservice.document.AuthEvent;
+import com.team15.tripplanning.userservice.dto.ActivityFeedDTO;
 import com.team15.tripplanning.userservice.dto.SavedDestinationProfileDTO;
 import com.team15.tripplanning.userservice.dto.TopTravelerDTO;
 import com.team15.tripplanning.userservice.dto.UserProfileDTO;
@@ -11,6 +13,7 @@ import com.team15.tripplanning.userservice.model.Status;
 import com.team15.tripplanning.userservice.model.User;
 import com.team15.tripplanning.userservice.observer.EntityObserver;
 import com.team15.tripplanning.userservice.observer.MongoEventLogger;
+import com.team15.tripplanning.userservice.repository.AuthEventRepository;
 import com.team15.tripplanning.userservice.repository.UserRepository;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -20,6 +23,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -34,12 +40,15 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final ObjectArrayDtoAdapter adapter = new ObjectArrayDtoAdapter();
     private final RedisTemplate<String, Object> redisTemplate;
+    private final AuthEventRepository authEventRepository;
 
     public UserService(UserRepository userRepository, MongoEventLogger mongoEventLogger,
-                       PasswordEncoder passwordEncoder, RedisTemplate<String, Object> redisTemplate) {
+                       PasswordEncoder passwordEncoder, RedisTemplate<String, Object> redisTemplate,
+                       AuthEventRepository authEventRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.redisTemplate = redisTemplate;
+        this.authEventRepository = authEventRepository;
         register(mongoEventLogger);
     }
 
@@ -150,6 +159,7 @@ public class UserService {
         deleteWildcard("s1-f1-users::*");
         deleteWildcard("s1-f6-profile::S1::S1-F6::" + id);
         deleteWildcard("s1-f3-trip-summary::S1::S1-F3::" + id);
+        deleteWildcard("s1-f12-activity::S1::S1-F12::" + id + "::*");
         return saved;
     }
 
@@ -261,6 +271,28 @@ public class UserService {
         deleteWildcard("s1-f1-users::*");
         deleteWildcard("s1-f6-profile::S1::S1-F6::" + id);
         return saved;
+    }
+
+    @Cacheable(value = "s1-f12-activity", key = "'S1::S1-F12::' + #userId + '::' + #page + '::' + #size")
+    public Map<String, Object> getActivityFeed(Long userId, int page, int size) {
+        findById(userId);
+        int cappedSize = Math.min(size, 100);
+        PageRequest pageable = PageRequest.of(page, cappedSize, Sort.by(Sort.Direction.DESC, "timestamp"));
+        Page<AuthEvent> eventPage = authEventRepository.findByUserId(userId, pageable);
+        List<ActivityFeedDTO> content = eventPage.getContent().stream()
+                .map(e -> ActivityFeedDTO.builder()
+                        .userId(userId)
+                        .action(e.getAction())
+                        .timestamp(e.getTimestamp())
+                        .details(e.getDetails())
+                        .build())
+                .toList();
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("content", content);
+        result.put("page", page);
+        result.put("size", cappedSize);
+        result.put("totalElements", eventPage.getTotalElements());
+        return result;
     }
 
     public String health() {

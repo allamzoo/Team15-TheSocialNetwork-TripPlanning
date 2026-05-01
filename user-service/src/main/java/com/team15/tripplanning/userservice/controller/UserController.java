@@ -6,8 +6,10 @@ import com.team15.tripplanning.userservice.dto.UserTripSummaryDTO;
 import com.team15.tripplanning.userservice.model.SavedDestination;
 import com.team15.tripplanning.userservice.model.User;
 import com.team15.tripplanning.userservice.model.Role;
+import com.team15.tripplanning.userservice.security.JwtService;
 import com.team15.tripplanning.userservice.service.SavedDestinationService;
 import com.team15.tripplanning.userservice.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -30,10 +32,13 @@ import org.springframework.web.server.ResponseStatusException;
 public class UserController {
     private final UserService userService;
     private final SavedDestinationService savedDestinationService;
+    private final JwtService jwtService;
 
-    public UserController(UserService userService, SavedDestinationService savedDestinationService) {
+    public UserController(UserService userService, SavedDestinationService savedDestinationService,
+                          JwtService jwtService) {
         this.userService = userService;
         this.savedDestinationService = savedDestinationService;
+        this.jwtService = jwtService;
     }
 
     @PostMapping
@@ -176,6 +181,26 @@ public class UserController {
     @PutMapping("/{id}/deactivate")
     public ResponseEntity<User> deactivate(@PathVariable Long id) {
         return ResponseEntity.ok(userService.deactivate(id));
+    }
+
+    @GetMapping("/{id}/activity")
+    public ResponseEntity<Map<String, Object>> getActivityFeed(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            HttpServletRequest request
+    ) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing or invalid Authorization header");
+        }
+        String token = authHeader.substring(7);
+        Long callerId = jwtService.extractUserId(token);
+        String callerRole = jwtService.extractRole(token);
+        if (!id.equals(callerId) && !"ADMIN".equals(callerRole)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
+        return ResponseEntity.ok(userService.getActivityFeed(id, page, size));
     }
 
     private Role parseRole(String role) {
