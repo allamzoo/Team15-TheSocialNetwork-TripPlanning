@@ -19,6 +19,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
@@ -28,6 +30,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class DestinationService {
+    private static final Logger log = LoggerFactory.getLogger(DestinationService.class);
     private final DestinationRepository destinationRepository;
     private final DestinationReviewRepository destinationReviewRepository;
     private final List<EntityObserver> observers = new ArrayList<>();
@@ -61,9 +64,14 @@ public class DestinationService {
     }
 
     private void deleteWildcard(String pattern) {
-        Set<String> keys = redisTemplate.keys(pattern);
-        if (keys != null && !keys.isEmpty()) {
-            redisTemplate.delete(keys);
+        try {
+            Set<String> keys = redisTemplate.keys(pattern);
+            if (keys != null && !keys.isEmpty()) {
+                redisTemplate.delete(keys);
+            }
+        } catch (Exception e) {
+            // Redis is a soft dependency — cache eviction failure must never break the business operation
+            log.warn("Cache eviction skipped (Redis unavailable) for pattern {}: {}", pattern, e.getMessage());
         }
     }
 

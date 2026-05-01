@@ -64,7 +64,11 @@ public class DestinationSearchService {
 
         } catch (Exception e) {
             log.error("Failed to index destination {} in Elasticsearch: {}", destination.getId(), e.getMessage());
-            throw new RuntimeException("Failed to index destination: " + e.getMessage(), e);
+            // ES is a soft dependency — indexing failure must never break the business operation
+            Map<String, Object> fallback = new HashMap<>();
+            fallback.put("indexedFields", List.of());
+            fallback.put("highlights", "");
+            return fallback;
         }
     }
 
