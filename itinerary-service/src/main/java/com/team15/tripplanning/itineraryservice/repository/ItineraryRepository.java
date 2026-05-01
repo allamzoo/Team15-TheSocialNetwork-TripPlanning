@@ -92,4 +92,20 @@ public interface ItineraryRepository extends JpaRepository<Itinerary, Long> {
     @Transactional
     @Query(value = "UPDATE bookings SET status = 'CANCELLED' WHERE itinerary_id = :itineraryId AND status = 'PENDING'", nativeQuery = true)
     int cancelPendingBookings(@Param("itineraryId") Long itineraryId);
+
+    @Query(value = """
+        SELECT u.id, u.name
+        FROM itineraries i
+        JOIN users u ON u.id = i.user_id
+        WHERE i.id = :itineraryId
+        """, nativeQuery = true)
+    List<Object[]> findUserInfoForVisit(@Param("itineraryId") Long itineraryId);
+
+    @Query(value = """
+        SELECT d.id, d.name, d.country, d.category
+        FROM itineraries i
+        JOIN destinations d ON d.id = i.destination_id
+        WHERE i.id = :itineraryId
+        """, nativeQuery = true)
+    List<Object[]> findDestinationInfoForVisit(@Param("itineraryId") Long itineraryId);
 }

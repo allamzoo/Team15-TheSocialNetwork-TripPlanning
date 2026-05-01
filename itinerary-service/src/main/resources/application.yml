@@ -25,13 +25,13 @@ spring:
       uri: ${SPRING_NEO4J_URI:bolt://localhost:7687}
       authentication:
         username: ${SPRING_NEO4J_USERNAME:neo4j}
-        password: ${SPRING_NEO4J_PASSWORD:password}
+        password: ${SPRING_NEO4J_PASSWORD:neo4jpass}
 
   neo4j:
     uri: ${SPRING_NEO4J_URI:bolt://localhost:7687}
     authentication:
       username: ${SPRING_NEO4J_USERNAME:neo4j}
-      password: ${SPRING_NEO4J_PASSWORD:password}
+      password: ${SPRING_NEO4J_PASSWORD:neo4jpass}
 
 server:
   port: 8080

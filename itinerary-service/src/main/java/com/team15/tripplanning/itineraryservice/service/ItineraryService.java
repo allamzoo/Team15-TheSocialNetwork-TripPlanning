@@ -4,6 +4,7 @@ import com.team15.tripplanning.itineraryservice.dto.ItineraryAnalyticsDTO;
 import com.team15.tripplanning.itineraryservice.dto.TripCostEstimateDTO;
 import com.team15.tripplanning.itineraryservice.model.Itinerary;
 import com.team15.tripplanning.itineraryservice.repository.ItineraryRepository;
+import com.team15.tripplanning.itineraryservice.repository.VisitGraphRepository;
 import com.team15.tripplanning.shared.observer.EntityObserver;
 import java.util.List;
 import com.team15.tripplanning.itineraryservice.dto.ItineraryDayRequestDTO;
@@ -25,14 +26,17 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class ItineraryService {
     private final ItineraryRepository itineraryRepository;
+    private final VisitGraphRepository visitGraphRepository;
     private final List<EntityObserver> observers = new ArrayList<>();
     private final RedisTemplate<String, Object> redisTemplate;
 
     public ItineraryService(ItineraryRepository itineraryRepository,
                             MongoEventLogger mongoEventLogger,
-                            RedisTemplate<String, Object> redisTemplate) {
+                            RedisTemplate<String, Object> redisTemplate,
+                            VisitGraphRepository visitGraphRepository) {
         this.itineraryRepository = itineraryRepository;
         this.redisTemplate = redisTemplate;
+        this.visitGraphRepository = visitGraphRepository;
         register(mongoEventLogger);
     }
 
@@ -385,5 +389,82 @@ public class ItineraryService {
         }
 
         return itinerary;
+    }
+
+    @Transactional
+    public Map<String, Object> recordVisit(Long itineraryId) {
+        Itinerary itinerary = itineraryRepository.findById(itineraryId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found"));
+
+        if (itinerary.getStatus() != Itinerary.ItineraryStatus.COMPLETED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only COMPLETED itineraries can record visits");
+        }
+
+        if (itinerary.getDestinationId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Itinerary has no destination assigned");
+        }
+
+        List<Object[]> userRows = itineraryRepository.findUserInfoForVisit(itineraryId);
+        if (userRows.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found for itinerary");
+        }
+
+        List<Object[]> destinationRows = itineraryRepository.findDestinationInfoForVisit(itineraryId);
+        if (destinationRows.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Destination not found for itinerary");
+        }
+
+        Object[] userRow = userRows.get(0);
+        Long userId = ((Number) userRow[0]).longValue();
+        String userName = userRow[1] != null ? userRow[1].toString() : "Unknown User";
+
+        Object[] destinationRow = destinationRows.get(0);
+        Long destinationId = ((Number) destinationRow[0]).longValue();
+        String destinationName = destinationRow[1] != null ? destinationRow[1].toString() : "Unknown Destination";
+        String country = destinationRow[2] != null ? destinationRow[2].toString() : "";
+        String category = destinationRow[3] != null ? destinationRow[3].toString() : "";
+
+        boolean alreadyRecorded = visitGraphRepository.isItineraryAlreadyRecorded(userId, destinationId, itineraryId);
+
+        if (alreadyRecorded) {
+            long visitCount = visitGraphRepository.getVisitCount(userId, destinationId);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Visit already recorded");
+            response.put("itineraryId", itineraryId);
+            response.put("userId", userId);
+            response.put("destinationId", destinationId);
+            response.put("visitCount", visitCount);
+            response.put("idempotent", true);
+            return response;
+        }
+
+        long visitCount = visitGraphRepository.recordVisit(
+                userId,
+                userName,
+                destinationId,
+                destinationName,
+                country,
+                category,
+                itineraryId
+        );
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("itineraryId", itineraryId);
+        payload.put("userId", userId);
+        payload.put("destinationId", destinationId);
+        notifyObservers("VISIT_RECORDED", payload);
+
+        deleteWildcard("itinerary-service::S3-F12::*");
+        deleteWildcard("s3-recommendations::*");
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Visit recorded successfully");
+        response.put("itineraryId", itineraryId);
+        response.put("userId", userId);
+        response.put("destinationId", destinationId);
+        response.put("visitCount", visitCount);
+        response.put("idempotent", false);
+        return response;
     }
 }
