@@ -85,7 +85,9 @@ services:
     container_name: tripplanning-cassandra
     environment:
       CASSANDRA_CLUSTER_NAME: tripplanning-cluster
-      JVM_OPTS: -Xms256m -Xmx256m
+      JVM_OPTS: -Xms512m -Xmx512m
+      MAX_HEAP_SIZE: 512m
+      HEAP_NEWSIZE: 128m
     ports:
       - "9042:9042"
     volumes:
@@ -93,7 +95,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512m
+          memory: 1g
 
   pgadmin:
     image: dpage/pgadmin4
@@ -181,10 +183,16 @@ services:
       SPRING_DATA_MONGODB_URI: mongodb://tripplanning-mongo:27017/tripplanningdb
       SPRING_REDIS_HOST: tripplanning-redis
       SPRING_REDIS_PORT: 6379
+      CASSANDRA_CONTACT_POINTS: tripplanning-cassandra
+      CASSANDRA_KEYSPACE: tripplanning
+      CASSANDRA_PORT: 9042
+      CASSANDRA_DATACENTER: datacenter1
     depends_on:
       postgres:
         condition: service_healthy
       mongodb:
+        condition: service_started
+      cassandra:
         condition: service_started
 
   booking-service:

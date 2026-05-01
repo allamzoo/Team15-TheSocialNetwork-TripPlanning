@@ -1,8 +1,10 @@
 package com.team15.tripplanning.activityservice.controller;
 
+import com.team15.tripplanning.activityservice.dto.ActivityLifecycleEventDTO;
 import com.team15.tripplanning.activityservice.dto.NearbyActivityDTO;
 import com.team15.tripplanning.activityservice.dto.ActivitySummaryDTO;
 import com.team15.tripplanning.activityservice.dto.BudgetActivityDTO;
+import com.team15.tripplanning.activityservice.dto.RecordEventRequest;
 import com.team15.tripplanning.activityservice.model.Activity;
 import com.team15.tripplanning.activityservice.service.ActivityService;
 
@@ -151,5 +153,14 @@ public class ActivityController {
             @RequestParam(required = false) Activity.ActivityCategory category) {
         List<Activity> activities = activityService.getActivitiesInDateRange(startDate.atStartOfDay(), endDate.atStartOfDay(), category);
         return ResponseEntity.ok(activities);
+    }
+
+    // ---------- S4-F11 ----------
+    @PostMapping("/{id}/events")
+    public ResponseEntity<ActivityLifecycleEventDTO> recordLifecycleEvent(
+            @PathVariable Long id,
+            @RequestBody RecordEventRequest request) {
+        ActivityLifecycleEventDTO dto = activityService.recordLifecycleEvent(id, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }
 }
