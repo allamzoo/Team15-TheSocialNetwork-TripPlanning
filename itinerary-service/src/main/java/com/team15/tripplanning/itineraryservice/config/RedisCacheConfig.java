@@ -24,13 +24,13 @@ public class RedisCacheConfig {
         template.setConnectionFactory(cf);
 
         StringRedisSerializer keySerializer = new StringRedisSerializer();
-        GenericJackson2JsonRedisSerializer valueSerializer = new GenericJackson2JsonRedisSerializer();
+        GenericJackson2JsonRedisSerializer valueSerializer =
+                new GenericJackson2JsonRedisSerializer();
 
         template.setKeySerializer(keySerializer);
         template.setHashKeySerializer(keySerializer);
         template.setValueSerializer(valueSerializer);
         template.setHashValueSerializer(valueSerializer);
-        template.afterPropertiesSet();
 
         return template;
     }
@@ -49,17 +49,6 @@ public class RedisCacheConfig {
                 .cacheDefaults(base)
                 .withInitialCacheConfigurations(configs)
                 .build();
-    }
-
-    @Bean
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory cf) {
-        RedisTemplate<String, Object> template = new RedisTemplate<>();
-        template.setConnectionFactory(cf);
-        template.setKeySerializer(new StringRedisSerializer());
-        template.setHashKeySerializer(new StringRedisSerializer());
-        template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
-        template.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
-        return template;
     }
 
     private RedisCacheConfiguration defaultConfig(Duration ttl) {
