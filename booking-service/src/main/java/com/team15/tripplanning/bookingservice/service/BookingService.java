@@ -3,6 +3,7 @@ package com.team15.tripplanning.bookingservice.service;
 import com.team15.tripplanning.bookingservice.dto.AppliedCouponDTO;
 import com.team15.tripplanning.bookingservice.dto.BookingDetailsDTO;
 import com.team15.tripplanning.bookingservice.dto.CouponUsageDTO;
+import com.team15.tripplanning.bookingservice.dto.DestinationSeasonRevenueDTO;
 import com.team15.tripplanning.bookingservice.dto.RevenueReportDTO;
 import com.team15.tripplanning.bookingservice.dto.UserBookingSummaryDTO;
 import com.team15.tripplanning.bookingservice.dto.CreateBookingRequest;
@@ -85,6 +86,7 @@ public class BookingService {
         notifyObservers("BOOKING_CREATED", payload);
         deleteWildcard("s5-booking-summary::S5::S5-F3::" + saved.getUserId());
         deleteWildcard("s5-revenue-report::*");
+        deleteWildcard("s5-destination-season::*");
 
         return saved;
     }
@@ -135,6 +137,7 @@ public class BookingService {
         notifyObservers("BOOKING_CREATED", payload);
         deleteWildcard("s5-booking-summary::S5::S5-F3::" + saved.getUserId());
         deleteWildcard("s5-revenue-report::*");
+        deleteWildcard("s5-destination-season::*");
 
         return saved;
     }
@@ -175,6 +178,7 @@ public class BookingService {
         deleteWildcard("s5-booking-summary::S5::S5-F3::" + saved.getUserId());
         deleteWildcard("s5-booking-details::S5::S5-F4::" + id);
         deleteWildcard("s5-revenue-report::*");
+        deleteWildcard("s5-destination-season::*");
         return saved;
     }
 
@@ -184,6 +188,7 @@ public class BookingService {
         deleteWildcard("s5-booking-summary::S5::S5-F3::" + booking.getUserId());
         deleteWildcard("s5-booking-details::S5::S5-F4::" + id);
         deleteWildcard("s5-revenue-report::*");
+        deleteWildcard("s5-destination-season::*");
     }
 
     // ===== S5-F3: User Booking Summary =====
@@ -270,6 +275,7 @@ public class BookingService {
         deleteWildcard("s5-booking-summary::S5::S5-F3::" + saved.getUserId());
         deleteWildcard("s5-booking-details::S5::S5-F4::" + id);
         deleteWildcard("s5-revenue-report::*");
+        deleteWildcard("s5-destination-season::*");
 
         return saved;
     }
@@ -330,6 +336,7 @@ public class BookingService {
 
         bookingRepository.saveAll(bookings);
         deleteWildcard("s5-revenue-report::*");
+        deleteWildcard("s5-destination-season::*");
     }
 
     @Cacheable(value = "s5-top-coupons", key = "'S5::S5-F5::' + #limit")
@@ -397,7 +404,7 @@ public class BookingService {
                 .build();
     }
 
-    // ===== S5-F1: FINAL SAFE LOGIC =====
+    // ===== S5-F1 =====
     public List<Booking> getBookings(String statusStr, LocalDateTime startDateTime, LocalDateTime endDateTime) {
         Booking.BookingStatus status = null;
 
@@ -482,6 +489,7 @@ public class BookingService {
         notifyObservers("COUPON_APPLIED", payload);
         deleteWildcard("s5-booking-details::S5::S5-F4::" + bookingId);
         deleteWildcard("s5-top-coupons::*");
+        deleteWildcard("s5-destination-season::*");
 
         return booking;
     }
@@ -522,8 +530,51 @@ public class BookingService {
         deleteWildcard("s5-booking-summary::S5::S5-F3::" + saved.getUserId());
         deleteWildcard("s5-booking-details::S5::S5-F4::" + id);
         deleteWildcard("s5-revenue-report::*");
+        deleteWildcard("s5-destination-season::*");
 
         return saved;
+    }
+
+    // ===== S5-F10: Revenue by Destination and Season =====
+    @Cacheable(value = "s5-destination-season", key = "'S5::S5-F10::' + #startDate + '::' + #endDate")
+    public List<DestinationSeasonRevenueDTO> getRevenueByDestinationAndSeason(
+            LocalDate startDate, LocalDate endDate) {
+
+        if (startDate.isAfter(endDate)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "startDate must not be after endDate");
+        }
+
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = endDate.atTime(23, 59, 59, 999000000);
+
+        List<Object[]> rows = bookingRepository.getRevenueByDestinationAndSeason(start, end);
+
+        List<DestinationSeasonRevenueDTO> result = new ArrayList<>();
+        for (Object[] row : rows) {
+            result.add(DestinationSeasonRevenueDTO.builder()
+                    .destinationId(((Number) row[0]).longValue())
+                    .destinationName((String) row[1])
+                    .totalRevenue(((Number) row[2]).doubleValue())
+                    .surchargeRevenue(((Number) row[3]).doubleValue())
+                    .baseRevenue(((Number) row[4]).doubleValue())
+                    .peakBookingCount(((Number) row[5]).longValue())
+                    .offPeakBookingCount(((Number) row[6]).longValue())
+                    .build());
+        }
+
+        return result;
+    }
+
+    // S5-F10 — log ANALYTICS_VIEWED on every call including cache hits
+    public void logAnalyticsViewed(LocalDate startDate, LocalDate endDate) {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("bookingId", 0L);
+        payload.put("amount", 0.0);
+        payload.put("method", "ANALYTICS");
+        payload.put("startDate", startDate.toString());
+        payload.put("endDate", endDate.toString());
+        notifyObservers("ANALYTICS_VIEWED", payload);
     }
 
     private void validateItineraryAllowsBooking(Long itineraryId) {
