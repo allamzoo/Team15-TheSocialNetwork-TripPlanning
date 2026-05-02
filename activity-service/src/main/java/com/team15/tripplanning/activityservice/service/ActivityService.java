@@ -1,10 +1,6 @@
 package com.team15.tripplanning.activityservice.service;
 
-import com.team15.tripplanning.activityservice.dto.ActivityLifecycleEventDTO;
-import com.team15.tripplanning.activityservice.dto.NearbyActivityDTO;
-import com.team15.tripplanning.activityservice.dto.ActivitySummaryDTO;
-import com.team15.tripplanning.activityservice.dto.BudgetActivityDTO;
-import com.team15.tripplanning.activityservice.dto.RecordEventRequest;
+import com.team15.tripplanning.activityservice.dto.*;
 import com.team15.tripplanning.activityservice.model.Activity;
 import com.team15.tripplanning.activityservice.model.cassandra.ActivityLifecycleEvent;
 import com.team15.tripplanning.activityservice.model.cassandra.ActivityLifecycleEventKey;
@@ -28,7 +24,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import com.team15.tripplanning.activityservice.dto.BatchActivityRequestDTO;
 
 @Service
 public class ActivityService {
@@ -399,6 +394,46 @@ public class ActivityService {
         } else {
             return activityRepository.findActivitiesInDateRange(startDate, endDate);
         }
+    }
+
+    // ---------- S4-F10 ----------
+    public ActivityAnalyticsDTO getActivityAnalytics(LocalDate startDate, LocalDate endDate) {
+        if (startDate.isAfter(endDate)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "startDate must not be after endDate");
+        }
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("startDate", startDate.toString());
+        payload.put("endDate",   endDate.toString());
+        notifyObservers("ANALYTICS_VIEWED", payload);
+
+        return getActivityAnalyticsCached(startDate, endDate);
+    }
+
+    @Cacheable(value = "s4-f10-analytics", key = "'S4::S4-F10::' + #startDate + '::' + #endDate")
+    public ActivityAnalyticsDTO getActivityAnalyticsCached(LocalDate startDate, LocalDate endDate) {
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime   = endDate.atTime(23, 59, 59, 999_000_000);
+
+        Object[] summary = activityRepository.getAnalyticsSummary(startDateTime, endDateTime);
+        int    total            = summary[0] != null ? ((Number) summary[0]).intValue()    : 0;
+        double avgCost          = summary[1] != null ? ((Number) summary[1]).doubleValue() : 0.0;
+        double avgDurationHours = summary[2] != null ? ((Number) summary[2]).doubleValue() : 0.0;
+
+        List<Object[]> categoryRows = activityRepository.getCountByCategory(startDateTime, endDateTime);
+        Map<String, Long> activitiesByCategory = new java.util.LinkedHashMap<>();
+        for (Object[] row : categoryRows) {
+            String cat = (String) row[0];
+            Long   cnt = ((Number) row[1]).longValue();
+            activitiesByCategory.put(cat, cnt);
+        }
+
+        return ActivityAnalyticsDTO.builder()
+                .totalActivities(total)
+                .averageCost(avgCost)
+                .averageDurationHours(avgDurationHours)
+                .activitiesByCategory(activitiesByCategory)
+                .build();
     }
 
     // ---------- S4-F11 ----------

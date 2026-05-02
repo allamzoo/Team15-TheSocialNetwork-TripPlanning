@@ -1,17 +1,14 @@
 package com.team15.tripplanning.activityservice.controller;
 
-import com.team15.tripplanning.activityservice.dto.ActivityLifecycleEventDTO;
-import com.team15.tripplanning.activityservice.dto.NearbyActivityDTO;
-import com.team15.tripplanning.activityservice.dto.ActivitySummaryDTO;
-import com.team15.tripplanning.activityservice.dto.BudgetActivityDTO;
-import com.team15.tripplanning.activityservice.dto.RecordEventRequest;
+import com.team15.tripplanning.activityservice.dto.*;
 import com.team15.tripplanning.activityservice.model.Activity;
 import com.team15.tripplanning.activityservice.service.ActivityService;
 
 import java.time.LocalDate;
 
 import java.util.HashMap;
-
+import org.springframework.format.annotation.DateTimeFormat;
+import static org.springframework.format.annotation.DateTimeFormat.ISO;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -31,9 +28,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.*;
 import com.team15.tripplanning.activityservice.dto.NearbyActivityDTO;
-import com.team15.tripplanning.activityservice.dto.BatchActivityRequestDTO;
-import com.team15.tripplanning.activityservice.dto.BatchActivityResponseDTO;
-import com.team15.tripplanning.activityservice.dto.MetadataFilterResponseDTO;
 import org.springframework.web.bind.annotation.*;
 
 
@@ -153,6 +147,19 @@ public class ActivityController {
             @RequestParam(required = false) Activity.ActivityCategory category) {
         List<Activity> activities = activityService.getActivitiesInDateRange(startDate.atStartOfDay(), endDate.atStartOfDay(), category);
         return ResponseEntity.ok(activities);
+    }
+
+    // ---------- S4-F10 ----------
+    @GetMapping("/analytics")
+    public ResponseEntity<ActivityAnalyticsDTO> getActivityAnalytics(
+            @RequestParam
+            @DateTimeFormat(iso = ISO.DATE) LocalDate startDate,
+
+            @RequestParam
+            @DateTimeFormat(iso = ISO.DATE) LocalDate endDate) {
+
+        ActivityAnalyticsDTO dto = activityService.getActivityAnalytics(startDate, endDate);
+        return ResponseEntity.ok(dto);
     }
 
     // ---------- S4-F11 ----------
