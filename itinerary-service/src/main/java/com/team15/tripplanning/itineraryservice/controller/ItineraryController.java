@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.team15.tripplanning.itineraryservice.dto.ItineraryAnalyticsDashboardDTO;
 
 @RestController
 @RequestMapping("/api/itineraries")
@@ -149,5 +150,18 @@ public class ItineraryController {
     @PostMapping("/{itineraryId}/record-visit")
     public ResponseEntity<Map<String, Object>> recordVisit(@PathVariable Long itineraryId) {
         return ResponseEntity.ok(itineraryService.recordVisit(itineraryId));
+    }
+
+    @GetMapping("/analytics/dashboard")
+    public ResponseEntity<ItineraryAnalyticsDashboardDTO> getAnalyticsDashboard(
+            @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam("endDate")   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+
+        if (startDate.isAfter(endDate)) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        ItineraryAnalyticsDashboardDTO dashboard = itineraryService.getItineraryAnalyticsDashboard(startDate, endDate);
+        return ResponseEntity.ok(dashboard);
     }
 }

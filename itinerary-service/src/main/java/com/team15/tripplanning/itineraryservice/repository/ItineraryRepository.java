@@ -1,6 +1,8 @@
 package com.team15.tripplanning.itineraryservice.repository;
 
 import com.team15.tripplanning.itineraryservice.model.Itinerary;
+
+import java.time.LocalDate;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -108,4 +110,18 @@ public interface ItineraryRepository extends JpaRepository<Itinerary, Long> {
         WHERE i.id = :itineraryId
         """, nativeQuery = true)
     List<Object[]> findDestinationInfoForVisit(@Param("itineraryId") Long itineraryId);
+
+    @Query(value = """
+    SELECT
+        i.status,
+        COUNT(*),
+        SUM(COALESCE(i.estimated_budget, 0))
+    FROM itineraries i
+    WHERE i.start_date >= :startDate AND i.start_date <= :endDate
+    GROUP BY i.status
+    """, nativeQuery = true)
+    List<Object[]> findStatusCountsAndBudgetSumByDateRange(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
 }
