@@ -1,5 +1,8 @@
 package com.team15.tripplanning.activityservice.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -23,10 +26,11 @@ public class RedisCacheConfig {
         RedisCacheConfiguration base = defaultConfig(Duration.ofMinutes(5));
 
         Map<String, RedisCacheConfiguration> configs = new HashMap<>();
-        configs.put("s4-activities",   defaultConfig(Duration.ofMinutes(5)));
+        configs.put("s4-activities",    defaultConfig(Duration.ofMinutes(5)));
         configs.put("s4-f1-latest",    defaultConfig(Duration.ofMinutes(5)));
         configs.put("s4-f8-summary",   defaultConfig(Duration.ofMinutes(10)));
         configs.put("s4-f9-budget",    defaultConfig(Duration.ofMinutes(5)));
+        configs.put("s4-f12-timeline", defaultConfig(Duration.ofMinutes(5)));
 
         return RedisCacheManager.builder(cf)
                 .cacheDefaults(base)
@@ -40,15 +44,26 @@ public class RedisCacheConfig {
         template.setConnectionFactory(cf);
         template.setKeySerializer(new StringRedisSerializer());
         template.setHashKeySerializer(new StringRedisSerializer());
-        template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
-        template.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
+        GenericJackson2JsonRedisSerializer serializer = jsonSerializer();
+        template.setValueSerializer(serializer);
+        template.setHashValueSerializer(serializer);
         return template;
+    }
+
+    private GenericJackson2JsonRedisSerializer jsonSerializer() {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        mapper.activateDefaultTyping(
+                mapper.getPolymorphicTypeValidator(),
+                ObjectMapper.DefaultTyping.NON_FINAL);
+        return new GenericJackson2JsonRedisSerializer(mapper);
     }
 
     private RedisCacheConfiguration defaultConfig(Duration ttl) {
         return RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(ttl)
                 .serializeValuesWith(RedisSerializationContext.SerializationPair
-                        .fromSerializer(new GenericJackson2JsonRedisSerializer()));
+                        .fromSerializer(jsonSerializer()));
     }
 }

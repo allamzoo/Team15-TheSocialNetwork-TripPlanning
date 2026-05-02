@@ -5,8 +5,8 @@ spring:
   autoconfigure:
     exclude:
       - org.springframework.boot.cassandra.autoconfigure.CassandraAutoConfiguration
-      - org.springframework.boot.data.cassandra.autoconfigure.DataCassandraAutoConfiguration
       - org.springframework.boot.data.cassandra.autoconfigure.DataCassandraReactiveAutoConfiguration
+      - org.springframework.boot.data.cassandra.autoconfigure.DataCassandraReactiveRepositoriesAutoConfiguration
 
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/tripplanningdb}
@@ -32,6 +32,8 @@ spring:
       contact-points: ${CASSANDRA_CONTACT_POINTS:localhost}
       port: ${CASSANDRA_PORT:9042}
       local-datacenter: ${CASSANDRA_DATACENTER:datacenter1}
+      schema-action: create-if-not-exists
+      entity-base-packages: com.team15.tripplanning.activityservice.model.cassandra
 
 server:
   port: 8080
