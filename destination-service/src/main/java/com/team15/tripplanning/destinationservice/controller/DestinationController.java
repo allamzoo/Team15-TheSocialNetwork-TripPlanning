@@ -6,10 +6,13 @@ import com.team15.tripplanning.destinationservice.dto.DestinationRevenueDTO;
 import com.team15.tripplanning.destinationservice.dto.TopDestinationDTO;
 import com.team15.tripplanning.destinationservice.model.Destination;
 import com.team15.tripplanning.destinationservice.model.DestinationCategory;
+import com.team15.tripplanning.destinationservice.model.DestinationSearchDocument;
+import com.team15.tripplanning.destinationservice.service.DestinationSearchService;
 import com.team15.tripplanning.destinationservice.service.DestinationService;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,9 +30,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/destinations")
 public class DestinationController {
     private final DestinationService destinationService;
+    private final DestinationSearchService destinationSearchService;
 
-    public DestinationController(DestinationService destinationService) {
+    public DestinationController(DestinationService destinationService,
+                                 DestinationSearchService destinationSearchService) {
         this.destinationService = destinationService;
+        this.destinationSearchService = destinationSearchService;
     }
 
     @PostMapping
@@ -72,6 +78,21 @@ public class DestinationController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
         return ResponseEntity.ok(destinationService.getDestinationRevenueSummary(id, startDate, endDate));
+    }
+
+    @GetMapping("/search/full-text")
+    @PreAuthorize("isAuthenticated()")
+    @Cacheable(value = "s2-dest-full-text-search",
+               key = "'S2::S2-F10::' + #query + '::' + #category + '::' + #status + '::' + #minRating + '::' + #maxRating")
+    public ResponseEntity<List<DestinationSearchDocument>> fullTextSearch(
+            @RequestParam String query,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Double minRating,
+            @RequestParam(required = false) Double maxRating
+    ) {
+        return ResponseEntity.ok(
+                destinationSearchService.fullTextSearch(query, category, status, minRating, maxRating));
     }
 
     @GetMapping("/search")

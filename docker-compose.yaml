@@ -47,7 +47,7 @@ services:
           memory: 256m
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.0.1
     container_name: tripplanning-elasticsearch
     environment:
       - discovery.type=single-node

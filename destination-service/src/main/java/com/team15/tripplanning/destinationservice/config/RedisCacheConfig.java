@@ -40,9 +40,10 @@ public class RedisCacheConfig {
         RedisCacheConfiguration base = defaultConfig(Duration.ofMinutes(5));
 
         Map<String, RedisCacheConfiguration> configs = new HashMap<>();
-        configs.put("s2-search", defaultConfig(Duration.ofMinutes(5)));
-        configs.put("s2-reports", defaultConfig(Duration.ofMinutes(10)));
-        configs.put("s2-reviews", defaultConfig(Duration.ofMinutes(10)));
+        configs.put("s2-search",                defaultConfig(Duration.ofMinutes(5)));
+        configs.put("s2-reports",               defaultConfig(Duration.ofMinutes(10)));
+        configs.put("s2-reviews",               defaultConfig(Duration.ofMinutes(10)));
+        configs.put("s2-dest-full-text-search", defaultConfig(Duration.ofMinutes(5)));
 
         return RedisCacheManager.builder(cf)
                 .cacheDefaults(base)
