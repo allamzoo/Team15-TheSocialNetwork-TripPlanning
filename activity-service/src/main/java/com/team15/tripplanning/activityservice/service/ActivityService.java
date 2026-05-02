@@ -8,9 +8,11 @@ import com.team15.tripplanning.activityservice.dto.RecordEventRequest;
 import com.team15.tripplanning.activityservice.model.Activity;
 import com.team15.tripplanning.activityservice.model.cassandra.ActivityLifecycleEvent;
 import com.team15.tripplanning.activityservice.model.cassandra.ActivityLifecycleEventKey;
-import com.team15.tripplanning.activityservice.repository.ActivityLifecycleEventRepository;
+import com.team15.tripplanning.activityservice.repository.ActivityLifecycleEventStore;
 import com.team15.tripplanning.activityservice.repository.ActivityRepository;
 import com.team15.tripplanning.shared.observer.EntityObserver;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -30,8 +32,10 @@ import com.team15.tripplanning.activityservice.dto.BatchActivityRequestDTO;
 
 @Service
 public class ActivityService {
+    private static final Logger log = LoggerFactory.getLogger(ActivityService.class);
+
     private final ActivityRepository activityRepository;
-    private final ActivityLifecycleEventRepository lifecycleEventRepository;
+    private final ActivityLifecycleEventStore lifecycleEventRepository;
     private final List<EntityObserver> observers = new ArrayList<>();
     private final RedisTemplate<String, Object> redisTemplate;
 
@@ -39,7 +43,7 @@ public class ActivityService {
             Set.of("BOOKED", "STARTED", "COMPLETED", "CANCELLED");
 
     public ActivityService(ActivityRepository activityRepository,
-                           ActivityLifecycleEventRepository lifecycleEventRepository,
+                           ActivityLifecycleEventStore lifecycleEventRepository,
                            MongoEventLogger mongoEventLogger,
                            RedisTemplate<String, Object> redisTemplate) {
         this.activityRepository = activityRepository;
@@ -63,9 +67,13 @@ public class ActivityService {
     }
 
     private void deleteWildcard(String pattern) {
-        Set<String> keys = redisTemplate.keys(pattern);
-        if (keys != null && !keys.isEmpty()) {
-            redisTemplate.delete(keys);
+        try {
+            Set<String> keys = redisTemplate.keys(pattern);
+            if (keys != null && !keys.isEmpty()) {
+                redisTemplate.delete(keys);
+            }
+        } catch (Exception e) {
+            log.warn("Cache eviction skipped (Redis unavailable) for pattern {}: {}", pattern, e.getMessage());
         }
     }
 
