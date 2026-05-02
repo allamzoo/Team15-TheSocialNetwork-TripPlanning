@@ -1,5 +1,8 @@
 package com.team15.tripplanning.itineraryservice.service;
 
+import com.team15.tripplanning.itineraryservice.dto.DestinationRecommendationDTO;
+import com.team15.tripplanning.itineraryservice.dto.ItineraryAnalyticsDTO;
+import com.team15.tripplanning.itineraryservice.dto.TripCostEstimateDTO;
 import com.team15.tripplanning.itineraryservice.dto.*;
 import com.team15.tripplanning.itineraryservice.model.Itinerary;
 import com.team15.tripplanning.itineraryservice.repository.ItineraryRepository;
@@ -10,6 +13,8 @@ import com.team15.tripplanning.itineraryservice.dto.ItineraryAnalyticsDashboardD
 import java.time.LocalDate;
 import java.util.List;
 
+import java.util.stream.Collectors;
+import com.team15.tripplanning.itineraryservice.dto.ItineraryDayRequestDTO;
 import com.team15.tripplanning.itineraryservice.model.ItineraryDay;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -550,5 +555,47 @@ public class ItineraryService {
         response.put("visitCount", visitCount);
         response.put("idempotent", false);
         return response;
+    }
+
+    // S3-F12
+    @Cacheable(value = "s3-recommendations", key = "'S3::S3-F12::' + #userId + '::' + #limit")
+    public List<DestinationRecommendationDTO> getRecommendations(Long userId, int limit) {
+        if (itineraryRepository.countUsersById(userId) == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found: " + userId);
+        }
+
+        List<long[]> graphResults = visitGraphRepository.getRecommendations(userId, limit);
+        if (graphResults.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        List<Long> destIds = graphResults.stream()
+                .map(r -> r[0])
+                .collect(Collectors.toList());
+
+        List<Object[]> destRows = itineraryRepository.findDestinationDetailsByIds(destIds);
+
+        Map<Long, Object[]> destMap = new HashMap<>();
+        for (Object[] row : destRows) {
+            destMap.put(((Number) row[0]).longValue(), row);
+        }
+
+        List<DestinationRecommendationDTO> result = new ArrayList<>();
+        for (long[] graphRow : graphResults) {
+            Long destId = graphRow[0];
+            Long score = graphRow[1];
+            Object[] dest = destMap.get(destId);
+            if (dest != null) {
+                result.add(DestinationRecommendationDTO.builder()
+                        .destinationId(destId)
+                        .name(dest[1] != null ? dest[1].toString() : "")
+                        .country(dest[2] != null ? dest[2].toString() : "")
+                        .category(dest[3] != null ? dest[3].toString() : "")
+                        .score(score)
+                        .build());
+            }
+        }
+
+        return result;
     }
 }

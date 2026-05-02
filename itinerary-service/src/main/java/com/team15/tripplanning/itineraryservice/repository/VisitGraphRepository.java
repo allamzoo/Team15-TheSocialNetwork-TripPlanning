@@ -1,5 +1,8 @@
 package com.team15.tripplanning.itineraryservice.repository;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.springframework.data.neo4j.core.Neo4jClient;
 import org.springframework.stereotype.Repository;
 
@@ -90,5 +93,34 @@ public class VisitGraphRepository {
                 .fetchAs(Long.class)
                 .one()
                 .orElse(0L);
+    }
+
+    /**
+     * Returns [destinationId, score] pairs for destinations recommended for userId.
+     * Score = number of similar travelers (users sharing ≥1 visited destination) who visited it.
+     */
+    public List<long[]> getRecommendations(Long userId, int limit) {
+        String query = """
+                MATCH (u:UserNode {userId: $userId})-[:VISITED]->(shared:DestinationNode)<-[:VISITED]-(similar:UserNode)
+                WHERE similar.userId <> $userId
+                WITH u, similar
+                MATCH (similar)-[:VISITED]->(rec:DestinationNode)
+                WHERE NOT (u)-[:VISITED]->(rec)
+                RETURN rec.destinationId AS destinationId, COUNT(DISTINCT similar) AS score
+                ORDER BY score DESC
+                LIMIT $limit
+                """;
+
+        Collection<long[]> results = neo4jClient.query(query)
+                .bind(userId).to("userId")
+                .bind((long) limit).to("limit")
+                .fetchAs(long[].class)
+                .mappedBy((typeSystem, record) -> new long[]{
+                        record.get("destinationId").asLong(),
+                        record.get("score").asLong()
+                })
+                .all();
+
+        return results.stream().collect(Collectors.toList());
     }
 }

@@ -1,11 +1,14 @@
 package com.team15.tripplanning.itineraryservice.controller;
 
+import com.team15.tripplanning.itineraryservice.dto.DestinationRecommendationDTO;
 import com.team15.tripplanning.itineraryservice.dto.EstimateRequest;
 import com.team15.tripplanning.itineraryservice.dto.ItineraryAnalyticsDTO;
 import com.team15.tripplanning.itineraryservice.dto.TripCostEstimateDTO;
 import com.team15.tripplanning.itineraryservice.model.Itinerary;
 import com.team15.tripplanning.itineraryservice.model.ItineraryDay;
+import com.team15.tripplanning.itineraryservice.security.JwtService;
 import com.team15.tripplanning.itineraryservice.service.ItineraryService;
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -28,9 +31,11 @@ import com.team15.tripplanning.itineraryservice.dto.ItineraryAnalyticsDashboardD
 @RequestMapping("/api/itineraries")
 public class ItineraryController {
     private final ItineraryService itineraryService;
+    private final JwtService jwtService;
 
-    public ItineraryController(ItineraryService itineraryService) {
+    public ItineraryController(ItineraryService itineraryService, JwtService jwtService) {
         this.itineraryService = itineraryService;
+        this.jwtService = jwtService;
     }
 
     @PostMapping
@@ -163,5 +168,33 @@ public class ItineraryController {
 
         ItineraryAnalyticsDashboardDTO dashboard = itineraryService.getItineraryAnalyticsDashboard(startDate, endDate);
         return ResponseEntity.ok(dashboard);
+    }
+
+    // S3-F12
+    @GetMapping("/recommendations")
+    public ResponseEntity<?> getRecommendations(
+            @RequestParam Long userId,
+            @RequestParam(defaultValue = "5") int limit,
+            HttpServletRequest request) {
+
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+        }
+
+        String token = authHeader.substring(7);
+        if (!jwtService.isTokenValid(token)) {
+            return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+        }
+
+        Long callerId = jwtService.extractUserId(token);
+        String callerRole = jwtService.extractRole(token);
+
+        if (!userId.equals(callerId) && !"ADMIN".equals(callerRole)) {
+            return ResponseEntity.status(403).body(Map.of("error", "Forbidden"));
+        }
+
+        List<DestinationRecommendationDTO> recommendations = itineraryService.getRecommendations(userId, limit);
+        return ResponseEntity.ok(recommendations);
     }
 }
