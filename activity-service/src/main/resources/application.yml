@@ -27,11 +27,6 @@ spring:
     redis:
       host: ${SPRING_REDIS_HOST:localhost}
       port: ${SPRING_REDIS_PORT:6379}
-    cassandra:
-      keyspace-name: ${CASSANDRA_KEYSPACE:tripplanning}
-      contact-points: ${CASSANDRA_CONTACT_POINTS:localhost}
-      port: ${CASSANDRA_PORT:9042}
-      local-datacenter: ${CASSANDRA_DATACENTER:datacenter1}
 
 server:
   port: 8080
@@ -39,3 +34,9 @@ server:
 jwt:
   secret: ${JWT_SECRET:tripplanning-secret-key-for-jwt-token-signing}
   expiration: ${JWT_EXPIRATION:86400000}
+
+# Cassandra is intentionally disabled.
+# ActivityLogRow is a plain POJO used only in CassandraRowAdapter (GoF Adapter pattern).
+# CassandraConfig is also guarded by @ConditionalOnProperty(cassandra.enabled=true).
+cassandra:
+  enabled: false
