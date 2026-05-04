@@ -162,7 +162,7 @@ services:
       SPRING_REDIS_PORT: 6379
       SPRING_NEO4J_URI: bolt://tripplanning-neo4j:7687
       SPRING_NEO4J_AUTHENTICATION_USERNAME: neo4j
-      SPRING_NEO4J_AUTHENTICATION_PASSWORD: neo4jpass
+      NEO4J_AUTH: neo4j/neo4jpass
     depends_on:
       postgres:
         condition: service_healthy

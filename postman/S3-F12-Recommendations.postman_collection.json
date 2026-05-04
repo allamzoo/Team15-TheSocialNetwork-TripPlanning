@@ -1,0 +1,1026 @@
+{
+  "info": {
+    "_postman_id": "d1e2f3a4-b5c6-7890-def1-234567890abc",
+    "name": "S3-F12 – Get Recommended Destinations",
+    "description": "Complete end-to-end test suite for GET /api/itineraries/recommendations?userId={id}&limit={n}.\n\nRun the four folders IN ORDER:\n  1 – Setup · Users     → registers A, B, C and creates an ADMIN\n  2 – Setup · Destinations  → creates D1–D4\n  3 – Setup · Graph         → creates COMPLETED itineraries and records visits\n  4 – Tests                 → all 6 spec scenarios + extras\n\n⚠  Run on a clean DB (or delete alice/bob/carol/carol_f12 users between runs).\n⚠  All services must be running via docker-compose up.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+
+    {
+      "name": "1 – Setup · Users",
+      "item": [
+
+        {
+          "name": "1.1 Register User A (Alice)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('User A registered (2xx)', function() {",
+                "  pm.expect([200, 201]).to.include(pm.response.code);",
+                "});",
+                "var res = pm.response.json();",
+                "pm.environment.set('tokenA', res.token);",
+                "var pl = JSON.parse(Buffer.from(res.token.split('.')[1], 'base64').toString('utf-8'));",
+                "pm.environment.set('userAId', pl.uid);",
+                "console.log('[F12] User A id =', pl.uid);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alice F12\",\n  \"email\": \"alice_f12@test.com\",\n  \"password\": \"password123\",\n  \"phone\": \"5551110001\"\n}"
+            },
+            "url": {
+              "raw": "{{userBaseUrl}}/api/auth/register",
+              "host": ["{{userBaseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+
+        {
+          "name": "1.2 Register User B (Bob)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('User B registered (2xx)', function() {",
+                "  pm.expect([200, 201]).to.include(pm.response.code);",
+                "});",
+                "var res = pm.response.json();",
+                "pm.environment.set('tokenB', res.token);",
+                "var pl = JSON.parse(Buffer.from(res.token.split('.')[1], 'base64').toString('utf-8'));",
+                "pm.environment.set('userBId', pl.uid);",
+                "console.log('[F12] User B id =', pl.uid);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bob F12\",\n  \"email\": \"bob_f12@test.com\",\n  \"password\": \"password123\",\n  \"phone\": \"5551110002\"\n}"
+            },
+            "url": {
+              "raw": "{{userBaseUrl}}/api/auth/register",
+              "host": ["{{userBaseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+
+        {
+          "name": "1.3 Register User C (Carol)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('User C registered (2xx)', function() {",
+                "  pm.expect([200, 201]).to.include(pm.response.code);",
+                "});",
+                "var res = pm.response.json();",
+                "pm.environment.set('tokenC', res.token);",
+                "var pl = JSON.parse(Buffer.from(res.token.split('.')[1], 'base64').toString('utf-8'));",
+                "pm.environment.set('userCId', pl.uid);",
+                "console.log('[F12] User C id =', pl.uid);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Carol F12\",\n  \"email\": \"carol_f12@test.com\",\n  \"password\": \"password123\",\n  \"phone\": \"5551110003\"\n}"
+            },
+            "url": {
+              "raw": "{{userBaseUrl}}/api/auth/register",
+              "host": ["{{userBaseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+
+        {
+          "name": "1.4 Create Admin User (POST /api/users role=ADMIN)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Admin user created (2xx)', function() {",
+                "  pm.expect([200, 201]).to.include(pm.response.code);",
+                "});",
+                "var body = pm.response.json();",
+                "pm.environment.set('adminId', body.id);",
+                "console.log('[F12] Admin id =', body.id);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Admin F12\",\n  \"email\": \"admin_f12@test.com\",\n  \"password\": \"password123\",\n  \"phone\": \"5551110004\",\n  \"role\": \"ADMIN\",\n  \"status\": \"ACTIVE\"\n}"
+            },
+            "url": {
+              "raw": "{{userBaseUrl}}/api/users",
+              "host": ["{{userBaseUrl}}"],
+              "path": ["api", "users"]
+            }
+          }
+        },
+
+        {
+          "name": "1.5 Login Admin → tokenAdmin",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Admin login 200', function() {",
+                "  pm.response.to.have.status(200);",
+                "});",
+                "var res = pm.response.json();",
+                "pm.environment.set('tokenAdmin', res.token);",
+                "var pl = JSON.parse(Buffer.from(res.token.split('.')[1], 'base64').toString('utf-8'));",
+                "pm.test('Token carries ADMIN role', function() {",
+                "  pm.expect(pl.role).to.eql('ADMIN');",
+                "});",
+                "console.log('[F12] Admin role claim =', pl.role);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin_f12@test.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{userBaseUrl}}/api/auth/login",
+              "host": ["{{userBaseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "2 – Setup · Destinations",
+      "item": [
+
+        {
+          "name": "2.1 Create D1 – Beach (Egypt)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('D1 created (2xx)', function() {",
+                "  pm.expect([200, 201]).to.include(pm.response.code);",
+                "});",
+                "var body = pm.response.json();",
+                "pm.environment.set('d1Id', body.id);",
+                "console.log('[F12] D1 id =', body.id);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{tokenA}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sharm El-Sheikh Beach\",\n  \"country\": \"Egypt\",\n  \"description\": \"Red Sea beach resort\",\n  \"category\": \"BEACH\"\n}"
+            },
+            "url": {
+              "raw": "{{destBaseUrl}}/api/destinations",
+              "host": ["{{destBaseUrl}}"],
+              "path": ["api", "destinations"]
+            }
+          }
+        },
+
+        {
+          "name": "2.2 Create D2 – Mountain (France)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('D2 created (2xx)', function() {",
+                "  pm.expect([200, 201]).to.include(pm.response.code);",
+                "});",
+                "var body = pm.response.json();",
+                "pm.environment.set('d2Id', body.id);",
+                "console.log('[F12] D2 id =', body.id);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{tokenA}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Mont Blanc\",\n  \"country\": \"France\",\n  \"description\": \"Highest peak in the Alps\",\n  \"category\": \"MOUNTAIN\"\n}"
+            },
+            "url": {
+              "raw": "{{destBaseUrl}}/api/destinations",
+              "host": ["{{destBaseUrl}}"],
+              "path": ["api", "destinations"]
+            }
+          }
+        },
+
+        {
+          "name": "2.3 Create D3 – City (Japan)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('D3 created (2xx)', function() {",
+                "  pm.expect([200, 201]).to.include(pm.response.code);",
+                "});",
+                "var body = pm.response.json();",
+                "pm.environment.set('d3Id', body.id);",
+                "console.log('[F12] D3 id =', body.id);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{tokenA}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tokyo City\",\n  \"country\": \"Japan\",\n  \"description\": \"Vibrant metropolis\",\n  \"category\": \"CITY\"\n}"
+            },
+            "url": {
+              "raw": "{{destBaseUrl}}/api/destinations",
+              "host": ["{{destBaseUrl}}"],
+              "path": ["api", "destinations"]
+            }
+          }
+        },
+
+        {
+          "name": "2.4 Create D4 – Historical (Italy)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('D4 created (2xx)', function() {",
+                "  pm.expect([200, 201]).to.include(pm.response.code);",
+                "});",
+                "var body = pm.response.json();",
+                "pm.environment.set('d4Id', body.id);",
+                "console.log('[F12] D4 id =', body.id);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{tokenA}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rome Historical Centre\",\n  \"country\": \"Italy\",\n  \"description\": \"Ancient ruins and landmarks\",\n  \"category\": \"HISTORICAL\"\n}"
+            },
+            "url": {
+              "raw": "{{destBaseUrl}}/api/destinations",
+              "host": ["{{destBaseUrl}}"],
+              "path": ["api", "destinations"]
+            }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "3 – Setup · Graph (Itineraries + Record Visits)",
+      "description": "Creates COMPLETED itineraries and calls record-visit so that Neo4j graph is populated.\nVisit pattern: A→D1, A→D2 | B→D1, B→D3 | C→D2, C→D4",
+      "item": [
+
+        {
+          "name": "3.1 Create Itinerary A → D1 (COMPLETED)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Itinerary A→D1 created (2xx)', function() {",
+                "  pm.expect([200, 201]).to.include(pm.response.code);",
+                "});",
+                "pm.environment.set('itinA1Id', pm.response.json().id);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{tokenA}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userAId}},\n  \"destinationId\": {{d1Id}},\n  \"title\": \"Alice Beach Trip\",\n  \"status\": \"COMPLETED\",\n  \"startDate\": \"2024-01-10\",\n  \"endDate\": \"2024-01-15\",\n  \"estimatedBudget\": 1500\n}"
+            },
+            "url": {
+              "raw": "{{itineraryBaseUrl}}/api/itineraries",
+              "host": ["{{itineraryBaseUrl}}"],
+              "path": ["api", "itineraries"]
+            }
+          }
+        },
+
+        {
+          "name": "3.2 Record Visit A → D1",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Visit A→D1 recorded 200', function() {",
+                "  pm.response.to.have.status(200);",
+                "});",
+                "var body = pm.response.json();",
+                "pm.test('Response has visitCount', function() {",
+                "  pm.expect(body).to.have.property('visitCount');",
+                "});"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{tokenA}}"}],
+            "url": {
+              "raw": "{{itineraryBaseUrl}}/api/itineraries/{{itinA1Id}}/record-visit",
+              "host": ["{{itineraryBaseUrl}}"],
+              "path": ["api", "itineraries", "{{itinA1Id}}", "record-visit"]
+            }
+          }
+        },
+
+        {
+          "name": "3.3 Create Itinerary A → D2 (COMPLETED)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Itinerary A→D2 created (2xx)', function() {",
+                "  pm.expect([200, 201]).to.include(pm.response.code);",
+                "});",
+                "pm.environment.set('itinA2Id', pm.response.json().id);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{tokenA}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userAId}},\n  \"destinationId\": {{d2Id}},\n  \"title\": \"Alice Mountain Trip\",\n  \"status\": \"COMPLETED\",\n  \"startDate\": \"2024-02-10\",\n  \"endDate\": \"2024-02-15\",\n  \"estimatedBudget\": 2000\n}"
+            },
+            "url": {
+              "raw": "{{itineraryBaseUrl}}/api/itineraries",
+              "host": ["{{itineraryBaseUrl}}"],
+              "path": ["api", "itineraries"]
+            }
+          }
+        },
+
+        {
+          "name": "3.4 Record Visit A → D2",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Visit A→D2 recorded 200', function() {",
+                "  pm.response.to.have.status(200);",
+                "});"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{tokenA}}"}],
+            "url": {
+              "raw": "{{itineraryBaseUrl}}/api/itineraries/{{itinA2Id}}/record-visit",
+              "host": ["{{itineraryBaseUrl}}"],
+              "path": ["api", "itineraries", "{{itinA2Id}}", "record-visit"]
+            }
+          }
+        },
+
+        {
+          "name": "3.5 Create Itinerary B → D1 (COMPLETED)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Itinerary B→D1 created (2xx)', function() {",
+                "  pm.expect([200, 201]).to.include(pm.response.code);",
+                "});",
+                "pm.environment.set('itinB1Id', pm.response.json().id);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{tokenA}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userBId}},\n  \"destinationId\": {{d1Id}},\n  \"title\": \"Bob Beach Trip\",\n  \"status\": \"COMPLETED\",\n  \"startDate\": \"2024-03-10\",\n  \"endDate\": \"2024-03-15\",\n  \"estimatedBudget\": 1200\n}"
+            },
+            "url": {
+              "raw": "{{itineraryBaseUrl}}/api/itineraries",
+              "host": ["{{itineraryBaseUrl}}"],
+              "path": ["api", "itineraries"]
+            }
+          }
+        },
+
+        {
+          "name": "3.6 Record Visit B → D1",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Visit B→D1 recorded 200', function() {",
+                "  pm.response.to.have.status(200);",
+                "});"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{tokenA}}"}],
+            "url": {
+              "raw": "{{itineraryBaseUrl}}/api/itineraries/{{itinB1Id}}/record-visit",
+              "host": ["{{itineraryBaseUrl}}"],
+              "path": ["api", "itineraries", "{{itinB1Id}}", "record-visit"]
+            }
+          }
+        },
+
+        {
+          "name": "3.7 Create Itinerary B → D3 (COMPLETED)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Itinerary B→D3 created (2xx)', function() {",
+                "  pm.expect([200, 201]).to.include(pm.response.code);",
+                "});",
+                "pm.environment.set('itinB2Id', pm.response.json().id);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{tokenA}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userBId}},\n  \"destinationId\": {{d3Id}},\n  \"title\": \"Bob City Trip\",\n  \"status\": \"COMPLETED\",\n  \"startDate\": \"2024-04-10\",\n  \"endDate\": \"2024-04-15\",\n  \"estimatedBudget\": 1800\n}"
+            },
+            "url": {
+              "raw": "{{itineraryBaseUrl}}/api/itineraries",
+              "host": ["{{itineraryBaseUrl}}"],
+              "path": ["api", "itineraries"]
+            }
+          }
+        },
+
+        {
+          "name": "3.8 Record Visit B → D3",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Visit B→D3 recorded 200', function() {",
+                "  pm.response.to.have.status(200);",
+                "});"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{tokenA}}"}],
+            "url": {
+              "raw": "{{itineraryBaseUrl}}/api/itineraries/{{itinB2Id}}/record-visit",
+              "host": ["{{itineraryBaseUrl}}"],
+              "path": ["api", "itineraries", "{{itinB2Id}}", "record-visit"]
+            }
+          }
+        },
+
+        {
+          "name": "3.9 Create Itinerary C → D2 (COMPLETED)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Itinerary C→D2 created (2xx)', function() {",
+                "  pm.expect([200, 201]).to.include(pm.response.code);",
+                "});",
+                "pm.environment.set('itinC1Id', pm.response.json().id);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{tokenA}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userCId}},\n  \"destinationId\": {{d2Id}},\n  \"title\": \"Carol Mountain Trip\",\n  \"status\": \"COMPLETED\",\n  \"startDate\": \"2024-05-10\",\n  \"endDate\": \"2024-05-15\",\n  \"estimatedBudget\": 2200\n}"
+            },
+            "url": {
+              "raw": "{{itineraryBaseUrl}}/api/itineraries",
+              "host": ["{{itineraryBaseUrl}}"],
+              "path": ["api", "itineraries"]
+            }
+          }
+        },
+
+        {
+          "name": "3.10 Record Visit C → D2",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Visit C→D2 recorded 200', function() {",
+                "  pm.response.to.have.status(200);",
+                "});"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{tokenA}}"}],
+            "url": {
+              "raw": "{{itineraryBaseUrl}}/api/itineraries/{{itinC1Id}}/record-visit",
+              "host": ["{{itineraryBaseUrl}}"],
+              "path": ["api", "itineraries", "{{itinC1Id}}", "record-visit"]
+            }
+          }
+        },
+
+        {
+          "name": "3.11 Create Itinerary C → D4 (COMPLETED)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Itinerary C→D4 created (2xx)', function() {",
+                "  pm.expect([200, 201]).to.include(pm.response.code);",
+                "});",
+                "pm.environment.set('itinC2Id', pm.response.json().id);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{tokenA}}"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userCId}},\n  \"destinationId\": {{d4Id}},\n  \"title\": \"Carol Historical Trip\",\n  \"status\": \"COMPLETED\",\n  \"startDate\": \"2024-06-10\",\n  \"endDate\": \"2024-06-15\",\n  \"estimatedBudget\": 1700\n}"
+            },
+            "url": {
+              "raw": "{{itineraryBaseUrl}}/api/itineraries",
+              "host": ["{{itineraryBaseUrl}}"],
+              "path": ["api", "itineraries"]
+            }
+          }
+        },
+
+        {
+          "name": "3.12 Record Visit C → D4",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Visit C→D4 recorded 200', function() {",
+                "  pm.response.to.have.status(200);",
+                "});"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{tokenA}}"}],
+            "url": {
+              "raw": "{{itineraryBaseUrl}}/api/itineraries/{{itinC2Id}}/record-visit",
+              "host": ["{{itineraryBaseUrl}}"],
+              "path": ["api", "itineraries", "{{itinC2Id}}", "record-visit"]
+            }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "4 – Tests (S3-F12 Scenarios)",
+      "description": "Graph state before tests:\n  A visited: D1, D2\n  B visited: D1, D3  (shares D1 with A)\n  C visited: D2, D4  (shares D2 with A)\n\nExpected recommendations for A: D3 (score=1 via B) + D4 (score=1 via C)",
+      "item": [
+
+        {
+          "name": "[a] User A own token → 200 with D3 & D4",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('[a] Status 200', function() {",
+                "  pm.response.to.have.status(200);",
+                "});",
+                "var recs = pm.response.json();",
+                "pm.test('[a] Response is an array', function() {",
+                "  pm.expect(recs).to.be.an('array');",
+                "});",
+                "pm.test('[a] Exactly 2 recommendations (D3 and D4)', function() {",
+                "  pm.expect(recs.length).to.eql(2);",
+                "});",
+                "var ids = recs.map(function(r) { return r.destinationId; });",
+                "var d3Id = parseInt(pm.environment.get('d3Id'));",
+                "var d4Id = parseInt(pm.environment.get('d4Id'));",
+                "var d1Id = parseInt(pm.environment.get('d1Id'));",
+                "var d2Id = parseInt(pm.environment.get('d2Id'));",
+                "pm.test('[a] D3 (Tokyo) is recommended', function() {",
+                "  pm.expect(ids).to.include(d3Id);",
+                "});",
+                "pm.test('[a] D4 (Rome) is recommended', function() {",
+                "  pm.expect(ids).to.include(d4Id);",
+                "});",
+                "pm.test('[a] D1 (Beach) NOT in recommendations', function() {",
+                "  pm.expect(ids).to.not.include(d1Id);",
+                "});",
+                "pm.test('[a] D2 (Mountain) NOT in recommendations', function() {",
+                "  pm.expect(ids).to.not.include(d2Id);",
+                "});",
+                "pm.test('[a] Each rec has destinationId, name, country, category, score', function() {",
+                "  recs.forEach(function(r) {",
+                "    pm.expect(r).to.have.all.keys('destinationId', 'name', 'country', 'category', 'score');",
+                "    pm.expect(r.score).to.be.a('number').and.above(0);",
+                "    pm.expect(r.name).to.be.a('string').and.not.empty;",
+                "    pm.expect(r.country).to.be.a('string').and.not.empty;",
+                "    pm.expect(r.category).to.be.a('string').and.not.empty;",
+                "  });",
+                "});",
+                "console.log('[F12-a] Recommendations:', JSON.stringify(recs));"
+              ]
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{tokenA}}"}],
+            "url": {
+              "raw": "{{itineraryBaseUrl}}/api/itineraries/recommendations?userId={{userAId}}&limit=5",
+              "host": ["{{itineraryBaseUrl}}"],
+              "path": ["api", "itineraries", "recommendations"],
+              "query": [
+                {"key": "userId", "value": "{{userAId}}"},
+                {"key": "limit", "value": "5"}
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "[b] B's token for A's recs → 403 Ownership Violation",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('[b] Status 403 Forbidden (ownership violation)', function() {",
+                "  pm.response.to.have.status(403);",
+                "});",
+                "pm.test('[b] Error field present in body', function() {",
+                "  pm.expect(pm.response.json()).to.have.property('error');",
+                "});"
+              ]
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{tokenB}}"}],
+            "url": {
+              "raw": "{{itineraryBaseUrl}}/api/itineraries/recommendations?userId={{userAId}}",
+              "host": ["{{itineraryBaseUrl}}"],
+              "path": ["api", "itineraries", "recommendations"],
+              "query": [
+                {"key": "userId", "value": "{{userAId}}"}
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "[c] Admin token for A's recs → 200 (ADMIN bypass)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('[c] Status 200 – ADMIN bypass works', function() {",
+                "  pm.response.to.have.status(200);",
+                "});",
+                "var recs = pm.response.json();",
+                "pm.test('[c] Response is an array', function() {",
+                "  pm.expect(recs).to.be.an('array');",
+                "});",
+                "var ids = recs.map(function(r) { return r.destinationId; });",
+                "var d3Id = parseInt(pm.environment.get('d3Id'));",
+                "var d4Id = parseInt(pm.environment.get('d4Id'));",
+                "pm.test('[c] Same D3 & D4 results as scenario a', function() {",
+                "  pm.expect(ids).to.include(d3Id);",
+                "  pm.expect(ids).to.include(d4Id);",
+                "});",
+                "console.log('[F12-c] Admin bypass result:', JSON.stringify(recs));"
+              ]
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{tokenAdmin}}"}],
+            "url": {
+              "raw": "{{itineraryBaseUrl}}/api/itineraries/recommendations?userId={{userAId}}&limit=5",
+              "host": ["{{itineraryBaseUrl}}"],
+              "path": ["api", "itineraries", "recommendations"],
+              "query": [
+                {"key": "userId", "value": "{{userAId}}"},
+                {"key": "limit", "value": "5"}
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "[d] Setup – Register User D (no visits)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('User D registered (2xx)', function() {",
+                "  pm.expect([200, 201]).to.include(pm.response.code);",
+                "});",
+                "var res = pm.response.json();",
+                "pm.environment.set('tokenD', res.token);",
+                "var pl = JSON.parse(Buffer.from(res.token.split('.')[1], 'base64').toString('utf-8'));",
+                "pm.environment.set('userDId', pl.uid);",
+                "console.log('[F12] User D id =', pl.uid);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dave F12\",\n  \"email\": \"dave_f12@test.com\",\n  \"password\": \"password123\",\n  \"phone\": \"5551110005\"\n}"
+            },
+            "url": {
+              "raw": "{{userBaseUrl}}/api/auth/register",
+              "host": ["{{userBaseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+
+        {
+          "name": "[d] User D (no visits) own token → 200 empty list",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('[d] Status 200', function() {",
+                "  pm.response.to.have.status(200);",
+                "});",
+                "pm.test('[d] Response is empty array (no visits → no recommendations)', function() {",
+                "  var recs = pm.response.json();",
+                "  pm.expect(recs).to.be.an('array').that.is.empty;",
+                "});",
+                "console.log('[F12-d] Empty recs response:', pm.response.text());"
+              ]
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{tokenD}}"}],
+            "url": {
+              "raw": "{{itineraryBaseUrl}}/api/itineraries/recommendations?userId={{userDId}}",
+              "host": ["{{itineraryBaseUrl}}"],
+              "path": ["api", "itineraries", "recommendations"],
+              "query": [
+                {"key": "userId", "value": "{{userDId}}"}
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "[e] userId=999999 with admin token → 404 User Not Found",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('[e] Status 404 User Not Found', function() {",
+                "  pm.response.to.have.status(404);",
+                "});",
+                "console.log('[F12-e] 404 body:', pm.response.text());"
+              ]
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{tokenAdmin}}"}],
+            "url": {
+              "raw": "{{itineraryBaseUrl}}/api/itineraries/recommendations?userId=999999",
+              "host": ["{{itineraryBaseUrl}}"],
+              "path": ["api", "itineraries", "recommendations"],
+              "query": [
+                {"key": "userId", "value": "999999"}
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "[f] No Authorization header → 401 Unauthorized",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('[f] Status 401 Unauthorized (no token)', function() {",
+                "  pm.response.to.have.status(401);",
+                "});",
+                "console.log('[F12-f] 401 body:', pm.response.text());"
+              ]
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{itineraryBaseUrl}}/api/itineraries/recommendations?userId={{userAId}}",
+              "host": ["{{itineraryBaseUrl}}"],
+              "path": ["api", "itineraries", "recommendations"],
+              "query": [
+                {"key": "userId", "value": "{{userAId}}"}
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "[extra] Default limit (no limit param) → 200, ≤5 results",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('[extra] Status 200', function() {",
+                "  pm.response.to.have.status(200);",
+                "});",
+                "pm.test('[extra] Default limit ≤ 5 results', function() {",
+                "  pm.expect(pm.response.json().length).to.be.at.most(5);",
+                "});"
+              ]
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{tokenA}}"}],
+            "url": {
+              "raw": "{{itineraryBaseUrl}}/api/itineraries/recommendations?userId={{userAId}}",
+              "host": ["{{itineraryBaseUrl}}"],
+              "path": ["api", "itineraries", "recommendations"],
+              "query": [
+                {"key": "userId", "value": "{{userAId}}"}
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "[extra] Invalid JWT → 401",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('[extra] Invalid token returns 401', function() {",
+                "  pm.response.to.have.status(401);",
+                "});"
+              ]
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer this.is.not.a.valid.jwt"}],
+            "url": {
+              "raw": "{{itineraryBaseUrl}}/api/itineraries/recommendations?userId={{userAId}}",
+              "host": ["{{itineraryBaseUrl}}"],
+              "path": ["api", "itineraries", "recommendations"],
+              "query": [
+                {"key": "userId", "value": "{{userAId}}"}
+              ]
+            }
+          }
+        },
+
+        {
+          "name": "[extra] limit=1 → exactly 1 result",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('[extra] Status 200', function() {",
+                "  pm.response.to.have.status(200);",
+                "});",
+                "pm.test('[extra] limit=1 returns exactly 1 result', function() {",
+                "  pm.expect(pm.response.json().length).to.eql(1);",
+                "});",
+                "pm.test('[extra] Result has score ≥ 1', function() {",
+                "  pm.expect(pm.response.json()[0].score).to.be.above(0);",
+                "});"
+              ]
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{tokenA}}"}],
+            "url": {
+              "raw": "{{itineraryBaseUrl}}/api/itineraries/recommendations?userId={{userAId}}&limit=1",
+              "host": ["{{itineraryBaseUrl}}"],
+              "path": ["api", "itineraries", "recommendations"],
+              "query": [
+                {"key": "userId", "value": "{{userAId}}"},
+                {"key": "limit", "value": "1"}
+              ]
+            }
+          }
+        }
+
+      ]
+    }
+
+  ]
+}
