@@ -1,14 +1,12 @@
 package com.team15.tripplanning.bookingservice.repository;
 
 import com.team15.tripplanning.bookingservice.model.Booking;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,42 +31,39 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     int updateStatusById(@Param("id") Long id, @Param("status") String status);
 
     @Query("""
-SELECT
-    COALESCE(SUM(CASE WHEN b.status = 'CONFIRMED' THEN b.amount ELSE 0 END), 0),
-    COUNT(CASE WHEN b.status = 'CONFIRMED' THEN 1 END),
-    COALESCE(SUM(CASE WHEN b.status = 'CANCELLED' THEN b.amount ELSE 0 END), 0),
-    COUNT(CASE WHEN b.status = 'CANCELLED' THEN 1 END)
-FROM Booking b
-WHERE b.createdAt BETWEEN :startDate AND :endDate
-""")
+            SELECT
+                COALESCE(SUM(CASE WHEN b.status = 'CONFIRMED' THEN b.amount ELSE 0 END), 0),
+                COUNT(CASE WHEN b.status = 'CONFIRMED' THEN 1 END),
+                COALESCE(SUM(CASE WHEN b.status = 'CANCELLED' THEN b.amount ELSE 0 END), 0),
+                COUNT(CASE WHEN b.status = 'CANCELLED' THEN 1 END)
+            FROM Booking b
+            WHERE b.createdAt BETWEEN :startDate AND :endDate
+            """)
     Object[] getRevenueStats(LocalDateTime startDate, LocalDateTime endDate);
 
-    // ===== S5-F1: search with sorting (NO NULL BUG HERE) =====
     @Query("""
-        SELECT b FROM Booking b
-        WHERE b.status = :status
-          AND b.createdAt BETWEEN :startDateTime AND :endDateTime
-        ORDER BY b.createdAt DESC
-    """)
+            SELECT b FROM Booking b
+            WHERE b.status = :status
+              AND b.createdAt BETWEEN :startDateTime AND :endDateTime
+            ORDER BY b.createdAt DESC
+            """)
     List<Booking> searchBookings(
             @Param("status") Booking.BookingStatus status,
             @Param("startDateTime") LocalDateTime startDateTime,
             @Param("endDateTime") LocalDateTime endDateTime
     );
 
-    // Optional: for date-only filtering
     List<Booking> findByCreatedAtBetweenOrderByCreatedAtDesc(
             LocalDateTime startDateTime,
             LocalDateTime endDateTime
     );
 
-    // ===== S5-F3: Booking summary grouped by type =====
     @Query("""
-        SELECT b.type, SUM(b.amount)
-        FROM Booking b
-        WHERE b.userId = :userId AND b.status = 'CONFIRMED'
-        GROUP BY b.type
-    """)
+            SELECT b.type, SUM(b.amount)
+            FROM Booking b
+            WHERE b.userId = :userId AND b.status = 'CONFIRMED'
+            GROUP BY b.type
+            """)
     List<Object[]> getBookingSummaryByUser(@Param("userId") Long userId);
 
     @Query(value = "SELECT status FROM itineraries WHERE id = :itineraryId", nativeQuery = true)
@@ -82,4 +77,44 @@ WHERE b.createdAt BETWEEN :startDate AND :endDate
 
     @Query(value = "SELECT COUNT(*) FROM users WHERE id = :userId", nativeQuery = true)
     int countUserById(@Param("userId") Long userId);
+
+    // S5-F10
+    @Query(value = """
+        SELECT
+            d.id                                                          AS destinationId,
+            d.name                                                        AS destinationName,
+            COALESCE(SUM(b.amount), 0)                                    AS totalRevenue,
+            COALESCE(SUM(
+                CAST(COALESCE(
+                    NULLIF(b.booking_details->>'seasonalSurcharge', ''),
+                    '0'
+                ) AS NUMERIC)
+            ), 0)                                                         AS surchargeRevenue,
+            COALESCE(SUM(b.amount), 0) - COALESCE(SUM(
+                CAST(COALESCE(
+                    NULLIF(b.booking_details->>'seasonalSurcharge', ''),
+                    '0'
+                ) AS NUMERIC)
+            ), 0)                                                         AS baseRevenue,
+            COUNT(CASE WHEN CAST(COALESCE(
+                NULLIF(b.booking_details->>'seasonalSurcharge', ''),
+                '0'
+            ) AS NUMERIC) > 0 THEN 1 END)                                AS peakBookingCount,
+            COUNT(CASE WHEN CAST(COALESCE(
+                NULLIF(b.booking_details->>'seasonalSurcharge', ''),
+                '0'
+            ) AS NUMERIC) = 0 THEN 1 END)                                AS offPeakBookingCount
+        FROM bookings b
+        JOIN itineraries i ON i.id = b.itin_id
+        JOIN destinations d ON d.id = i.destination_id
+        WHERE b.status = 'CONFIRMED'
+          AND b.created_at >= :startDate
+          AND b.created_at <= :endDate
+        GROUP BY d.id, d.name
+        ORDER BY SUM(b.amount) DESC
+        """, nativeQuery = true)
+    List<Object[]> getRevenueByDestinationAndSeason(
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
 }
