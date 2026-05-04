@@ -168,6 +168,10 @@ public class ActivityController {
             @RequestParam
             @DateTimeFormat(iso = ISO.DATE) LocalDate endDate) {
 
+        // Log ANALYTICS_VIEWED on every call (cache hit or miss) per spec §4.4.4.
+        // Must run outside the @Cacheable layer — Spring AOP intercepts external calls only.
+        activityService.logAnalyticsViewed(startDate, endDate);
+
         ActivityAnalyticsDTO dto = activityService.getActivityAnalytics(startDate, endDate);
         return ResponseEntity.ok(dto);
     }

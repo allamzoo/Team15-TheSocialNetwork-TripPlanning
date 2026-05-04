@@ -1,12 +1,5 @@
 package com.team15.tripplanning.activityservice.service;
 
-import com.team15.tripplanning.activityservice.dto.ActivityEventDTO;
-import com.team15.tripplanning.activityservice.dto.ActivityLifecycleEventDTO;
-import com.team15.tripplanning.activityservice.dto.ActivitySummaryDTO;
-import com.team15.tripplanning.activityservice.dto.BatchActivityRequestDTO;
-import com.team15.tripplanning.activityservice.dto.BudgetActivityDTO;
-import com.team15.tripplanning.activityservice.dto.NearbyActivityDTO;
-import com.team15.tripplanning.activityservice.dto.RecordEventRequest;
 import com.team15.tripplanning.activityservice.dto.*;
 import com.team15.tripplanning.activityservice.model.Activity;
 import com.team15.tripplanning.activityservice.model.cassandra.ActivityLifecycleEvent;
@@ -34,12 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class ActivityService {
@@ -415,28 +402,44 @@ public class ActivityService {
     }
 
     // ---------- S4-F10 ----------
+    /**
+     * Logs ANALYTICS_VIEWED to MongoDB on every invocation (cache hits included).
+     * Called by the controller before the cached query method.
+     * Spec §4.4.4: observability events must not invalidate the analytics cache.
+     */
+    public void logAnalyticsViewed(LocalDate startDate, LocalDate endDate) {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("startDate", startDate.toString());
+        payload.put("endDate",   endDate.toString());
+        notifyObservers("ANALYTICS_VIEWED", payload);
+    }
+
+    /**
+     * Validates the date range then queries PostgreSQL for analytics.
+     * @Cacheable works here because the controller calls this method externally
+     * (Spring AOP intercepts external calls, not internal this.method() calls).
+     */
+    @Cacheable(value = "s4-f10-analytics", key = "'S4::S4-F10::' + #startDate + '::' + #endDate")
     public ActivityAnalyticsDTO getActivityAnalytics(LocalDate startDate, LocalDate endDate) {
         if (startDate.isAfter(endDate)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "startDate must not be after endDate");
         }
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("startDate", startDate.toString());
-        payload.put("endDate",   endDate.toString());
-        notifyObservers("ANALYTICS_VIEWED", payload);
 
-        return getActivityAnalyticsCached(startDate, endDate);
-    }
-
-    @Cacheable(value = "s4-f10-analytics", key = "'S4::S4-F10::' + #startDate + '::' + #endDate")
-    public ActivityAnalyticsDTO getActivityAnalyticsCached(LocalDate startDate, LocalDate endDate) {
         LocalDateTime startDateTime = startDate.atStartOfDay();
         LocalDateTime endDateTime   = endDate.atTime(23, 59, 59, 999_000_000);
 
-        Object[] summary = activityRepository.getAnalyticsSummary(startDateTime, endDateTime);
-        int    total            = summary[0] != null ? ((Number) summary[0]).intValue()    : 0;
-        double avgCost          = summary[1] != null ? ((Number) summary[1]).doubleValue() : 0.0;
-        double avgDurationHours = summary[2] != null ? ((Number) summary[2]).doubleValue() : 0.0;
+        List<Object[]> summaryRows = activityRepository.getAnalyticsSummary(startDateTime, endDateTime);
+        int    total            = 0;
+        double avgCost          = 0.0;
+        double avgDurationHours = 0.0;
+
+        if (summaryRows != null && !summaryRows.isEmpty()) {
+            Object[] summary = summaryRows.get(0);
+            total            = summary[0] != null ? ((Number) summary[0]).intValue()    : 0;
+            avgCost          = summary[1] != null ? ((Number) summary[1]).doubleValue() : 0.0;
+            avgDurationHours = summary[2] != null ? ((Number) summary[2]).doubleValue() : 0.0;
+        }
 
         List<Object[]> categoryRows = activityRepository.getCountByCategory(startDateTime, endDateTime);
         Map<String, Long> activitiesByCategory = new java.util.LinkedHashMap<>();

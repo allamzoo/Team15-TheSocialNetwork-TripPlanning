@@ -146,7 +146,7 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
             WHERE scheduled_time >= :startDate
               AND scheduled_time <= :endDate
             """, nativeQuery = true)
-    Object[] getAnalyticsSummary(
+    List<Object[]> getAnalyticsSummary(
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
 
