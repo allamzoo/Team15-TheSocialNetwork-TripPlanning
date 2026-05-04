@@ -71,6 +71,7 @@ public class BookingController {
 
     @PutMapping("/itinerary/{itineraryId}/cancel")
     public ResponseEntity<Void> cancelBookingsByItinerary(@PathVariable Long itineraryId) {
+
         bookingService.cancelPendingBookingsByItinerary(itineraryId);
         return ResponseEntity.ok().build();
     }
