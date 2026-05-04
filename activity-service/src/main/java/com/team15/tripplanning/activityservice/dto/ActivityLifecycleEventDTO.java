@@ -46,11 +46,11 @@ public class ActivityLifecycleEventDTO {
         }
     }
 
-    public Long getActivityId()          { return activityId; }
-    public Instant getEventTimestamp()   { return eventTimestamp; }
-    public String getStatus()            { return status; }
-    public String getCategory()          { return category; }
-    public Double getLatitude()          { return latitude; }
-    public Double getLongitude()         { return longitude; }
-    public String getNotes()             { return notes; }
+    public Long getActivityId()        { return activityId; }
+    public Instant getEventTimestamp() { return eventTimestamp; }
+    public String getStatus()          { return status; }
+    public String getCategory()        { return category; }
+    public Double getLatitude()        { return latitude; }
+    public Double getLongitude()       { return longitude; }
+    public String getNotes()           { return notes; }
 }

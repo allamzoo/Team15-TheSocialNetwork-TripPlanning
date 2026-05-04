@@ -27,8 +27,8 @@ public class NoOpActivityLifecycleEventStore implements ActivityLifecycleEventSt
     }
 
     @Override
-    public List<ActivityLifecycleEvent> findByKeyActivityId(Long activityId) {
-        log.warn("Cassandra disabled — returning empty lifecycle history for activityId={}", activityId);
+    public List<ActivityLifecycleEvent> findByActivityId(Long activityId) {
+        log.warn("Cassandra disabled — returning empty timeline for activityId={}", activityId);
         return List.of();
     }
 }

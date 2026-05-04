@@ -36,8 +36,7 @@ public class ActivityLifecycleEventKey implements Serializable {
         if (this == o) return true;
         if (!(o instanceof ActivityLifecycleEventKey)) return false;
         ActivityLifecycleEventKey that = (ActivityLifecycleEventKey) o;
-        return Objects.equals(activityId, that.activityId) &&
-               Objects.equals(eventTimestamp, that.eventTimestamp);
+        return Objects.equals(activityId, that.activityId) && Objects.equals(eventTimestamp, that.eventTimestamp);
     }
 
     @Override

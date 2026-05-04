@@ -29,19 +29,14 @@ public class ActivityLifecycleEvent {
 
     public ActivityLifecycleEventKey getKey() { return key; }
     public void setKey(ActivityLifecycleEventKey key) { this.key = key; }
-
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
-
     public String getCategory() { return category; }
     public void setCategory(String category) { this.category = category; }
-
     public Double getLatitude() { return latitude; }
     public void setLatitude(Double latitude) { this.latitude = latitude; }
-
     public Double getLongitude() { return longitude; }
     public void setLongitude(Double longitude) { this.longitude = longitude; }
-
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
 }

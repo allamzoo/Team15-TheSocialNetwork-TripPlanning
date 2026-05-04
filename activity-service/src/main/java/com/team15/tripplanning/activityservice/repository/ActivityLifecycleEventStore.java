@@ -14,5 +14,14 @@ public interface ActivityLifecycleEventStore {
 
     void save(ActivityLifecycleEvent event);
 
-    List<ActivityLifecycleEvent> findByKeyActivityId(Long activityId);
+    /**
+     * Returns all lifecycle events for the given activity, sorted by most recent first.
+     * Used by the timeline endpoint (S4-F12).
+     */
+    List<ActivityLifecycleEvent> findByActivityId(Long activityId);
+
+    /** Alias kept for internal consistency with the composite-key naming convention. */
+    default List<ActivityLifecycleEvent> findByKeyActivityId(Long activityId) {
+        return findByActivityId(activityId);
+    }
 }

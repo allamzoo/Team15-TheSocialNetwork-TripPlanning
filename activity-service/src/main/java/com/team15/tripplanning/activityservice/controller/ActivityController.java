@@ -2,24 +2,24 @@ package com.team15.tripplanning.activityservice.controller;
 
 import com.team15.tripplanning.activityservice.dto.ActivityLifecycleEventDTO;
 import com.team15.tripplanning.activityservice.dto.NearbyActivityDTO;
+import com.team15.tripplanning.activityservice.dto.ActivityEventDTO;
+import com.team15.tripplanning.activityservice.dto.ActivityLifecycleEventDTO;
 import com.team15.tripplanning.activityservice.dto.ActivitySummaryDTO;
+import com.team15.tripplanning.activityservice.dto.BatchActivityRequestDTO;
+import com.team15.tripplanning.activityservice.dto.BatchActivityResponseDTO;
 import com.team15.tripplanning.activityservice.dto.BudgetActivityDTO;
+import com.team15.tripplanning.activityservice.dto.RecordEventRequest;
+import com.team15.tripplanning.activityservice.dto.NearbyActivityDTO;
 import com.team15.tripplanning.activityservice.dto.RecordEventRequest;
 import com.team15.tripplanning.activityservice.model.Activity;
 import com.team15.tripplanning.activityservice.service.ActivityService;
-
 import java.time.LocalDate;
-
 import java.util.HashMap;
-
-import java.time.LocalDate;
 import java.util.List;
-
-import org.springframework.http.HttpStatus;
 import java.util.Map;
-
-import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -162,5 +162,16 @@ public class ActivityController {
             @RequestBody RecordEventRequest request) {
         ActivityLifecycleEventDTO dto = activityService.recordLifecycleEvent(id, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
+    }
+    // ---------- S4-F12 ----------
+    // ---------- S4-F12 ----------
+    @GetMapping("/{id}/timeline")
+    public ResponseEntity<List<ActivityEventDTO>> getActivityTimeline(
+            @PathVariable Long id,
+            @RequestParam(required = false) String startTime,
+            @RequestParam(required = false) String endTime) {
+
+        List<ActivityEventDTO> timeline = activityService.getActivityTimeline(id, startTime, endTime);
+        return ResponseEntity.ok(timeline);
     }
 }

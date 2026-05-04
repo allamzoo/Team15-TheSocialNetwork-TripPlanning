@@ -1,17 +1,24 @@
 package com.team15.tripplanning.activityservice.repository;
 
-/**
- * Marker interface kept for documentation purposes.
- *
- * When cassandra.enabled=true, provide a real implementation of ActivityLifecycleEventStore
- * backed by spring-data-cassandra (CassandraRepository). For now, Cassandra is a soft
- * dependency and NoOpActivityLifecycleEventStore is used instead.
- *
- * IMPORTANT: This interface intentionally does NOT extend CassandraRepository.
- * Extending CassandraRepository causes DataCassandraRepositoriesRegistrar to try
- * to create a Cassandra bean even when all Cassandra autoconfiguration is excluded,
- * crashing the service when no Cassandra cluster is reachable.
- */
-public interface ActivityLifecycleEventRepository {
-    // intentionally empty — see ActivityLifecycleEventStore + NoOpActivityLifecycleEventStore
+import com.team15.tripplanning.activityservice.model.cassandra.ActivityLifecycleEvent;
+import com.team15.tripplanning.activityservice.model.cassandra.ActivityLifecycleEventKey;
+import java.time.Instant;
+import java.util.List;
+import org.springframework.data.cassandra.repository.CassandraRepository;
+import org.springframework.data.cassandra.repository.Query;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface ActivityLifecycleEventRepository
+        extends CassandraRepository<ActivityLifecycleEvent, ActivityLifecycleEventKey> {
+
+    @Query("SELECT * FROM activity_lifecycle_events WHERE activity_id = ?0")
+    List<ActivityLifecycleEvent> findByActivityId(Long activityId);
+
+    @Query("SELECT * FROM activity_lifecycle_events WHERE activity_id = ?0 AND event_timestamp >= ?1 AND event_timestamp <= ?2")
+    List<ActivityLifecycleEvent> findByActivityIdAndEventTimestampBetween(
+            Long activityId,
+            Instant start,
+            Instant end
+    );
 }

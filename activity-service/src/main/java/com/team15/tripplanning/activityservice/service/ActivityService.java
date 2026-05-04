@@ -1,9 +1,11 @@
 package com.team15.tripplanning.activityservice.service;
 
+import com.team15.tripplanning.activityservice.dto.ActivityEventDTO;
 import com.team15.tripplanning.activityservice.dto.ActivityLifecycleEventDTO;
-import com.team15.tripplanning.activityservice.dto.NearbyActivityDTO;
 import com.team15.tripplanning.activityservice.dto.ActivitySummaryDTO;
+import com.team15.tripplanning.activityservice.dto.BatchActivityRequestDTO;
 import com.team15.tripplanning.activityservice.dto.BudgetActivityDTO;
+import com.team15.tripplanning.activityservice.dto.NearbyActivityDTO;
 import com.team15.tripplanning.activityservice.dto.RecordEventRequest;
 import com.team15.tripplanning.activityservice.model.Activity;
 import com.team15.tripplanning.activityservice.model.cassandra.ActivityLifecycleEvent;
@@ -13,34 +15,38 @@ import com.team15.tripplanning.activityservice.repository.ActivityRepository;
 import com.team15.tripplanning.shared.observer.EntityObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import com.team15.tripplanning.activityservice.dto.BatchActivityRequestDTO;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class ActivityService {
     private static final Logger log = LoggerFactory.getLogger(ActivityService.class);
+
+    private static final Set<String> VALID_LIFECYCLE_STATUSES =
+            Set.of("BOOKED", "STARTED", "COMPLETED", "CANCELLED");
 
     private final ActivityRepository activityRepository;
     private final ActivityLifecycleEventStore lifecycleEventRepository;
     private final List<EntityObserver> observers = new ArrayList<>();
     private final RedisTemplate<String, Object> redisTemplate;
 
-    private static final Set<String> VALID_LIFECYCLE_STATUSES =
-            Set.of("BOOKED", "STARTED", "COMPLETED", "CANCELLED");
+
 
     public ActivityService(ActivityRepository activityRepository,
                            ActivityLifecycleEventStore lifecycleEventRepository,
@@ -445,5 +451,64 @@ public class ActivityService {
                 .longitude(activity.getLongitude())
                 .notes(request.getNotes())
                 .build();
+    }
+    // ---------- S4-F12 ----------
+    @Cacheable(value = "s4-f12-timeline", key = "'S4::S4-F12::' + #activityId + '::' + #startTime + '::' + #endTime")
+    public List<ActivityEventDTO> getActivityTimeline(Long activityId,
+                                                      String startTime,
+                                                      String endTime) {
+        findById(activityId); // 404 if activity does not exist
+
+        Instant start = parseFlexibleInstant(startTime);
+        Instant end = parseFlexibleInstant(endTime);
+
+        if (start != null && end != null && start.isAfter(end)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "startTime must be before or equal to endTime");
+        }
+
+        List<ActivityLifecycleEvent> events = lifecycleEventRepository.findByActivityId(activityId);
+
+        return events.stream()
+                .filter(e -> {
+                    Instant ts = e.getKey().getEventTimestamp();
+
+                    if (start != null && ts.isBefore(start)) {
+                        return false;
+                    }
+
+                    if (end != null && ts.isAfter(end)) {
+                        return false;
+                    }
+
+                    return true;
+                })
+                .sorted((a, b) -> b.getKey().getEventTimestamp()
+                        .compareTo(a.getKey().getEventTimestamp()))
+                .map(e -> ActivityEventDTO.builder()
+                        .timestamp(e.getKey().getEventTimestamp())
+                        .status(e.getStatus())
+                        .category(e.getCategory())
+                        .latitude(e.getLatitude())
+                        .longitude(e.getLongitude())
+                        .notes(e.getNotes())
+                        .build())
+                .collect(Collectors.toList());
+    }
+    private Instant parseFlexibleInstant(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        try {
+            return Instant.parse(value);
+        } catch (Exception ignored) {
+            try {
+                return LocalDateTime.parse(value).toInstant(ZoneOffset.UTC);
+            } catch (Exception e) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Invalid datetime format. Use 2026-05-02T14:10:00 or 2026-05-02T14:10:00Z");
+            }
+        }
     }
 }
