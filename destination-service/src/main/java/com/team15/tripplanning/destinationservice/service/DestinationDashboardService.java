@@ -5,7 +5,9 @@ import com.team15.tripplanning.destinationservice.model.Destination;
 import com.team15.tripplanning.destinationservice.repository.DestinationDashboardRepository;
 import com.team15.tripplanning.destinationservice.repository.DestinationRepository;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
 
@@ -30,7 +32,7 @@ public class DestinationDashboardService {
     public DestinationDashboardDTO getDashboard(Long destinationId) {
         // 1. Validate destination exists → 404 if not found
         Destination destination = destinationRepository.findById(destinationId)
-                .orElseThrow(() -> new RuntimeException("Destination not found with id: " + destinationId));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Destination not found with id: " + destinationId));
 
         // 2. Log DASHBOARD_VIEWED on EVERY call (outside cache layer)
         mongoEventLogger.onEvent("DASHBOARD_VIEWED", Map.of(
@@ -52,7 +54,11 @@ public class DestinationDashboardService {
     )
     public DestinationDashboardDTO getCachedDashboard(Long destinationId, Destination destination) {
         // 4. Run aggregate query
-        Object[] agg = dashboardRepository.getDashboardAggregates(destinationId);
+        Object[] raw = dashboardRepository.getDashboardAggregates(destinationId);
+        // Hibernate 6 may wrap the single row in an outer array
+        Object[] agg = (raw.length > 0 && raw[0] instanceof Object[])
+                ? (Object[]) raw[0]
+                : raw;
 
         long totalItineraries     = agg[0] != null ? ((Number) agg[0]).longValue() : 0L;
         long completedItineraries = agg[1] != null ? ((Number) agg[1]).longValue() : 0L;
