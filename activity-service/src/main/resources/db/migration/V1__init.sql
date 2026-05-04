@@ -1,10 +1,6 @@
-DO $$ BEGIN
-    CREATE TYPE activitycategory AS ENUM (
-        'SIGHTSEEING', 'ADVENTURE', 'DINING', 'CULTURAL', 'LEISURE'
-    );
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
+CREATE TYPE activitycategory AS ENUM (
+    'SIGHTSEEING', 'ADVENTURE', 'DINING', 'CULTURAL', 'LEISURE'
+);
 
 CREATE TABLE IF NOT EXISTS activities (
     id BIGSERIAL PRIMARY KEY,

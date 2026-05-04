@@ -1,21 +1,28 @@
 package com.team15.tripplanning.itineraryservice.service;
 
+import com.team15.tripplanning.itineraryservice.dto.DestinationRecommendationDTO;
 import com.team15.tripplanning.itineraryservice.dto.ItineraryAnalyticsDTO;
 import com.team15.tripplanning.itineraryservice.dto.TripCostEstimateDTO;
+import com.team15.tripplanning.itineraryservice.dto.*;
 import com.team15.tripplanning.itineraryservice.model.Itinerary;
 import com.team15.tripplanning.itineraryservice.repository.ItineraryRepository;
 import com.team15.tripplanning.itineraryservice.repository.VisitGraphRepository;
 import com.team15.tripplanning.shared.observer.EntityObserver;
+import com.team15.tripplanning.itineraryservice.dto.ItineraryAnalyticsDashboardDTO;
+
+import java.time.LocalDate;
 import java.util.List;
+
+import java.util.stream.Collectors;
 import com.team15.tripplanning.itineraryservice.dto.ItineraryDayRequestDTO;
 import com.team15.tripplanning.itineraryservice.model.ItineraryDay;
 import java.util.ArrayList;
-import com.team15.tripplanning.itineraryservice.dto.ItineraryDayDTO;
-import com.team15.tripplanning.itineraryservice.dto.ItineraryDetailsDTO;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Comparator;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
@@ -363,6 +370,88 @@ public class ItineraryService {
                 .build();
     }
 
+
+    public ItineraryAnalyticsDashboardDTO getItineraryAnalyticsDashboard(
+            LocalDate startDate, LocalDate endDate) {
+
+        String cacheKey = "itinerary-service::S3-F10::" + startDate + "::" + endDate;
+
+        // 1. Try Redis cache
+        @SuppressWarnings("unchecked")
+        Map<String, Object> cached = (Map<String, Object>) redisTemplate.opsForValue().get(cacheKey);
+        ItineraryAnalyticsDashboardDTO dashboard;
+
+        if (cached != null) {
+            @SuppressWarnings("unchecked")
+            Map<String, Long> statusMap = (Map<String, Long>) cached.get("itinerariesByStatus");
+            dashboard = ItineraryAnalyticsDashboardDTO.builder()
+                    .totalItineraries(((Number) cached.get("totalItineraries")).longValue())
+                    .totalBudget(((Number) cached.get("totalBudget")).doubleValue())
+                    .averageBudget(((Number) cached.get("averageBudget")).doubleValue())
+                    .completionRate(((Number) cached.get("completionRate")).doubleValue())
+                    .itinerariesByStatus(statusMap)
+                    .build();
+        } else {
+            // 2. Query database
+            List<Object[]> rows = itineraryRepository.findStatusCountsAndBudgetSumByDateRange(startDate, endDate);
+
+            long totalItineraries = 0L;
+            double totalBudget = 0.0;
+            Map<String, Long> statusCounts = new HashMap<>();
+
+            for (Object[] row : rows) {
+                String status = (String) row[0];
+                long count = ((Number) row[1]).longValue();
+                double sumBudget = row[2] != null ? ((Number) row[2]).doubleValue() : 0.0;
+
+                totalItineraries += count;
+                totalBudget += sumBudget;
+                statusCounts.put(status, count);
+            }
+
+            // Ensure all statuses appear
+            for (String s : List.of("DRAFT", "PLANNED", "IN_PROGRESS", "COMPLETED", "CANCELLED")) {
+                statusCounts.putIfAbsent(s, 0L);
+            }
+
+            double averageBudget = totalItineraries > 0 ? totalBudget / totalItineraries : 0.0;
+            long completed = statusCounts.getOrDefault("COMPLETED", 0L);
+            double completionRate = totalItineraries > 0 ? (double) completed / totalItineraries : 0.0;
+
+            dashboard = ItineraryAnalyticsDashboardDTO.builder()
+                    .totalItineraries(totalItineraries)
+                    .totalBudget(totalBudget)
+                    .averageBudget(averageBudget)
+                    .completionRate(completionRate)
+                    .itinerariesByStatus(statusCounts)
+                    .build();
+
+            // Store in Redis, 10 minutes TTL
+            Map<String, Object> cacheMap = new HashMap<>();
+            cacheMap.put("totalItineraries", totalItineraries);
+            cacheMap.put("totalBudget", totalBudget);
+            cacheMap.put("averageBudget", averageBudget);
+            cacheMap.put("completionRate", completionRate);
+            cacheMap.put("itinerariesByStatus", statusCounts);
+            redisTemplate.opsForValue().set(cacheKey, cacheMap, 10, TimeUnit.MINUTES);
+        }
+
+        // 3. Log ANALYTICS_VIEWED event (every call)
+        Map<String, Object> details = new HashMap<>();
+        details.put("startDate", startDate.toString());
+        details.put("endDate", endDate.toString());
+        details.put("source", "S3-F10");
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("itineraryId", 0L);
+        payload.put("action", "ANALYTICS_VIEWED");
+        payload.put("details", details);
+
+        notifyObservers("ANALYTICS_VIEWED", payload);
+
+        return dashboard;
+    }
+
     @Transactional
     public Itinerary cancelItinerary(Long id) {
         Itinerary itinerary = itineraryRepository.findById(id)
@@ -466,5 +555,47 @@ public class ItineraryService {
         response.put("visitCount", visitCount);
         response.put("idempotent", false);
         return response;
+    }
+
+    // S3-F12
+    @Cacheable(value = "s3-recommendations", key = "'S3::S3-F12::' + #userId + '::' + #limit")
+    public List<DestinationRecommendationDTO> getRecommendations(Long userId, int limit) {
+        if (itineraryRepository.countUsersById(userId) == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found: " + userId);
+        }
+
+        List<long[]> graphResults = visitGraphRepository.getRecommendations(userId, limit);
+        if (graphResults.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        List<Long> destIds = graphResults.stream()
+                .map(r -> r[0])
+                .collect(Collectors.toList());
+
+        List<Object[]> destRows = itineraryRepository.findDestinationDetailsByIds(destIds);
+
+        Map<Long, Object[]> destMap = new HashMap<>();
+        for (Object[] row : destRows) {
+            destMap.put(((Number) row[0]).longValue(), row);
+        }
+
+        List<DestinationRecommendationDTO> result = new ArrayList<>();
+        for (long[] graphRow : graphResults) {
+            Long destId = graphRow[0];
+            Long score = graphRow[1];
+            Object[] dest = destMap.get(destId);
+            if (dest != null) {
+                result.add(DestinationRecommendationDTO.builder()
+                        .destinationId(destId)
+                        .name(dest[1] != null ? dest[1].toString() : "")
+                        .country(dest[2] != null ? dest[2].toString() : "")
+                        .category(dest[3] != null ? dest[3].toString() : "")
+                        .score(score)
+                        .build());
+            }
+        }
+
+        return result;
     }
 }

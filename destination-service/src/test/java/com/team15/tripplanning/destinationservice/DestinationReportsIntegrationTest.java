@@ -15,6 +15,7 @@ import com.team15.tripplanning.destinationservice.dto.DestinationReviewAlertDTO;
 import com.team15.tripplanning.destinationservice.dto.TopDestinationDTO;
 import com.team15.tripplanning.destinationservice.model.DestinationReview;
 import com.team15.tripplanning.destinationservice.model.DestinationStatus;
+import com.team15.tripplanning.destinationservice.service.DestinationSearchService;
 import com.team15.tripplanning.destinationservice.service.DestinationService;
 import java.time.LocalDate;
 import java.util.List;
@@ -28,11 +29,14 @@ class DestinationReportsIntegrationTest {
 
     private MockMvc mockMvc;
     private DestinationService destinationService;
+    private DestinationSearchService destinationSearchService;
 
     @BeforeEach
     void setUp() {
         destinationService = Mockito.mock(DestinationService.class);
-        mockMvc = MockMvcBuilders.standaloneSetup(new DestinationController(destinationService)).build();
+        destinationSearchService = Mockito.mock(DestinationSearchService.class);
+        mockMvc = MockMvcBuilders.standaloneSetup(
+                new DestinationController(destinationService, destinationSearchService)).build();
     }
 
     @Test

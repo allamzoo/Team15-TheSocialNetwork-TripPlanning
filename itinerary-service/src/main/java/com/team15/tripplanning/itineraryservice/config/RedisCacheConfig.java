@@ -44,6 +44,7 @@ public class RedisCacheConfig {
         configs.put("s3-cost-estimate", defaultConfig(Duration.ofMinutes(5)));
         configs.put("s3-details", defaultConfig(Duration.ofMinutes(15)));
         configs.put("s3-analytics", defaultConfig(Duration.ofMinutes(10)));
+        configs.put("s3-recommendations", defaultConfig(Duration.ofMinutes(5)));
 
         return RedisCacheManager.builder(cf)
                 .cacheDefaults(base)

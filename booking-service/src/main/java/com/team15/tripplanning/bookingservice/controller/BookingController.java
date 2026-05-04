@@ -1,6 +1,7 @@
 package com.team15.tripplanning.bookingservice.controller;
 
 import com.team15.tripplanning.bookingservice.dto.CreateBookingRequest;
+import com.team15.tripplanning.bookingservice.dto.DestinationSeasonRevenueDTO;
 import com.team15.tripplanning.bookingservice.dto.RevenueReportDTO;
 import com.team15.tripplanning.bookingservice.dto.UserBookingSummaryDTO;
 import com.team15.tripplanning.bookingservice.model.Booking;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.team15.tripplanning.bookingservice.dto.RefundCancellationRequest;
 
 @RestController
 @RequestMapping("/api/bookings")
@@ -49,9 +51,7 @@ public class BookingController {
         if (request == null) {
             request = new CreateBookingRequest();
         }
-
         request.setItineraryId(itineraryId);
-
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(bookingService.createFromRequest(request));
     }
@@ -82,14 +82,15 @@ public class BookingController {
 
     @PutMapping("/{id}")
     public ResponseEntity<Booking> update(@PathVariable Long id, @RequestBody Booking booking) {
-        return ResponseEntity.ok(bookingService.update(id, booking)); // 200
+        return ResponseEntity.ok(bookingService.update(id, booking));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         bookingService.delete(id);
-        return ResponseEntity.noContent().build(); // 204
+        return ResponseEntity.noContent().build();
     }
+
     @GetMapping("/reports/revenue")
     public ResponseEntity<RevenueReportDTO> getRevenueReport(
             @RequestParam LocalDate startDate,
@@ -114,8 +115,7 @@ public class BookingController {
             @RequestBody(required = false) Map<String, String> body
     ) {
         String reason = body != null ? body.get("reason") : null;
-        Booking updated = bookingService.cancelBooking(id, reason);
-        return ResponseEntity.ok(updated);
+        return ResponseEntity.ok(bookingService.cancelBooking(id, reason));
     }
 
     @PostMapping("/{id}/cancel")
@@ -127,8 +127,8 @@ public class BookingController {
         if (body != null && body.get("reason") != null) {
             reason = body.get("reason").toString();
         }
-        Booking updated = bookingService.cancelBooking(id, reason);
-        return ResponseEntity.status(HttpStatus.CREATED).body(updated);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(bookingService.cancelBooking(id, reason));
     }
 
     @GetMapping("/coupons/top-used")
@@ -149,8 +149,30 @@ public class BookingController {
     ) {
         LocalDateTime startDateTime = startDate != null ? startDate.atStartOfDay() : null;
         LocalDateTime endDateTime = endDate != null ? endDate.atTime(23, 59, 59) : null;
+        return ResponseEntity.ok(bookingService.getBookings(status, startDateTime, endDateTime));
+    }
 
-        List<Booking> bookings = bookingService.getBookings(status, startDateTime, endDateTime);
-        return ResponseEntity.ok(bookings);
+    // S5-F10
+    @GetMapping("/analytics/destination-season")
+    public ResponseEntity<List<DestinationSeasonRevenueDTO>> getRevenueByDestinationAndSeason(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
+        bookingService.logAnalyticsViewed(startDate, endDate);
+        return ResponseEntity.ok(
+                bookingService.getRevenueByDestinationAndSeason(startDate, endDate));
+    }
+
+    @PostMapping("/{id}/refund-cancellation-tier")
+    public ResponseEntity<Booking> refundCancellationTier(
+            @PathVariable Long id,
+            @RequestBody(required = false) RefundCancellationRequest request
+    ) {
+        if (request == null) {
+            request = new RefundCancellationRequest();
+        }
+
+        Booking updated = bookingService.processRefundCancellationTier(id, request);
+        return ResponseEntity.ok(updated);
     }
 }

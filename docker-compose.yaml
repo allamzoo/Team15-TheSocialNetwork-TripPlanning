@@ -47,7 +47,7 @@ services:
           memory: 256m
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.0.1
     container_name: tripplanning-elasticsearch
     environment:
       - discovery.type=single-node
@@ -85,7 +85,9 @@ services:
     container_name: tripplanning-cassandra
     environment:
       CASSANDRA_CLUSTER_NAME: tripplanning-cluster
-      JVM_OPTS: -Xms256m -Xmx256m
+      JVM_OPTS: -Xms512m -Xmx512m
+      MAX_HEAP_SIZE: 512m
+      HEAP_NEWSIZE: 128m
     ports:
       - "9042:9042"
     volumes:
@@ -93,7 +95,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512m
+          memory: 1g
 
   pgadmin:
     image: dpage/pgadmin4
@@ -160,7 +162,7 @@ services:
       SPRING_REDIS_PORT: 6379
       SPRING_NEO4J_URI: bolt://tripplanning-neo4j:7687
       SPRING_NEO4J_AUTHENTICATION_USERNAME: neo4j
-      SPRING_NEO4J_AUTHENTICATION_PASSWORD: password
+      NEO4J_AUTH: neo4j/neo4jpass
     depends_on:
       postgres:
         condition: service_healthy
@@ -181,10 +183,16 @@ services:
       SPRING_DATA_MONGODB_URI: mongodb://tripplanning-mongo:27017/tripplanningdb
       SPRING_REDIS_HOST: tripplanning-redis
       SPRING_REDIS_PORT: 6379
+      CASSANDRA_CONTACT_POINTS: tripplanning-cassandra
+      CASSANDRA_KEYSPACE: tripplanning
+      CASSANDRA_PORT: 9042
+      CASSANDRA_DATACENTER: datacenter1
     depends_on:
       postgres:
         condition: service_healthy
       mongodb:
+        condition: service_started
+      cassandra:
         condition: service_started
 
   booking-service:

@@ -3,7 +3,7 @@ spring:
     name: itinerary-service
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/tripplanningdb}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/tripplanningdb}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:postgres}
 
@@ -17,21 +17,16 @@ spring:
 
   data:
     mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/tripplanningdb}
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://tripplanning-mongo:27017/tripplanningdb}
     redis:
-      host: ${SPRING_REDIS_HOST:localhost}
+      host: ${SPRING_REDIS_HOST:tripplanning-redis}
       port: ${SPRING_REDIS_PORT:6379}
-    neo4j:
-      uri: ${SPRING_NEO4J_URI:bolt://localhost:7687}
-      authentication:
-        username: ${SPRING_NEO4J_USERNAME:neo4j}
-        password: ${SPRING_NEO4J_PASSWORD:neo4jpass}
 
   neo4j:
-    uri: ${SPRING_NEO4J_URI:bolt://localhost:7687}
+    uri: ${SPRING_NEO4J_URI:bolt://tripplanning-neo4j:7687}
     authentication:
-      username: ${SPRING_NEO4J_USERNAME:neo4j}
-      password: ${SPRING_NEO4J_PASSWORD:neo4jpass}
+      username: ${SPRING_NEO4J_AUTHENTICATION_USERNAME:neo4j}
+      password: ${SPRING_NEO4J_AUTHENTICATION_PASSWORD:neo4jpass}
 
 server:
   port: 8080

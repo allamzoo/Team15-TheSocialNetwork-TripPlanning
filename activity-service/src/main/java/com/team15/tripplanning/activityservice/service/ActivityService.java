@@ -1,13 +1,33 @@
 package com.team15.tripplanning.activityservice.service;
 
-import com.team15.tripplanning.activityservice.dto.NearbyActivityDTO;
+import com.team15.tripplanning.activityservice.dto.ActivityEventDTO;
+import com.team15.tripplanning.activityservice.dto.ActivityLifecycleEventDTO;
 import com.team15.tripplanning.activityservice.dto.ActivitySummaryDTO;
+import com.team15.tripplanning.activityservice.dto.BatchActivityRequestDTO;
 import com.team15.tripplanning.activityservice.dto.BudgetActivityDTO;
+import com.team15.tripplanning.activityservice.dto.NearbyActivityDTO;
+import com.team15.tripplanning.activityservice.dto.RecordEventRequest;
+import com.team15.tripplanning.activityservice.dto.*;
 import com.team15.tripplanning.activityservice.model.Activity;
+import com.team15.tripplanning.activityservice.model.cassandra.ActivityLifecycleEvent;
+import com.team15.tripplanning.activityservice.model.cassandra.ActivityLifecycleEventKey;
+import com.team15.tripplanning.activityservice.repository.ActivityLifecycleEventStore;
 import com.team15.tripplanning.activityservice.repository.ActivityRepository;
 import com.team15.tripplanning.shared.observer.EntityObserver;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -20,18 +40,27 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import com.team15.tripplanning.activityservice.dto.BatchActivityRequestDTO;
 
 @Service
 public class ActivityService {
+    private static final Logger log = LoggerFactory.getLogger(ActivityService.class);
+
+    private static final Set<String> VALID_LIFECYCLE_STATUSES =
+            Set.of("BOOKED", "STARTED", "COMPLETED", "CANCELLED");
+
     private final ActivityRepository activityRepository;
+    private final ActivityLifecycleEventStore lifecycleEventRepository;
     private final List<EntityObserver> observers = new ArrayList<>();
     private final RedisTemplate<String, Object> redisTemplate;
 
+
+
     public ActivityService(ActivityRepository activityRepository,
+                           ActivityLifecycleEventStore lifecycleEventRepository,
                            MongoEventLogger mongoEventLogger,
                            RedisTemplate<String, Object> redisTemplate) {
         this.activityRepository = activityRepository;
+        this.lifecycleEventRepository = lifecycleEventRepository;
         this.redisTemplate = redisTemplate;
         register(mongoEventLogger);
     }
@@ -51,9 +80,13 @@ public class ActivityService {
     }
 
     private void deleteWildcard(String pattern) {
-        Set<String> keys = redisTemplate.keys(pattern);
-        if (keys != null && !keys.isEmpty()) {
-            redisTemplate.delete(keys);
+        try {
+            Set<String> keys = redisTemplate.keys(pattern);
+            if (keys != null && !keys.isEmpty()) {
+                redisTemplate.delete(keys);
+            }
+        } catch (Exception e) {
+            log.warn("Cache eviction skipped (Redis unavailable) for pattern {}: {}", pattern, e.getMessage());
         }
     }
 
@@ -378,6 +411,151 @@ public class ActivityService {
             return activityRepository.findActivitiesByDateRangeAndCategory(startDate, endDate, String.valueOf(category));
         } else {
             return activityRepository.findActivitiesInDateRange(startDate, endDate);
+        }
+    }
+
+    // ---------- S4-F10 ----------
+    public ActivityAnalyticsDTO getActivityAnalytics(LocalDate startDate, LocalDate endDate) {
+        if (startDate.isAfter(endDate)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "startDate must not be after endDate");
+        }
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("startDate", startDate.toString());
+        payload.put("endDate",   endDate.toString());
+        notifyObservers("ANALYTICS_VIEWED", payload);
+
+        return getActivityAnalyticsCached(startDate, endDate);
+    }
+
+    @Cacheable(value = "s4-f10-analytics", key = "'S4::S4-F10::' + #startDate + '::' + #endDate")
+    public ActivityAnalyticsDTO getActivityAnalyticsCached(LocalDate startDate, LocalDate endDate) {
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime   = endDate.atTime(23, 59, 59, 999_000_000);
+
+        Object[] summary = activityRepository.getAnalyticsSummary(startDateTime, endDateTime);
+        int    total            = summary[0] != null ? ((Number) summary[0]).intValue()    : 0;
+        double avgCost          = summary[1] != null ? ((Number) summary[1]).doubleValue() : 0.0;
+        double avgDurationHours = summary[2] != null ? ((Number) summary[2]).doubleValue() : 0.0;
+
+        List<Object[]> categoryRows = activityRepository.getCountByCategory(startDateTime, endDateTime);
+        Map<String, Long> activitiesByCategory = new java.util.LinkedHashMap<>();
+        for (Object[] row : categoryRows) {
+            String cat = (String) row[0];
+            Long   cnt = ((Number) row[1]).longValue();
+            activitiesByCategory.put(cat, cnt);
+        }
+
+        return ActivityAnalyticsDTO.builder()
+                .totalActivities(total)
+                .averageCost(avgCost)
+                .averageDurationHours(avgDurationHours)
+                .activitiesByCategory(activitiesByCategory)
+                .build();
+    }
+
+    // ---------- S4-F11 ----------
+    public ActivityLifecycleEventDTO recordLifecycleEvent(Long activityId, RecordEventRequest request) {
+        // b) Find activity in PostgreSQL — throws 404 if not found
+        Activity activity = findById(activityId);
+
+        // c) Validate status
+        String rawStatus = request.getStatus();
+        if (rawStatus == null || !VALID_LIFECYCLE_STATUSES.contains(rawStatus.toUpperCase())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Invalid status. Must be one of: BOOKED, STARTED, COMPLETED, CANCELLED");
+        }
+        String status = rawStatus.toUpperCase();
+
+        // d) Store lifecycle event in Cassandra
+        Instant now = Instant.now();
+        ActivityLifecycleEventKey key = new ActivityLifecycleEventKey(activityId, now);
+        ActivityLifecycleEvent event = new ActivityLifecycleEvent();
+        event.setKey(key);
+        event.setStatus(status);
+        event.setCategory(activity.getCategory().name());
+        event.setLatitude(activity.getLatitude());
+        event.setLongitude(activity.getLongitude());
+        event.setNotes(request.getNotes());
+        lifecycleEventRepository.save(event);
+
+        // e) Fire observer → logs EVENT_RECORDED to MongoDB activity_events
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("activityId", activityId);
+        payload.put("itineraryId", activity.getItineraryId());
+        payload.put("status", status);
+        payload.put("category", activity.getCategory().name());
+        payload.put("notes", request.getNotes());
+        notifyObservers("EVENT_RECORDED", payload);
+
+        // f) Return DTO (caller responds with 201)
+        return ActivityLifecycleEventDTO.builder()
+                .activityId(activityId)
+                .eventTimestamp(now)
+                .status(status)
+                .category(activity.getCategory().name())
+                .latitude(activity.getLatitude())
+                .longitude(activity.getLongitude())
+                .notes(request.getNotes())
+                .build();
+    }
+    // ---------- S4-F12 ----------
+    @Cacheable(value = "s4-f12-timeline", key = "'S4::S4-F12::' + #activityId + '::' + #startTime + '::' + #endTime")
+    public List<ActivityEventDTO> getActivityTimeline(Long activityId,
+                                                      String startTime,
+                                                      String endTime) {
+        findById(activityId); // 404 if activity does not exist
+
+        Instant start = parseFlexibleInstant(startTime);
+        Instant end = parseFlexibleInstant(endTime);
+
+        if (start != null && end != null && start.isAfter(end)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "startTime must be before or equal to endTime");
+        }
+
+        List<ActivityLifecycleEvent> events = lifecycleEventRepository.findByActivityId(activityId);
+
+        return events.stream()
+                .filter(e -> {
+                    Instant ts = e.getKey().getEventTimestamp();
+
+                    if (start != null && ts.isBefore(start)) {
+                        return false;
+                    }
+
+                    if (end != null && ts.isAfter(end)) {
+                        return false;
+                    }
+
+                    return true;
+                })
+                .sorted((a, b) -> b.getKey().getEventTimestamp()
+                        .compareTo(a.getKey().getEventTimestamp()))
+                .map(e -> ActivityEventDTO.builder()
+                        .timestamp(e.getKey().getEventTimestamp())
+                        .status(e.getStatus())
+                        .category(e.getCategory())
+                        .latitude(e.getLatitude())
+                        .longitude(e.getLongitude())
+                        .notes(e.getNotes())
+                        .build())
+                .collect(Collectors.toList());
+    }
+    private Instant parseFlexibleInstant(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        try {
+            return Instant.parse(value);
+        } catch (Exception ignored) {
+            try {
+                return LocalDateTime.parse(value).toInstant(ZoneOffset.UTC);
+            } catch (Exception e) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Invalid datetime format. Use 2026-05-02T14:10:00 or 2026-05-02T14:10:00Z");
+            }
         }
     }
 }
