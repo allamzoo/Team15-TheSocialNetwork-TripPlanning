@@ -44,6 +44,7 @@ public class RedisCacheConfig {
         configs.put("s2-reports",               defaultConfig(Duration.ofMinutes(10)));
         configs.put("s2-reviews",               defaultConfig(Duration.ofMinutes(10)));
         configs.put("s2-dest-full-text-search", defaultConfig(Duration.ofMinutes(5)));
+        configs.put("destination-service",      defaultConfig(Duration.ofMinutes(10)));
 
         return RedisCacheManager.builder(cf)
                 .cacheDefaults(base)
