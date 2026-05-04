@@ -1,24 +1,28 @@
 package com.team15.tripplanning.activityservice.repository;
 
-import com.team15.tripplanning.activityservice.model.cassandra.ActivityLifecycleEvent;
-import com.team15.tripplanning.activityservice.model.cassandra.ActivityLifecycleEventKey;
 import java.time.Instant;
 import java.util.List;
-import org.springframework.data.cassandra.repository.CassandraRepository;
-import org.springframework.data.cassandra.repository.Query;
-import org.springframework.stereotype.Repository;
 
-@Repository
-public interface ActivityLifecycleEventRepository
-        extends CassandraRepository<ActivityLifecycleEvent, ActivityLifecycleEventKey> {
-
-    @Query("SELECT * FROM activity_lifecycle_events WHERE activity_id = ?0")
-    List<ActivityLifecycleEvent> findByActivityId(Long activityId);
-
-    @Query("SELECT * FROM activity_lifecycle_events WHERE activity_id = ?0 AND event_timestamp >= ?1 AND event_timestamp <= ?2")
-    List<ActivityLifecycleEvent> findByActivityIdAndEventTimestampBetween(
-            Long activityId,
-            Instant start,
-            Instant end
-    );
+/**
+ * Documentation-only interface describing the Cassandra queries that back
+ * ActivityLifecycleEventStore when cassandra.enabled=true.
+ *
+ * IMPORTANT: This interface intentionally does NOT extend CassandraRepository
+ * and carries NO @Repository annotation. Extending CassandraRepository causes
+ * DataCassandraRepositoriesRegistrar to attempt bean creation even when all
+ * Cassandra autoconfiguration is excluded, crashing the service startup when
+ * no Cassandra cluster is reachable.
+ *
+ * When Cassandra is enabled, create a @ConditionalOnProperty(cassandra.enabled=true)
+ * @Service that wraps the real CassandraRepository and implements ActivityLifecycleEventStore.
+ *
+ * Equivalent CQL queries for reference:
+ *   findByActivityId:
+ *     SELECT * FROM activity_lifecycle_events WHERE activity_id = ?
+ *   findByActivityIdAndEventTimestampBetween:
+ *     SELECT * FROM activity_lifecycle_events WHERE activity_id = ?
+ *       AND event_timestamp >= ? AND event_timestamp <= ?
+ */
+public interface ActivityLifecycleEventRepository {
+    // intentionally empty — see ActivityLifecycleEventStore + NoOpActivityLifecycleEventStore
 }
