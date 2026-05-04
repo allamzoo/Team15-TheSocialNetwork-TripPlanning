@@ -6,6 +6,8 @@ import com.team15.tripplanning.bookingservice.dto.CouponUsageDTO;
 import com.team15.tripplanning.bookingservice.dto.DestinationSeasonRevenueDTO;
 import com.team15.tripplanning.bookingservice.dto.RevenueReportDTO;
 import com.team15.tripplanning.bookingservice.dto.UserBookingSummaryDTO;
+import com.team15.tripplanning.bookingservice.dto.RefundCancellationRequest;
+import com.team15.tripplanning.bookingservice.dto.ItineraryRefundInfo;
 import com.team15.tripplanning.bookingservice.dto.CreateBookingRequest;
 import com.team15.tripplanning.bookingservice.model.Booking;
 import com.team15.tripplanning.bookingservice.model.BookingCoupon;
@@ -20,6 +22,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import com.team15.tripplanning.bookingservice.strategy.*;
+
 
 import java.sql.Timestamp;
 import java.time.LocalDate;
@@ -592,5 +596,126 @@ public class BookingService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Booking is allowed only for PLANNED or IN_PROGRESS itineraries");
         }
+    }
+
+    @Transactional
+    public Booking processRefundCancellationTier(Long bookingId, RefundCancellationRequest request) {
+
+        // ===== b) Find booking =====
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Booking not found: " + bookingId
+                ));
+
+        // ===== c) Validate status =====
+        if (booking.getStatus() != Booking.BookingStatus.CONFIRMED) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Only CONFIRMED bookings can be refunded"
+            );
+        }
+
+        // ===== d) Fetch itinerary info =====
+        Object[] raw = bookingRepository.findItineraryRefundInfoRaw(booking.getItineraryId());
+
+        if (raw == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found");
+        }
+
+        if (raw.length == 1 && raw[0] instanceof Object[] nested) {
+            raw = nested;
+        }
+
+        if (raw.length < 3) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Invalid itinerary lookup result");
+        }
+
+        Long itineraryId = ((Number) raw[0]).longValue();
+        String itineraryStatus = raw[1] != null ? raw[1].toString() : null;
+
+        LocalDate startDate;
+        if (raw[2] instanceof java.sql.Date date) {
+            startDate = date.toLocalDate();
+        } else if (raw[2] instanceof java.time.LocalDate ld) {
+            startDate = ld;
+        } else {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Invalid itinerary date");
+        }
+
+        ItineraryRefundInfo itinerary = new ItineraryRefundInfo(
+                itineraryId,
+                itineraryStatus,
+                startDate
+        );
+
+        // ===== e) Select strategy =====
+        RefundStrategySelector selector = new RefundStrategySelector();
+        RefundStrategy strategy = selector.select(itinerary);
+        long daysBeforeDeparture = selector.calculateDaysBeforeDeparture(itinerary);
+
+        RefundResult result = strategy.calculateRefund(booking, itinerary, request);
+
+        // ===== f) NoRefundStrategy =====
+        if (strategy instanceof NoRefundStrategy) {
+
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("bookingId", booking.getId());
+            payload.put("userId", booking.getUserId());
+            payload.put("strategyName", result.getStrategyName());
+            payload.put("reason", "trip already started or completed");
+            payload.put("itineraryId", itineraryId);
+            payload.put("itineraryStatus", itineraryStatus);
+
+            notifyObservers("REFUND_DENIED", payload);
+
+            deleteWildcard("booking-service::S5-F10::*");
+            deleteWildcard("booking-service::S5-F11::" + bookingId + "::*");
+            deleteWildcard("booking-service::booking::" + bookingId);
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "trip already started or completed"
+            );
+        }
+
+        // ===== g) Apply refund =====
+        booking.setStatus(Booking.BookingStatus.CANCELLED);
+
+        // ===== h) Update JSONB =====
+        Map<String, Object> details = booking.getBookingDetails();
+        if (details == null) details = new HashMap<>();
+
+        details.put("refundAmount", result.getRefundAmount());
+        details.put("tier", result.getTier());
+        details.put("strategyName", result.getStrategyName());
+        details.put("refundReason", request != null ? request.getReason() : null);
+        details.put("daysBeforeDeparture", daysBeforeDeparture);
+        details.put("refundedAt", LocalDateTime.now().toString());
+
+        booking.setBookingDetails(details);
+
+        Booking saved = bookingRepository.save(booking);
+
+        // ===== i) Mongo log =====
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("bookingId", saved.getId());
+        payload.put("userId", saved.getUserId());
+        payload.put("amount", result.getRefundAmount());
+        payload.put("method", "REFUND");
+        payload.put("strategyName", result.getStrategyName());
+        payload.put("tier", result.getTier());
+        payload.put("originalAmount", saved.getAmount());
+        payload.put("daysBeforeDeparture", daysBeforeDeparture);
+        payload.put("refundReason", request != null ? request.getReason() : null);
+
+        notifyObservers("REFUNDED", payload);
+
+        // ===== j) Cache invalidation =====
+        deleteWildcard("booking-service::S5-F10::*");
+        deleteWildcard("booking-service::S5-F11::" + bookingId + "::*");
+        deleteWildcard("booking-service::booking::" + bookingId);
+
+        return saved;
     }
 }

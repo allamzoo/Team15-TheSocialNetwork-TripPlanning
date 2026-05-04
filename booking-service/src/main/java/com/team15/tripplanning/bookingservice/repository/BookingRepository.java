@@ -117,4 +117,11 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
     );
+
+    @Query(value = """
+    SELECT i.id, i.status, i.start_date
+    FROM itineraries i
+    WHERE i.id = :itineraryId
+    """, nativeQuery = true)
+    Object[] findItineraryRefundInfoRaw(@Param("itineraryId") Long itineraryId);
 }
