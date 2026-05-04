@@ -135,4 +135,29 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,
             @Param("category") String category);
+
+    // -------------------- S4-F10 --------------------
+    @Query(value = """
+            SELECT
+                COUNT(*)                                            AS totalActivities,
+                COALESCE(AVG((metadata->>'cost')::numeric), 0)     AS averageCost,
+                COALESCE(AVG((metadata->>'duration')::numeric), 0) AS averageDurationHours
+            FROM activities
+            WHERE scheduled_time >= :startDate
+              AND scheduled_time <= :endDate
+            """, nativeQuery = true)
+    Object[] getAnalyticsSummary(
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
+    @Query(value = """
+            SELECT category, COUNT(*) AS cnt
+            FROM activities
+            WHERE scheduled_time >= :startDate
+              AND scheduled_time <= :endDate
+            GROUP BY category
+            """, nativeQuery = true)
+    List<Object[]> getCountByCategory(
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
 }

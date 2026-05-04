@@ -32,6 +32,7 @@ public class RedisCacheConfig {
         configs.put("s4-f9-budget",    defaultConfig(Duration.ofMinutes(5)));
         configs.put("s4-f12-timeline", defaultConfig(Duration.ofMinutes(5)));
 
+        configs.put("s4-f10-analytics", defaultConfig(Duration.ofMinutes(10)));
         return RedisCacheManager.builder(cf)
                 .cacheDefaults(base)
                 .withInitialCacheConfigurations(configs)
