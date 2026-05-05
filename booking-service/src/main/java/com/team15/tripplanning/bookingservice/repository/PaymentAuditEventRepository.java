@@ -12,4 +12,6 @@ public interface PaymentAuditEventRepository extends MongoRepository<PaymentAudi
     List<PaymentAuditEvent> findByBookingIdOrderByTimestampDesc(Long bookingId);
 
     Page<PaymentAuditEvent> findByBookingId(Long bookingId, Pageable pageable);
+
+    List<PaymentAuditEvent> findByBookingIdAndActionNotOrderByTimestampAsc(Long bookingId, String excludedAction);
 }

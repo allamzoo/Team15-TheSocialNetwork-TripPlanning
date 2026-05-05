@@ -196,9 +196,11 @@ services:
       - "8085:8080"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tripplanningdb
-      SPRING_DATA_MONGODB_URI: mongodb://tripplanning-mongo:27017/tripplanningdb
-      SPRING_REDIS_HOST: tripplanning-redis
-      SPRING_REDIS_PORT: 6379
+      SPRING_MONGODB_HOST: tripplanning-mongo
+      SPRING_MONGODB_PORT: 27017
+      SPRING_MONGODB_DATABASE: tripplanningdb
+      SPRING_DATA_REDIS_HOST: tripplanning-redis
+      SPRING_DATA_REDIS_PORT: 6379
     depends_on:
       postgres:
         condition: service_healthy

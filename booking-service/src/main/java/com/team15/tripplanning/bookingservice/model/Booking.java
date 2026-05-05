@@ -55,13 +55,13 @@ public class Booking {
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @JsonAlias({"booking_type"})
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "bookingtype default 'ACCOMMODATION'")
     private BookingType type;
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @JsonAlias({"booking_status"})
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "bookingstatus default 'PENDING'")
     private BookingStatus status = BookingStatus.PENDING;
 
     @JdbcTypeCode(SqlTypes.JSON)
