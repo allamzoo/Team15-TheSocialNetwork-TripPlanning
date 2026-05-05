@@ -21,12 +21,13 @@ spring:
     mapper:
       accept-case-insensitive-enums: true
 
-  data:
-    mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI:mongodb://root:rootpass@mongo:27017/tripplanningmongo?authSource=admin}
+  mongodb:
+    host: ${SPRING_MONGODB_HOST:localhost}
+    port: ${SPRING_MONGODB_PORT:27017}
+    database: ${SPRING_MONGODB_DATABASE:tripplanningdb}
     redis:
-      host: ${SPRING_REDIS_HOST:localhost}
-      port: ${SPRING_REDIS_PORT:6379}
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
 
 server:
   port: 8080

@@ -1,5 +1,8 @@
 package com.team15.tripplanning.bookingservice.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,6 +30,7 @@ public class RedisCacheConfig {
         configs.put("s5-booking-details", defaultConfig(Duration.ofMinutes(10)));
         configs.put("s5-top-coupons",     defaultConfig(Duration.ofMinutes(5)));
         configs.put("s5-revenue-report",  defaultConfig(Duration.ofMinutes(10)));
+        configs.put("s5-booking-audit",   defaultConfig(Duration.ofMinutes(10)));
 
         return RedisCacheManager.builder(cf)
                 .cacheDefaults(base)
@@ -40,8 +44,8 @@ public class RedisCacheConfig {
         template.setConnectionFactory(cf);
         template.setKeySerializer(new StringRedisSerializer());
         template.setHashKeySerializer(new StringRedisSerializer());
-        template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
-        template.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
+        template.setValueSerializer(new GenericJackson2JsonRedisSerializer(redisObjectMapper()));
+        template.setHashValueSerializer(new GenericJackson2JsonRedisSerializer(redisObjectMapper()));
         return template;
     }
 
@@ -49,6 +53,17 @@ public class RedisCacheConfig {
         return RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(ttl)
                 .serializeValuesWith(RedisSerializationContext.SerializationPair
-                        .fromSerializer(new GenericJackson2JsonRedisSerializer()));
+                        .fromSerializer(new GenericJackson2JsonRedisSerializer(redisObjectMapper())));
+    }
+
+    private ObjectMapper redisObjectMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        mapper.activateDefaultTyping(
+                mapper.getPolymorphicTypeValidator(),
+                ObjectMapper.DefaultTyping.NON_FINAL
+        );
+        return mapper;
     }
 }

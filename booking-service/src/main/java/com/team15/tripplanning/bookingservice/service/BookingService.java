@@ -1,14 +1,19 @@
 package com.team15.tripplanning.bookingservice.service;
 
 import com.team15.tripplanning.bookingservice.dto.AppliedCouponDTO;
+import com.team15.tripplanning.bookingservice.dto.AuditEventDTO;
 import com.team15.tripplanning.bookingservice.dto.BookingDetailsDTO;
 import com.team15.tripplanning.bookingservice.dto.CouponUsageDTO;
 import com.team15.tripplanning.bookingservice.dto.DestinationSeasonRevenueDTO;
+import com.team15.tripplanning.bookingservice.dto.CreateBookingRequest;
 import com.team15.tripplanning.bookingservice.dto.RevenueReportDTO;
+import com.team15.tripplanning.bookingservice.dto.SaleAuditTrailDTO;
 import com.team15.tripplanning.bookingservice.dto.UserBookingSummaryDTO;
 import com.team15.tripplanning.bookingservice.dto.RefundCancellationRequest;
 import com.team15.tripplanning.bookingservice.dto.ItineraryRefundInfo;
 import com.team15.tripplanning.bookingservice.dto.CreateBookingRequest;
+import com.team15.tripplanning.bookingservice.model.mongo.PaymentAuditEvent;
+import com.team15.tripplanning.bookingservice.repository.PaymentAuditEventRepository;
 import com.team15.tripplanning.bookingservice.model.Booking;
 import com.team15.tripplanning.bookingservice.model.BookingCoupon;
 import com.team15.tripplanning.bookingservice.model.Coupon;
@@ -39,17 +44,20 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final BookingCouponRepository bookingCouponRepository;
     private final CouponRepository couponRepository;
+    private final PaymentAuditEventRepository paymentAuditEventRepository;
     private final List<EntityObserver> observers = new ArrayList<>();
     private final RedisTemplate<String, Object> redisTemplate;
 
     public BookingService(BookingRepository bookingRepository,
                           BookingCouponRepository bookingCouponRepository,
                           CouponRepository couponRepository,
+                          PaymentAuditEventRepository paymentAuditEventRepository,
                           MongoEventLogger mongoEventLogger,
                           RedisTemplate<String, Object> redisTemplate) {
         this.bookingRepository = bookingRepository;
         this.bookingCouponRepository = bookingCouponRepository;
         this.couponRepository = couponRepository;
+        this.paymentAuditEventRepository = paymentAuditEventRepository;
         this.redisTemplate = redisTemplate;
         register(mongoEventLogger);
     }
@@ -579,6 +587,27 @@ public class BookingService {
         payload.put("startDate", startDate.toString());
         payload.put("endDate", endDate.toString());
         notifyObservers("ANALYTICS_VIEWED", payload);
+    }
+
+    @Cacheable(value = "s5-booking-audit", key = "'S5::S5-F11::' + #bookingId")
+    public SaleAuditTrailDTO getAuditTrail(Long bookingId) {
+        findById(bookingId);
+        List<PaymentAuditEvent> events = paymentAuditEventRepository
+                .findByBookingIdAndActionNotOrderByTimestampAsc(bookingId, "ANALYTICS_VIEWED");
+        List<AuditEventDTO> eventDTOs = new ArrayList<>();
+        for (PaymentAuditEvent e : events) {
+            eventDTOs.add(AuditEventDTO.builder()
+                    .action(e.getAction())
+                    .timestamp(e.getTimestamp())
+                    .method(e.getMethod())
+                    .amount(e.getAmount())
+                    .details(e.getDetails())
+                    .build());
+        }
+        return SaleAuditTrailDTO.builder()
+                .saleId(bookingId)
+                .events(eventDTOs)
+                .build();
     }
 
     private void validateItineraryAllowsBooking(Long itineraryId) {

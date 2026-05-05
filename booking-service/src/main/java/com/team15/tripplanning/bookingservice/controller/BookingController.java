@@ -3,6 +3,7 @@ package com.team15.tripplanning.bookingservice.controller;
 import com.team15.tripplanning.bookingservice.dto.CreateBookingRequest;
 import com.team15.tripplanning.bookingservice.dto.DestinationSeasonRevenueDTO;
 import com.team15.tripplanning.bookingservice.dto.RevenueReportDTO;
+import com.team15.tripplanning.bookingservice.dto.SaleAuditTrailDTO;
 import com.team15.tripplanning.bookingservice.dto.UserBookingSummaryDTO;
 import com.team15.tripplanning.bookingservice.model.Booking;
 import com.team15.tripplanning.bookingservice.service.BookingService;
@@ -161,6 +162,11 @@ public class BookingController {
         bookingService.logAnalyticsViewed(startDate, endDate);
         return ResponseEntity.ok(
                 bookingService.getRevenueByDestinationAndSeason(startDate, endDate));
+    }
+
+    @GetMapping("/{id}/audit-trail")
+    public ResponseEntity<SaleAuditTrailDTO> getAuditTrail(@PathVariable Long id) {
+        return ResponseEntity.ok(bookingService.getAuditTrail(id));
     }
 
     @PostMapping("/{id}/refund-cancellation-tier")
