@@ -23,7 +23,8 @@ public class Activity {
         ADVENTURE,
         DINING,
         CULTURAL,
-        LEISURE
+        LEISURE,
+        OUTDOOR
     }
 
     @Id

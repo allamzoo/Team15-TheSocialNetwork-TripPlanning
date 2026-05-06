@@ -29,6 +29,12 @@ services:
       - "27017:27017"
     volumes:
       - mongodata:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
     deploy:
       resources:
         limits:
@@ -41,6 +47,11 @@ services:
       - "6379:6379"
     volumes:
       - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     deploy:
       resources:
         limits:
@@ -53,10 +64,18 @@ services:
       - discovery.type=single-node
       - xpack.security.enabled=false
       - ES_JAVA_OPTS=-Xms256m -Xmx256m
+      - node.store.allow_mmap=false
+      - xpack.ml.enabled=false
     ports:
       - "9200:9200"
     volumes:
       - esdata:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
     deploy:
       resources:
         limits:
@@ -75,6 +94,12 @@ services:
       - "7687:7687"
     volumes:
       - neo4jdata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
     deploy:
       resources:
         limits:
@@ -85,17 +110,22 @@ services:
     container_name: tripplanning-cassandra
     environment:
       CASSANDRA_CLUSTER_NAME: tripplanning-cluster
-      JVM_OPTS: -Xms512m -Xmx512m
-      MAX_HEAP_SIZE: 512m
-      HEAP_NEWSIZE: 128m
+      MAX_HEAP_SIZE: 256m
+      HEAP_NEWSIZE: 64m
     ports:
       - "9042:9042"
     volumes:
       - cassandradata:/var/lib/cassandra
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'DESCRIBE KEYSPACES' || exit 1"]
+      interval: 15s
+      timeout: 15s
+      retries: 20
+      start_period: 90s
     deploy:
       resources:
         limits:
-          memory: 1g
+          memory: 2g
 
   pgadmin:
     image: dpage/pgadmin4
@@ -125,7 +155,9 @@ services:
       postgres:
         condition: service_healthy
       mongodb:
-        condition: service_started
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   destination-service:
     build:
@@ -144,9 +176,11 @@ services:
       postgres:
         condition: service_healthy
       mongodb:
-        condition: service_started
+        condition: service_healthy
+      redis:
+        condition: service_healthy
       elasticsearch:
-        condition: service_started
+        condition: service_healthy
 
   itinerary-service:
     build:
@@ -167,9 +201,11 @@ services:
       postgres:
         condition: service_healthy
       mongodb:
-        condition: service_started
+        condition: service_healthy
+      redis:
+        condition: service_healthy
       neo4j:
-        condition: service_started
+        condition: service_healthy
 
   activity-service:
     build:

@@ -94,7 +94,6 @@ public class DestinationService {
         return saved;
     }
 
-    @Cacheable(value = "s2-destinations", key = "'S2::all'")
     public List<Destination> findAll() {
         return destinationRepository.findAll();
     }
