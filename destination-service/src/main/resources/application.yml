@@ -17,7 +17,7 @@ spring:
 
   data:
     mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/tripplanningdb}
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://tripplanning-mongo:27017/tripplanningdb}
       auto-index-creation: false
     redis:
       host: ${SPRING_REDIS_HOST:localhost}

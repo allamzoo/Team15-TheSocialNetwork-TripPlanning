@@ -21,12 +21,13 @@ spring:
     mapper:
       accept-case-insensitive-enums: true
 
-  mongodb:
-    host: ${SPRING_MONGODB_HOST:localhost}
-    port: ${SPRING_MONGODB_PORT:27017}
-    database: ${SPRING_MONGODB_DATABASE:tripplanningdb}
+  data:
+    mongodb:
+      host: ${SPRING_MONGODB_HOST:tripplanning-mongo}
+      port: ${SPRING_MONGODB_PORT:27017}
+      database: ${SPRING_MONGODB_DATABASE:tripplanningdb}
     redis:
-      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      host: ${SPRING_DATA_REDIS_HOST:tripplanning-redis}
       port: ${SPRING_DATA_REDIS_PORT:6379}
 
 server:
