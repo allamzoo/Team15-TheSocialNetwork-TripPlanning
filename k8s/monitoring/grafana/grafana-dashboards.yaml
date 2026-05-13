@@ -61,11 +61,152 @@ data:
     { "title": "Destination Service Dashboard", "panels": [], "schemaVersion": 36, "version": 1 }
 
   # ┌─ S3 OWNED BLOCK ─ PR: feature/m3-s3-infra-itinerary ────────────────────┐
-  # │ Include saga state-machine panels: COMPLETING/PAYMENT_PENDING/PAID/      │
-  # │ PAYMENT_FAILED counts (PromQL counter metrics from ItinerarySaga).       │
+  # │ Panels: HTTP req/s, P50/P95/P99 latency, JVM heap (PromQL)             │
+  # │       + error rate, saga state transitions, Feign outcomes (LogQL)     │
   # └──────────────────────────────────────────────────────────────────────────┘
   itinerary-dashboard.json: |
-    { "title": "Itinerary Service Dashboard", "panels": [], "schemaVersion": 36, "version": 1 }
+    {
+      "title": "Itinerary Service Dashboard",
+      "uid": "itinerary-service",
+      "schemaVersion": 36,
+      "version": 1,
+      "refresh": "30s",
+      "time": { "from": "now-1h", "to": "now" },
+      "panels": [
+        {
+          "id": 1,
+          "title": "HTTP Request Rate (req/s)",
+          "type": "timeseries",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum by (uri, method) (rate(http_server_requests_seconds_count{job=\"itinerary-service\"}[5m]))",
+              "legendFormat": "{{method}} {{uri}}"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "title": "HTTP Latency Percentiles (P50 / P95 / P99)",
+          "type": "timeseries",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "histogram_quantile(0.50, sum by (le, uri) (rate(http_server_requests_seconds_bucket{job=\"itinerary-service\"}[5m])))",
+              "legendFormat": "P50 {{uri}}"
+            },
+            {
+              "refId": "B",
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "histogram_quantile(0.95, sum by (le, uri) (rate(http_server_requests_seconds_bucket{job=\"itinerary-service\"}[5m])))",
+              "legendFormat": "P95 {{uri}}"
+            },
+            {
+              "refId": "C",
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "histogram_quantile(0.99, sum by (le, uri) (rate(http_server_requests_seconds_bucket{job=\"itinerary-service\"}[5m])))",
+              "legendFormat": "P99 {{uri}}"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "title": "JVM Heap Usage",
+          "type": "timeseries",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "jvm_memory_used_bytes{job=\"itinerary-service\", area=\"heap\"}",
+              "legendFormat": "Heap Used"
+            },
+            {
+              "refId": "B",
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "jvm_memory_max_bytes{job=\"itinerary-service\", area=\"heap\"}",
+              "legendFormat": "Heap Max"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "title": "Error Rate (ERROR logs/min)",
+          "type": "timeseries",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "type": "loki", "uid": "loki" },
+              "expr": "sum(count_over_time({app=\"tripplanning\", service=\"itinerary-service\", level=\"ERROR\"}[1m]))",
+              "legendFormat": "Errors/min"
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "title": "Saga State Transitions",
+          "type": "timeseries",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "type": "loki", "uid": "loki" },
+              "expr": "count_over_time({app=\"tripplanning\", service=\"itinerary-service\"} |= \"COMPLETING\" [1m])",
+              "legendFormat": "COMPLETING"
+            },
+            {
+              "refId": "B",
+              "datasource": { "type": "loki", "uid": "loki" },
+              "expr": "count_over_time({app=\"tripplanning\", service=\"itinerary-service\"} |= \"PAYMENT_PENDING\" [1m])",
+              "legendFormat": "PAYMENT_PENDING"
+            },
+            {
+              "refId": "C",
+              "datasource": { "type": "loki", "uid": "loki" },
+              "expr": "count_over_time({app=\"tripplanning\", service=\"itinerary-service\"} |= \"PAID\" [1m])",
+              "legendFormat": "PAID"
+            },
+            {
+              "refId": "D",
+              "datasource": { "type": "loki", "uid": "loki" },
+              "expr": "count_over_time({app=\"tripplanning\", service=\"itinerary-service\"} |= \"PAYMENT_FAILED\" [1m])",
+              "legendFormat": "PAYMENT_FAILED"
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "title": "Feign Call Outcomes (Errors vs Success)",
+          "type": "timeseries",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 24 },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": { "type": "loki", "uid": "loki" },
+              "expr": "count_over_time({app=\"tripplanning\", service=\"itinerary-service\"} |= \"FeignException\" [1m])",
+              "legendFormat": "Feign Errors"
+            },
+            {
+              "refId": "B",
+              "datasource": { "type": "loki", "uid": "loki" },
+              "expr": "count_over_time({app=\"tripplanning\", service=\"itinerary-service\"} |= \"Feign\" != \"FeignException\" [1m])",
+              "legendFormat": "Feign Success"
+            }
+          ]
+        }
+      ]
+    }
 
   # ┌─ S4 OWNED BLOCK ─ PR: feature/m3-s4-infra-activity ─────────────────────┐
   # │ Include Cassandra write latency panel (PromQL).                          │
