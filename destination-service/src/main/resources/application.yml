@@ -17,7 +17,9 @@ spring:
 
   data:
     mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI:mongodb://tripplanning-mongo:27017/tripplanningdb}
+      host: ${SPRING_MONGODB_HOST:tripplanning-mongo}
+      port: ${SPRING_MONGODB_PORT:27017}
+      database: ${SPRING_MONGODB_DATABASE:tripplanningdb}
       auto-index-creation: false
     redis:
       host: ${SPRING_REDIS_HOST:localhost}
@@ -29,9 +31,37 @@ spring:
   elasticsearch:
     uris: ${SPRING_ELASTICSEARCH_URIS:http://localhost:9200}
 
+  # M3: RabbitMQ connection
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
+    virtual-host: /
+    listener:
+      simple:
+        auto-startup: ${M3_MESSAGING_ENABLED:false}
+        missing-queues-fatal: false
+
 server:
   port: 8080
 
 jwt:
   secret: ${JWT_SECRET:tripplanning-secret-key-for-jwt-token-signing}
   expiration: ${JWT_EXPIRATION:86400000}
+
+# ─── S2 OWNED BLOCK ─────────────────────────────────────────────────────────
+# Pull request: feature/m3-s2-feign-amqp-destination
+# Edit ONLY this block in your S2 PR.
+feign:
+  itinerary-service:
+    url: ${FEIGN_ITINERARY_SERVICE_URL:http://localhost:8083}
+  user-service:
+    url: ${FEIGN_USER_SERVICE_URL:http://localhost:8081}
+  booking-service:
+    url: ${FEIGN_BOOKING_SERVICE_URL:http://localhost:8085}
+
+m3:
+  messaging:
+    enabled: ${M3_MESSAGING_ENABLED:false}
+# ─── END S2 OWNED BLOCK ─────────────────────────────────────────────────────

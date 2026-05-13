@@ -156,12 +156,22 @@ public class BookingController {
     // S5-F10
     @GetMapping("/analytics/destination-season")
     public ResponseEntity<List<DestinationSeasonRevenueDTO>> getRevenueByDestinationAndSeason(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
         bookingService.logAnalyticsViewed(startDate, endDate);
         return ResponseEntity.ok(
                 bookingService.getRevenueByDestinationAndSeason(startDate, endDate));
+    }
+
+    // S5-F11
+    @GetMapping("/{id}/payment-history")
+    public ResponseEntity<?> getPaymentHistory(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return ResponseEntity.ok(bookingService.getPaymentHistory(id, page, size));
     }
 
     @GetMapping("/{id}/audit-trail")
@@ -170,7 +180,7 @@ public class BookingController {
     }
 
     @PostMapping("/{id}/refund-cancellation-tier")
-    public ResponseEntity<Booking> refundCancellationTier(
+    public ResponseEntity<?> refundCancellationTier(
             @PathVariable Long id,
             @RequestBody(required = false) RefundCancellationRequest request
     ) {
@@ -178,7 +188,7 @@ public class BookingController {
             request = new RefundCancellationRequest();
         }
 
-        Booking updated = bookingService.processRefundCancellationTier(id, request);
-        return ResponseEntity.ok(updated);
+        Map<String, Object> result = bookingService.processRefundCancellationTier(id, request);
+        return ResponseEntity.ok(result);
     }
 }

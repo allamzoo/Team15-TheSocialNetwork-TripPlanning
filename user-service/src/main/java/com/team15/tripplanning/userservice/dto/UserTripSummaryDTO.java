@@ -1,11 +1,18 @@
 package com.team15.tripplanning.userservice.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class UserTripSummaryDTO {
     private Long userId;
     private String name;
     private Long totalTrips;
+
+    @JsonProperty("completedItineraries")
     private Long completedTrips;
+
+    @JsonProperty("cancelledItineraries")
     private Long cancelledTrips;
+
     private Double totalSpent;
     private Double averageBudget;
 
@@ -67,9 +74,11 @@ public class UserTripSummaryDTO {
     public Long getTotalTrips() { return totalTrips; }
     public void setTotalTrips(Long totalTrips) { this.totalTrips = totalTrips; }
 
+    @JsonProperty("completedItineraries")
     public Long getCompletedTrips() { return completedTrips; }
     public void setCompletedTrips(Long completedTrips) { this.completedTrips = completedTrips; }
 
+    @JsonProperty("cancelledItineraries")
     public Long getCancelledTrips() { return cancelledTrips; }
     public void setCancelledTrips(Long cancelledTrips) { this.cancelledTrips = cancelledTrips; }
 

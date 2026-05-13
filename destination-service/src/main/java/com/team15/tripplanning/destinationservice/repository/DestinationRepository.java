@@ -38,7 +38,7 @@ public interface DestinationRepository extends JpaRepository<Destination, Long> 
             COALESCE(SUM(b.amount), 0) AS total_revenue,
             COALESCE(AVG(b.amount), 0) AS average_booking_amount
         FROM bookings b
-        JOIN itineraries i ON b.itinerary_id = i.id
+        JOIN itineraries i ON b.itin_id = i.id
         WHERE i.destination_id = :destinationId
           AND b.status = 'CONFIRMED'
           AND DATE(b.created_at) BETWEEN :startDate AND :endDate
@@ -89,7 +89,7 @@ public interface DestinationRepository extends JpaRepository<Destination, Long> 
            COALESCE(COUNT(b.id), 0)     AS total_bookings
     FROM destinations d
     LEFT JOIN itineraries i ON i.destination_id = d.id
-    LEFT JOIN bookings b    ON b.itinerary_id = i.id AND b.status = 'CONFIRMED'
+    LEFT JOIN bookings b    ON b.itin_id = i.id AND b.status = 'CONFIRMED'
     GROUP BY d.id, d.name, d.rating, d.total_ratings
     ORDER BY d.rating DESC, d.total_ratings DESC, d.id ASC
     LIMIT :limit

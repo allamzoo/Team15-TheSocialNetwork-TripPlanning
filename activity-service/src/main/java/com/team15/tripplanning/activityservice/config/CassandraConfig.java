@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.cassandra.config.CqlSessionFactoryBean;
 
-import java.util.Collections;
+import java.util.Arrays;
 
 @Configuration
 @ConditionalOnProperty(name = "cassandra.enabled", havingValue = "true")
@@ -31,10 +31,20 @@ public class CassandraConfig {
         factory.setPort(port);
         factory.setLocalDatacenter(localDatacenter);
         factory.setKeyspaceName(keyspaceName);
-        factory.setKeyspaceStartupScripts(Collections.singletonList(
+        factory.setKeyspaceStartupScripts(java.util.Arrays.asList(
                 "CREATE KEYSPACE IF NOT EXISTS " + keyspaceName
                         + " WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1}"
-                        + " AND durable_writes = true"
+                        + " AND durable_writes = true",
+                "CREATE TABLE IF NOT EXISTS " + keyspaceName + ".activity_lifecycle_events ("
+                        + "    activity_id bigint,"
+                        + "    event_timestamp timestamp,"
+                        + "    status text,"
+                        + "    category text,"
+                        + "    latitude double,"
+                        + "    longitude double,"
+                        + "    notes text,"
+                        + "    PRIMARY KEY (activity_id, event_timestamp)"
+                        + ") WITH CLUSTERING ORDER BY (event_timestamp DESC)"
         ));
         return factory;
     }

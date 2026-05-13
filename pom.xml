@@ -15,12 +15,14 @@
     </properties>
     <packaging>pom</packaging>
     <modules>
+        <module>contracts</module>
         <module>shared-lib</module>
         <module>user-service</module>
         <module>destination-service</module>
         <module>itinerary-service</module>
         <module>activity-service</module>
         <module>booking-service</module>
+        <module>api-gateway</module>
     </modules>
 
 </project>

@@ -1,0 +1,44 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  docker-compose.override.yml — M3 FULL-STACK ACTIVATION                    ║
+# ║  OWNED BY: S5-INFRA                                                         ║
+# ║  PURPOSE: Enable all M3 AMQP listeners and Feign calls for end-to-end       ║
+# ║           integration verification after all 15 feature slices have merged. ║
+# ║                                                                              ║
+# ║  Usage (applied automatically by docker-compose if present in same dir):    ║
+# ║    docker compose up --build                                                 ║
+# ║                                                                              ║
+# ║  To run WITHOUT M3 activation (M1 baseline):                                ║
+# ║    docker compose -f docker-compose.yaml up --build                         ║
+# ║                                                                              ║
+# ║  What this file changes vs docker-compose.yaml:                             ║
+# ║    - M3_MESSAGING_ENABLED: "true" → AMQP listeners start at boot           ║
+# ║    - All exchange/queue declarations happen via each service's AmqpConfig    ║
+# ║    - Feign client URLs are unchanged (same as base file)                     ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+services:
+
+  # ┌─ S1 OVERRIDE ─────────────────────────────────────────────────────────────┐
+  user-service:
+    environment:
+      M3_MESSAGING_ENABLED: "true"
+
+  # ┌─ S2 OVERRIDE ─────────────────────────────────────────────────────────────┐
+  destination-service:
+    environment:
+      M3_MESSAGING_ENABLED: "true"
+
+  # ┌─ S3 OVERRIDE ─────────────────────────────────────────────────────────────┐
+  itinerary-service:
+    environment:
+      M3_MESSAGING_ENABLED: "true"
+
+  # ┌─ S4 OVERRIDE ─────────────────────────────────────────────────────────────┐
+  activity-service:
+    environment:
+      M3_MESSAGING_ENABLED: "true"
+
+  # ┌─ S5 OVERRIDE ─────────────────────────────────────────────────────────────┐
+  booking-service:
+    environment:
+      M3_MESSAGING_ENABLED: "true"

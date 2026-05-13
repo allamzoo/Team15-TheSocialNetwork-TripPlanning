@@ -30,9 +30,37 @@ spring:
       host: ${SPRING_DATA_REDIS_HOST:tripplanning-redis}
       port: ${SPRING_DATA_REDIS_PORT:6379}
 
+  # M3: RabbitMQ connection
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
+    virtual-host: /
+    listener:
+      simple:
+        auto-startup: ${M3_MESSAGING_ENABLED:false}
+        missing-queues-fatal: false
+
 server:
   port: 8080
 
 jwt:
   secret: ${JWT_SECRET:tripplanning-secret-key-for-jwt-token-signing}
   expiration: ${JWT_EXPIRATION:86400000}
+
+# ─── S5 OWNED BLOCK ─────────────────────────────────────────────────────────
+# Pull request: feature/m3-s5-feign-amqp-booking
+# Edit ONLY this block in your S5 PR.
+feign:
+  user-service:
+    url: ${FEIGN_USER_SERVICE_URL:http://localhost:8081}
+  itinerary-service:
+    url: ${FEIGN_ITINERARY_SERVICE_URL:http://localhost:8083}
+  destination-service:
+    url: ${FEIGN_DESTINATION_SERVICE_URL:http://localhost:8082}
+
+m3:
+  messaging:
+    enabled: ${M3_MESSAGING_ENABLED:false}
+# ─── END S5 OWNED BLOCK ─────────────────────────────────────────────────────

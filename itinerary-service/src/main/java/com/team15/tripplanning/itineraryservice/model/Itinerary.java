@@ -49,6 +49,9 @@ public class Itinerary {
 
     private Double estimatedBudget;
 
+    @Column(name = "total_amount")
+    private Double totalAmount;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb default '{}'::jsonb")
     private Map<String, Object> metadata = new HashMap<>();
@@ -127,6 +130,14 @@ public class Itinerary {
 
     public void setEstimatedBudget(Double estimatedBudget) {
         this.estimatedBudget = estimatedBudget;
+    }
+
+    public Double getTotalAmount() {
+        return totalAmount;
+    }
+
+    public void setTotalAmount(Double totalAmount) {
+        this.totalAmount = totalAmount;
     }
 
     public Map<String, Object> getMetadata() {

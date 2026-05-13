@@ -1,0 +1,52 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║       prometheus-configmap.yaml — SHARED FILE                               ║
+# ║  STABLE STRUCTURE agreed at M3 Day-0 kickoff.                               ║
+# ║  Each slice's INFRA sub-task edits ONLY its own scrape_configs job block.   ║
+# ║  Do NOT change global settings, job order, or another slice's block.        ║
+# ║  To add custom metric relabelling for your service, append relabel_configs  ║
+# ║  inside your slice's job block only.                                         ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    # ── MONITORING-INFRA OWNED (do not edit in feature slice PRs) ────────────
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    scrape_configs:
+      # ┌─ S1 OWNED BLOCK ─ PR: feature/m3-s1-feign-amqp-user ────────────────┐
+      # │ Add relabel_configs or metric_relabel_configs for user-service here. │
+      # └──────────────────────────────────────────────────────────────────────┘
+      - job_name: user-service
+        static_configs:
+          - targets: ['user-service.tripplanning.svc.cluster.local:8080']
+        metrics_path: /actuator/prometheus
+
+      # ┌─ S2 OWNED BLOCK ─ PR: feature/m3-s2-feign-amqp-destination ─────────┐
+      - job_name: destination-service
+        static_configs:
+          - targets: ['destination-service.tripplanning.svc.cluster.local:8080']
+        metrics_path: /actuator/prometheus
+
+      # ┌─ S3 OWNED BLOCK ─ PR: feature/m3-s3-feign-amqp-itinerary ───────────┐
+      - job_name: itinerary-service
+        static_configs:
+          - targets: ['itinerary-service.tripplanning.svc.cluster.local:8080']
+        metrics_path: /actuator/prometheus
+
+      # ┌─ S4 OWNED BLOCK ─ PR: feature/m3-s4-feign-amqp-activity ────────────┐
+      - job_name: activity-service
+        static_configs:
+          - targets: ['activity-service.tripplanning.svc.cluster.local:8080']
+        metrics_path: /actuator/prometheus
+
+      # ┌─ S5 OWNED BLOCK ─ PR: feature/m3-s5-feign-amqp-booking ─────────────┐
+      - job_name: booking-service
+        static_configs:
+          - targets: ['booking-service.tripplanning.svc.cluster.local:8080']
+        metrics_path: /actuator/prometheus

@@ -1,0 +1,87 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║              api-gateway/application.yml — SHARED FILE                      ║
+# ║  STABLE STRUCTURE agreed at M3 Day-0 kickoff. Each slice EDITS ONLY its     ║
+# ║  assigned route block (marked below). Do NOT reorder routes or rename        ║
+# ║  top-level keys — that causes merge conflicts for every other slice.         ║
+# ║                                                                              ║
+# ║  Shared keys (gateway-infra team owns):                                      ║
+# ║    server.port, jwt.secret, gateway.public-paths, management.*               ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+
+        # ┌─ S1 OWNED BLOCK ─────────────────────────────────────────────────────┐
+        # │ PR: feature/m3-s1-feign-amqp-user                                   │
+        # │ Add new predicates/filters for S1 endpoints ONLY inside this block.  │
+        # │ Do NOT touch the id, uri, or other slices' blocks.                   │
+        # └──────────────────────────────────────────────────────────────────────┘
+        - id: user-service
+          uri: http://user-service:8080
+          predicates:
+            - Path=/api/users/**, /api/auth/**, /api/saved-destinations/**
+          # S1 adds filters here (e.g., StripPrefix, CircuitBreaker) if needed
+
+        # ┌─ S2 OWNED BLOCK ─────────────────────────────────────────────────────┐
+        # │ PR: feature/m3-s2-feign-amqp-destination                            │
+        # └──────────────────────────────────────────────────────────────────────┘
+        - id: destination-service
+          uri: http://destination-service:8080
+          predicates:
+            - Path=/api/destinations/**
+          # S2 adds filters here if needed
+
+        # ┌─ S3 OWNED BLOCK ─────────────────────────────────────────────────────┐
+        # │ PR: feature/m3-s3-feign-amqp-itinerary                              │
+        # └──────────────────────────────────────────────────────────────────────┘
+        - id: itinerary-service
+          uri: http://itinerary-service:8080
+          predicates:
+            - Path=/api/itineraries/**, /api/itinerary-days/**
+          # S3 adds filters here if needed
+
+        # ┌─ S4 OWNED BLOCK ─────────────────────────────────────────────────────┐
+        # │ PR: feature/m3-s4-feign-amqp-activity                               │
+        # └──────────────────────────────────────────────────────────────────────┘
+        - id: activity-service
+          uri: http://activity-service:8080
+          predicates:
+            - Path=/api/activities/**
+          # S4 adds filters here if needed
+
+        # ┌─ S5 OWNED BLOCK ─────────────────────────────────────────────────────┐
+        # │ PR: feature/m3-s5-feign-amqp-booking                                │
+        # └──────────────────────────────────────────────────────────────────────┘
+        - id: booking-service
+          uri: http://booking-service:8080
+          predicates:
+            - Path=/api/bookings/**, /api/coupons/**, /api/booking-coupons/**
+          # S5 adds filters here if needed
+
+# ── GATEWAY-INFRA OWNED (do not edit in feature slice PRs) ───────────────────
+server:
+  port: 8080
+
+jwt:
+  secret: ${JWT_SECRET}
+
+# Public paths that bypass JWT validation (no token required)
+gateway:
+  public-paths:
+    - /api/auth/register
+    - /api/auth/login
+    - /api/users/health
+    - /api/destinations/health
+    - /api/itineraries/health
+    - /api/activities/health
+    - /api/bookings/health
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info"

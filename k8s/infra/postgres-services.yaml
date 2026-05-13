@@ -1,0 +1,175 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  postgres-services.yaml — INFRA OWNED (committed at Day-0 kickoff)          ║
+# ║                                                                              ║
+# ║  Fixes per-service K8s Service names so every slice knows its DB DNS:       ║
+# ║    user-postgres.tripplanning.svc.cluster.local:5432                        ║
+# ║    destination-postgres.tripplanning.svc.cluster.local:5432                ║
+# ║    itinerary-postgres.tripplanning.svc.cluster.local:5432                  ║
+# ║    activity-postgres.tripplanning.svc.cluster.local:5432                   ║
+# ║    booking-postgres.tripplanning.svc.cluster.local:5432                    ║
+# ║                                                                              ║
+# ║  All Services select the SAME shared postgres StatefulSet (label            ║
+# ║  app=postgres) — each slice gets its own schema inside tripplanningdb.       ║
+# ║  To move to per-service postgres, update the selector in your slice's PR    ║
+# ║  and add a dedicated StatefulSet; the Service DNS name stays the same.       ║
+# ║                                                                              ║
+# ║  DATASOURCE env var in each Deployment (set by each slice's                 ║
+# ║  k8s/<service>/deployment.yaml):                                             ║
+# ║    SPRING_DATASOURCE_URL:                                                   ║
+# ║      jdbc:postgresql://<svc>-postgres:5432/tripplanningdb                   ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+# ── Shared postgres StatefulSet ───────────────────────────────────────────────
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: tripplanning
+spec:
+  serviceName: postgres-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              value: postgres
+            - name: POSTGRES_DB
+              value: tripplanningdb
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              memory: 256Mi
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-d", "tripplanningdb"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 20
+          volumeMounts:
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: pgdata
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
+---
+# ── Headless service for StatefulSet DNS ─────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-headless
+  namespace: tripplanning
+spec:
+  clusterIP: None
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+---
+# ┌─ S1: user-postgres ────────────────────────────────────────────────────────┐
+# │ DNS: user-postgres.tripplanning.svc.cluster.local:5432                    │
+# └────────────────────────────────────────────────────────────────────────────┘
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-postgres
+  namespace: tripplanning
+  labels:
+    slice: s1
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+  type: ClusterIP
+---
+# ┌─ S2: destination-postgres ─────────────────────────────────────────────────┐
+# │ DNS: destination-postgres.tripplanning.svc.cluster.local:5432             │
+# └────────────────────────────────────────────────────────────────────────────┘
+apiVersion: v1
+kind: Service
+metadata:
+  name: destination-postgres
+  namespace: tripplanning
+  labels:
+    slice: s2
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+  type: ClusterIP
+---
+# ┌─ S3: itinerary-postgres ───────────────────────────────────────────────────┐
+# │ DNS: itinerary-postgres.tripplanning.svc.cluster.local:5432               │
+# └────────────────────────────────────────────────────────────────────────────┘
+apiVersion: v1
+kind: Service
+metadata:
+  name: itinerary-postgres
+  namespace: tripplanning
+  labels:
+    slice: s3
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+  type: ClusterIP
+---
+# ┌─ S4: activity-postgres ────────────────────────────────────────────────────┐
+# │ DNS: activity-postgres.tripplanning.svc.cluster.local:5432                │
+# └────────────────────────────────────────────────────────────────────────────┘
+apiVersion: v1
+kind: Service
+metadata:
+  name: activity-postgres
+  namespace: tripplanning
+  labels:
+    slice: s4
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+  type: ClusterIP
+---
+# ┌─ S5: booking-postgres ─────────────────────────────────────────────────────┐
+# │ DNS: booking-postgres.tripplanning.svc.cluster.local:5432                 │
+# └────────────────────────────────────────────────────────────────────────────┘
+apiVersion: v1
+kind: Service
+metadata:
+  name: booking-postgres
+  namespace: tripplanning
+  labels:
+    slice: s5
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+  type: ClusterIP

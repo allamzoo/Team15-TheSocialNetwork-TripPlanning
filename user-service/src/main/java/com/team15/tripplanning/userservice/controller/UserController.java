@@ -61,7 +61,8 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<User> findById(@PathVariable Long id) {
+    public ResponseEntity<User> findById(@PathVariable Long id, HttpServletRequest request) {
+        checkOwnership(id, request);
         return ResponseEntity.ok(userService.findById(id));
     }
 
@@ -76,7 +77,9 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<User> update(@PathVariable Long id, @RequestBody User user) {
+    public ResponseEntity<User> update(@PathVariable Long id, @RequestBody User user,
+                                       HttpServletRequest request) {
+        checkOwnership(id, request);
         return ResponseEntity.ok(userService.update(id, user));
     }
 
@@ -135,7 +138,8 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable Long id, HttpServletRequest request) {
+        checkOwnership(id, request);
         userService.delete(id);
         return ResponseEntity.noContent().build();
     }
@@ -190,6 +194,12 @@ public class UserController {
             @RequestParam(defaultValue = "10") int size,
             HttpServletRequest request
     ) {
+        if (page < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "page must be >= 0");
+        }
+        if (size <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "size must be > 0");
+        }
         String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing or invalid Authorization header");
@@ -201,6 +211,26 @@ public class UserController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
         return ResponseEntity.ok(userService.getActivityFeed(id, page, size));
+    }
+
+    // ── Ownership guard ────────────────────────────────────────────────────────
+    private void checkOwnership(Long resourceId, HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing or invalid Authorization header");
+        }
+        String token = authHeader.substring(7);
+        try {
+            Long callerId = jwtService.extractUserId(token);
+            String callerRole = jwtService.extractRole(token);
+            if (!resourceId.equals(callerId) && !"ADMIN".equals(callerRole)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+            }
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid token");
+        }
     }
 
     private Role parseRole(String role) {

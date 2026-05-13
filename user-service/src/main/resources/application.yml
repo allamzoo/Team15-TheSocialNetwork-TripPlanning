@@ -17,10 +17,31 @@ spring:
 
   data:
     mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI:mongodb://tripplanning-mongo:27017/tripplanningdb}
+      host: ${SPRING_MONGODB_HOST:tripplanning-mongo}
+      port: ${SPRING_MONGODB_PORT:27017}
+      database: ${SPRING_MONGODB_DATABASE:tripplanningdb}
     redis:
       host: ${SPRING_REDIS_HOST:localhost}
       port: ${SPRING_REDIS_PORT:6379}
+
+  # M3: RabbitMQ connection — present in application.yml so connection properties
+  # are always available regardless of whether M3 messaging is activated.
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
+    virtual-host: /
+    listener:
+      simple:
+        # Listeners do NOT start at boot unless M3_MESSAGING_ENABLED=true.
+        # This prevents startup failure when the exchange hasn't been declared
+        # yet (i.e., the publisher slice hasn't merged or deployed).
+        auto-startup: ${M3_MESSAGING_ENABLED:false}
+        # Don't crash if RabbitMQ queues/exchanges are not yet declared by
+        # another slice. Log a warning and continue — idempotent redeclaration
+        # happens when that slice's AmqpConfig bean first runs.
+        missing-queues-fatal: false
 
 server:
   port: 8080
@@ -28,3 +49,22 @@ server:
 jwt:
   secret: ${JWT_SECRET:tripplanning-secret-key-for-jwt-token-signing}
   expiration: ${JWT_EXPIRATION:86400000}
+
+# ─── S1 OWNED BLOCK ─────────────────────────────────────────────────────────
+# Pull request: feature/m3-s1-feign-amqp-user
+# Edit ONLY this block in your S1 PR — do not touch any other key in this file.
+#
+# Feign URLs: use docker-compose container names (overridden via env vars);
+# localhost fallbacks let developers run user-service alone without docker.
+feign:
+  itinerary-service:
+    url: ${FEIGN_ITINERARY_SERVICE_URL:http://localhost:8083}
+  booking-service:
+    url: ${FEIGN_BOOKING_SERVICE_URL:http://localhost:8085}
+
+# M3 messaging gate: set M3_MESSAGING_ENABLED=true to activate @RabbitListener
+# beans and AmqpConfig exchange/queue declarations.
+m3:
+  messaging:
+    enabled: ${M3_MESSAGING_ENABLED:false}
+# ─── END S1 OWNED BLOCK ─────────────────────────────────────────────────────

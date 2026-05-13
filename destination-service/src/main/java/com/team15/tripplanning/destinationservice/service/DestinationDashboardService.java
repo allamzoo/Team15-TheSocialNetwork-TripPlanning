@@ -63,6 +63,11 @@ public class DestinationDashboardService {
         long totalItineraries     = agg[0] != null ? ((Number) agg[0]).longValue() : 0L;
         long completedItineraries = agg[1] != null ? ((Number) agg[1]).longValue() : 0L;
         long totalVisitors        = agg[2] != null ? ((Number) agg[2]).longValue() : 0L;
+        long cancelledItineraries = agg.length > 3 && agg[3] != null ? ((Number) agg[3]).longValue() : 0L;
+        double totalRevenue       = agg.length > 4 && agg[4] != null ? ((Number) agg[4]).doubleValue() : 0.0;
+        long totalBookings        = agg.length > 5 && agg[5] != null ? ((Number) agg[5]).longValue() : 0L;
+        double completionRate     = totalItineraries > 0
+                ? (double) completedItineraries / totalItineraries * 100.0 : 0.0;
 
         // 5. Build DTO using Builder pattern
         return DestinationDashboardDTO.builder()
@@ -70,9 +75,13 @@ public class DestinationDashboardService {
                 .name(destination.getName())
                 .totalItineraries(totalItineraries)
                 .completedItineraries(completedItineraries)
+                .cancelledItineraries(cancelledItineraries)
                 .totalVisitors(totalVisitors)
                 .totalRatings(destination.getTotalRatings())
                 .averageRating(destination.getRating())
+                .totalRevenue(totalRevenue)
+                .totalBookings(totalBookings)
+                .completionRate(completionRate)
                 .build();
     }
 }

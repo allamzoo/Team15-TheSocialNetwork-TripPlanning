@@ -1,0 +1,81 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║       grafana-dashboards.yaml — SHARED FILE                                 ║
+# ║  STABLE STRUCTURE agreed at M3 Day-0 kickoff.                               ║
+# ║  The provisioner ConfigMap (dashboards.yaml key) is MONITORING-INFRA owned  ║
+# ║  — do not edit it in feature PRs.                                           ║
+# ║  Each slice's INFRA sub-task replaces ONLY its own dashboard JSON key        ║
+# ║  in the grafana-dashboard-files ConfigMap (marked S<n> OWNED BLOCK below).  ║
+# ║  Minimum panel requirements per dashboard:                                  ║
+# ║    ≥ 3 PromQL panels (from prometheus scrape job) +                         ║
+# ║    ≥ 3 LogQL panels  (from Loki datasource)                                 ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards-config
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  # ── MONITORING-INFRA OWNED — do not edit in feature slice PRs ────────────────
+  # This ConfigMap tells Grafana where to load dashboard JSON files from.
+  # Dashboard JSON files are embedded in the grafana-dashboard-files ConfigMap
+  # and mounted at /etc/grafana/provisioning/dashboards/tripplanning/.
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+      - name: Trip Planning
+        orgId: 1
+        folder: Trip Planning
+        folderUid: tripplanning
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 30
+        allowUiUpdates: true
+        options:
+          path: /etc/grafana/provisioning/dashboards/tripplanning
+          foldersFromFilesStructure: false
+
+---
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  grafana-dashboard-files — each S<n>-INFRA slice replaces its own JSON key  ║
+# ║  Do NOT modify another slice's JSON key in your PR.                         ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-files
+  namespace: monitoring
+data:
+  # ┌─ S1 OWNED BLOCK ─ PR: feature/m3-s1-infra-user ─────────────────────────┐
+  # │ Replace the placeholder JSON with a real Grafana dashboard JSON.         │
+  # │ Required panels: HTTP req/s, error rate, p99 latency (PromQL) +         │
+  # │   log volume, error logs, slow-query logs (LogQL).                      │
+  # └──────────────────────────────────────────────────────────────────────────┘
+  user-dashboard.json: |
+    { "title": "User Service Dashboard", "panels": [], "schemaVersion": 36, "version": 1 }
+
+  # ┌─ S2 OWNED BLOCK ─ PR: feature/m3-s2-infra-destination ──────────────────┐
+  destination-dashboard.json: |
+    { "title": "Destination Service Dashboard", "panels": [], "schemaVersion": 36, "version": 1 }
+
+  # ┌─ S3 OWNED BLOCK ─ PR: feature/m3-s3-infra-itinerary ────────────────────┐
+  # │ Include saga state-machine panels: COMPLETING/PAYMENT_PENDING/PAID/      │
+  # │ PAYMENT_FAILED counts (PromQL counter metrics from ItinerarySaga).       │
+  # └──────────────────────────────────────────────────────────────────────────┘
+  itinerary-dashboard.json: |
+    { "title": "Itinerary Service Dashboard", "panels": [], "schemaVersion": 36, "version": 1 }
+
+  # ┌─ S4 OWNED BLOCK ─ PR: feature/m3-s4-infra-activity ─────────────────────┐
+  # │ Include Cassandra write latency panel (PromQL).                          │
+  # └──────────────────────────────────────────────────────────────────────────┘
+  activity-dashboard.json: |
+    { "title": "Activity Service Dashboard", "panels": [], "schemaVersion": 36, "version": 1 }
+
+  # ┌─ S5 OWNED BLOCK ─ PR: feature/m3-s5-infra-booking ──────────────────────┐
+  # │ Include settlement saga panels: SETTLEMENT_PENDING/SETTLED/REFUNDED     │
+  # │ counts + payment failure rate (PromQL counter metrics from SettlementSaga).│
+  # └──────────────────────────────────────────────────────────────────────────┘
+  booking-dashboard.json: |
+    { "title": "Booking Service Dashboard", "panels": [], "schemaVersion": 36, "version": 1 }

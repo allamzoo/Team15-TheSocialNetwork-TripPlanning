@@ -30,7 +30,9 @@ spring:
 
   data:
     mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI:mongodb://tripplanning-mongo:27017/tripplanningdb}
+      host: ${SPRING_MONGODB_HOST:tripplanning-mongo}
+      port: ${SPRING_MONGODB_PORT:27017}
+      database: ${SPRING_MONGODB_DATABASE:tripplanningdb}
     redis:
       host: ${SPRING_REDIS_HOST:localhost}
       port: ${SPRING_REDIS_PORT:6379}
@@ -42,6 +44,18 @@ spring:
       schema-action: create-if-not-exists
       entity-base-packages: com.team15.tripplanning.activityservice.model.cassandra
 
+  # M3: RabbitMQ connection
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
+    virtual-host: /
+    listener:
+      simple:
+        auto-startup: ${M3_MESSAGING_ENABLED:false}
+        missing-queues-fatal: false
+
 server:
   port: 8080
 
@@ -51,3 +65,15 @@ jwt:
 
 cassandra:
   enabled: true
+
+# ─── S4 OWNED BLOCK ─────────────────────────────────────────────────────────
+# Pull request: feature/m3-s4-feign-amqp-activity
+# Edit ONLY this block in your S4 PR.
+feign:
+  itinerary-service:
+    url: ${FEIGN_ITINERARY_SERVICE_URL:http://localhost:8083}
+
+m3:
+  messaging:
+    enabled: ${M3_MESSAGING_ENABLED:false}
+# ─── END S4 OWNED BLOCK ─────────────────────────────────────────────────────
