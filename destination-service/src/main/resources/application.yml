@@ -54,6 +54,8 @@ jwt:
 # Pull request: feature/m3-s2-feign-amqp-destination
 # Edit ONLY this block in your S2 PR.
 feign:
+  destination-service:
+    url: ${FEIGN_DESTINATION_SERVICE_URL:http://localhost:8080}
   itinerary-service:
     url: ${FEIGN_ITINERARY_SERVICE_URL:http://localhost:8083}
   user-service:
