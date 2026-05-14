@@ -25,4 +25,8 @@ public class CassandraActivityLifecycleEventStore implements ActivityLifecycleEv
     public List<ActivityLifecycleEvent> findByActivityId(Long activityId) {
         return repo.findByKeyActivityId(activityId);
     }
+    @Override
+    public List<ActivityLifecycleEvent> findByActivityIdAndStatus(Long activityId, String status) {
+        return repo.findByKeyActivityIdAndStatus(activityId, status);
+    }
 }
