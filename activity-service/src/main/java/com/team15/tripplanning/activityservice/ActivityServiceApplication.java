@@ -3,9 +3,10 @@ package com.team15.tripplanning.activityservice;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.openfeign.EnableFeignClients;
+import com.team15.tripplanning.contracts.feign.ItineraryServiceClient;
 
 @SpringBootApplication
-@EnableFeignClients(basePackages = "com.team15.tripplanning.contracts.feign")
+@EnableFeignClients(clients = {ItineraryServiceClient.class})
 public class ActivityServiceApplication {
 
     public static void main(String[] args) {

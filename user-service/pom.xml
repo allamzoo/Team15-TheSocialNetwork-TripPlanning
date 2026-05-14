@@ -170,6 +170,19 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+            <!--
+                Exclude @Tag("live-integration") tests from the default mvn test / install run.
+                These tests require the full docker-compose stack (all 5 services + Redis)
+                to be running and must be triggered manually:
+                  mvn test -Dtest=CachingIntegrationTest -Dgroups=live-integration
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <excludedGroups>live-integration</excludedGroups>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 

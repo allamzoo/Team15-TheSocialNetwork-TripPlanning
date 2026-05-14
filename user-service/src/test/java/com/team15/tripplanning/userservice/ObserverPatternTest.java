@@ -33,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.timeout;
 
 /**
  * STEP 7 — Observer + Factory Pattern tests.
@@ -203,8 +204,9 @@ class ObserverPatternTest {
         authService.register(req);
 
         // Assert: exactly one save, with action=REGISTERED and correct userId
+        // timeout() needed because MongoEventLogger writes via CompletableFuture.runAsync()
         ArgumentCaptor<AuthEvent> captor = ArgumentCaptor.forClass(AuthEvent.class);
-        verify(authEventRepository, times(1)).save(captor.capture());
+        verify(authEventRepository, timeout(2000).times(1)).save(captor.capture());
 
         AuthEvent saved = captor.getValue();
         assertEquals("REGISTERED", saved.getAction(),
@@ -241,9 +243,9 @@ class ObserverPatternTest {
         // Act
         authService.login(req);
 
-        // Assert
+        // Assert — timeout() because MongoEventLogger writes via CompletableFuture.runAsync()
         ArgumentCaptor<AuthEvent> captor = ArgumentCaptor.forClass(AuthEvent.class);
-        verify(authEventRepository, times(1)).save(captor.capture());
+        verify(authEventRepository, timeout(2000).times(1)).save(captor.capture());
 
         AuthEvent saved = captor.getValue();
         assertEquals("LOGGED_IN", saved.getAction(),
@@ -276,8 +278,9 @@ class ObserverPatternTest {
         userService.mergePreferences(1L, newPrefs);
 
         // Assert: observer chain fired → exactly one AUTH event saved with USER_UPDATED
+        // timeout() because MongoEventLogger writes via CompletableFuture.runAsync()
         ArgumentCaptor<AuthEvent> captor = ArgumentCaptor.forClass(AuthEvent.class);
-        verify(authEventRepository, times(1)).save(captor.capture());
+        verify(authEventRepository, timeout(2000).times(1)).save(captor.capture());
 
         AuthEvent saved = captor.getValue();
         assertEquals("USER_UPDATED", saved.getAction(),
