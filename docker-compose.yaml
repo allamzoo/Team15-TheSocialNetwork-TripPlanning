@@ -327,6 +327,24 @@ services:
       rabbitmq:
         condition: service_healthy
 
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      JWT_SECRET: dGhpcyBpcyBhIHZlcnkgbG9uZyBzZWNyZXQga2V5IGZvciBqd3Q=
+    depends_on:
+      - user-service
+      - destination-service
+      - itinerary-service
+      - activity-service
+      - booking-service
+
+
 volumes:
   pgdata:
   mongodata:

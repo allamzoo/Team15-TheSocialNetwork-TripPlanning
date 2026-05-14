@@ -57,8 +57,15 @@ jwt:
 # Feign URLs: use docker-compose container names (overridden via env vars);
 # localhost fallbacks let developers run user-service alone without docker.
 feign:
+  user-service:
+    url: ${FEIGN_USER_SERVICE_URL:http://localhost:8081}
+
+  destination-service:
+    url: ${FEIGN_DESTINATION_SERVICE_URL:http://localhost:8082}
+
   itinerary-service:
     url: ${FEIGN_ITINERARY_SERVICE_URL:http://localhost:8083}
+
   booking-service:
     url: ${FEIGN_BOOKING_SERVICE_URL:http://localhost:8085}
 
