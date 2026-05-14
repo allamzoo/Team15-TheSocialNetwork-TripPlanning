@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: tripplanning-redis
+  namespace: tripplanning
+spec:
+  serviceName: tripplanning-redis
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tripplanning-redis
+  template:
+    metadata:
+      labels:
+        app: tripplanning-redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          ports:
+            - containerPort: 6379
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              memory: 64Mi
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 20
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+  volumeClaimTemplates:
+    - metadata:
+        name: redis-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tripplanning-redis
+  namespace: tripplanning
+spec:
+  selector:
+    app: tripplanning-redis
+  ports:
+    - port: 6379
+      targetPort: 6379
+  type: ClusterIP

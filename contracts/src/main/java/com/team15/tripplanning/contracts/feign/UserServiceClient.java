@@ -26,4 +26,11 @@ public interface UserServiceClient {
      */
     @GetMapping("/api/users/{userId}")
     UserDTO getUser(@PathVariable Long userId);
+
+    /**
+     * Internal service-to-service call — no ownership check.
+     * Use this from other microservices that need user data without a user JWT.
+     */
+    @GetMapping("/api/users/{userId}/internal")
+    UserDTO getUserInternal(@PathVariable Long userId);
 }

@@ -27,8 +27,13 @@ public class Itinerary {
         DRAFT,
         PLANNED,
         IN_PROGRESS,
+        COMPLETING,
         COMPLETED,
-        CANCELLED
+        CANCELLED,
+        PAYMENT_PENDING,
+        PAID,
+        PAYMENT_FAILED,
+        REFUNDED
     }
 
     @Id

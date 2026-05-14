@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: itinerary-service
+  namespace: tripplanning
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: itinerary-service
+  template:
+    metadata:
+      labels:
+        app: itinerary-service
+    spec:
+      containers:
+        - name: itinerary-service
+          image: itinerary-service:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: itinerary-service-configmap
+          env:
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "postgres"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-secret
+                  key: jwt-secret
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30

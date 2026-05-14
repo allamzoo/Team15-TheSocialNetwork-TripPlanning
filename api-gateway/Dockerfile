@@ -9,12 +9,12 @@ COPY contracts/pom.xml ./contracts/pom.xml
 COPY contracts/src ./contracts/src
 RUN mvn install -f contracts/pom.xml -DskipTests
 
-COPY itinerary-service/pom.xml ./itinerary-service/pom.xml
-COPY itinerary-service/src ./itinerary-service/src
-RUN mvn clean package -f itinerary-service/pom.xml -DskipTests
+COPY api-gateway/pom.xml ./api-gateway/pom.xml
+COPY api-gateway/src ./api-gateway/src
+RUN mvn clean package -f api-gateway/pom.xml -DskipTests
 
 FROM eclipse-temurin:17-jre
 WORKDIR /app
-COPY --from=build /app/itinerary-service/target/itinerary-service-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=build /app/api-gateway/target/api-gateway-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]

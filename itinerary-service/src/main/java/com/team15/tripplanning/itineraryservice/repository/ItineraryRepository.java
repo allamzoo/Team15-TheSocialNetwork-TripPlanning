@@ -16,15 +16,6 @@ public interface ItineraryRepository extends JpaRepository<Itinerary, Long> {
 
     List<Itinerary> findByStatus(Itinerary.ItineraryStatus status);
 
-    @Query(value = """
-            SELECT i.id, i.title, d.name AS destination_name, COUNT(b.id) AS bookings_count
-            FROM itineraries i
-            LEFT JOIN destinations d ON d.id = i.destination_id
-            LEFT JOIN bookings b ON b.itinerary_id = i.id
-            WHERE i.id = :itineraryId
-            GROUP BY i.id, i.title, d.name
-            """, nativeQuery = true)
-    List<Object[]> findItinerarySummaryWithDestinationAndBookings(@Param("itineraryId") Long itineraryId);
 
     @Modifying
     @Transactional
@@ -45,15 +36,6 @@ public interface ItineraryRepository extends JpaRepository<Itinerary, Long> {
             @Param("endDate") java.time.LocalDate endDate
     );
 
-    // In ItineraryRepository.java
-
-    @Query(value = "SELECT COUNT(*) FROM destinations WHERE id = :id", nativeQuery = true)
-    int countDestinationById(@Param("id") Long id);
-
-    @Query(value = "SELECT COUNT(*) FROM destinations WHERE id = :id AND status = 'ACTIVE'", nativeQuery = true)
-    int countActiveDestinationById(@Param("id") Long id);
-
-
     // S3-F3
     @Query(value = """
             SELECT COUNT(*) FROM itineraries
@@ -62,12 +44,6 @@ public interface ItineraryRepository extends JpaRepository<Itinerary, Long> {
             """, nativeQuery = true)
     int countActiveItinerariesForDestination(@Param("destinationId") Long destinationId);
 
-
-    @Query(
-            value = "SELECT COALESCE(SUM(b.amount), 0) FROM bookings b WHERE b.itinerary_id = :itineraryId AND b.status = 'CONFIRMED'",
-            nativeQuery = true
-    )
-    Double sumConfirmedBookingsByItinerary(@Param("itineraryId") Long itineraryId);
 
     @Query(
             value = "SELECT * FROM itineraries WHERE metadata ->> :key = :value",
@@ -90,26 +66,6 @@ public interface ItineraryRepository extends JpaRepository<Itinerary, Long> {
             @Param("endDate") java.time.LocalDate endDate
     );
 
-    @Modifying
-    @Transactional
-    @Query(value = "UPDATE bookings SET status = 'CANCELLED' WHERE itinerary_id = :itineraryId AND status = 'PENDING'", nativeQuery = true)
-    int cancelPendingBookings(@Param("itineraryId") Long itineraryId);
-
-    @Query(value = """
-        SELECT u.id, u.name
-        FROM itineraries i
-        JOIN users u ON u.id = i.user_id
-        WHERE i.id = :itineraryId
-        """, nativeQuery = true)
-    List<Object[]> findUserInfoForVisit(@Param("itineraryId") Long itineraryId);
-
-    @Query(value = """
-        SELECT d.id, d.name, d.country, d.category
-        FROM itineraries i
-        JOIN destinations d ON d.id = i.destination_id
-        WHERE i.id = :itineraryId
-        """, nativeQuery = true)
-    List<Object[]> findDestinationInfoForVisit(@Param("itineraryId") Long itineraryId);
 
     @Query(value = """
     SELECT
@@ -125,10 +81,12 @@ public interface ItineraryRepository extends JpaRepository<Itinerary, Long> {
             @Param("endDate") LocalDate endDate
     );
 
-    // S3-F12
-    @Query(value = "SELECT COUNT(*) FROM users WHERE id = :id", nativeQuery = true)
-    int countUsersById(@Param("id") Long id);
-
-    @Query(value = "SELECT id, name, country, CAST(category AS text) FROM destinations WHERE id IN :ids", nativeQuery = true)
-    List<Object[]> findDestinationDetailsByIds(@Param("ids") List<Long> ids);
+    // S3-EVENTS: atomic conditional status transition for saga consumers
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE itineraries SET status = :newStatus WHERE id = :id AND status = :expectedStatus",
+            nativeQuery = true)
+    int transitionStatus(@Param("id") Long id,
+                         @Param("newStatus") String newStatus,
+                         @Param("expectedStatus") String expectedStatus);
 }

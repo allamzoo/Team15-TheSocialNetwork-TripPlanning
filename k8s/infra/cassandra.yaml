@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: tripplanning-cassandra
+  namespace: tripplanning
+spec:
+  serviceName: tripplanning-cassandra
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tripplanning-cassandra
+  template:
+    metadata:
+      labels:
+        app: tripplanning-cassandra
+    spec:
+      containers:
+        - name: cassandra
+          image: cassandra:4
+          ports:
+            - containerPort: 9042
+          env:
+            - name: CASSANDRA_CLUSTER_NAME
+              value: tripplanning
+            - name: MAX_HEAP_SIZE
+              value: "512M"
+            - name: HEAP_NEWSIZE
+              value: "128M"
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              memory: 512Mi
+          readinessProbe:
+            exec:
+              command: ["cqlsh", "-e", "describe keyspaces"]
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            failureThreshold: 20
+          volumeMounts:
+            - name: cassandra-data
+              mountPath: /var/lib/cassandra
+  volumeClaimTemplates:
+    - metadata:
+        name: cassandra-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tripplanning-cassandra
+  namespace: tripplanning
+spec:
+  selector:
+    app: tripplanning-cassandra
+  ports:
+    - port: 9042
+      targetPort: 9042
+  type: ClusterIP
