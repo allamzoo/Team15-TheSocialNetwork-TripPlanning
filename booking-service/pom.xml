@@ -172,6 +172,12 @@
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
+        <!-- M3: Loki4J — structured JSON log shipping to Loki (Area 6 observability) -->
+        <dependency>
+            <groupId>com.github.loki4j</groupId>
+            <artifactId>loki-logback-appender</artifactId>
+            <version>1.5.2</version>
+        </dependency>
     </dependencies>
 
     <build>

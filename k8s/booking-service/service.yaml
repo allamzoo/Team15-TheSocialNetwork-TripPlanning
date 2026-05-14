@@ -1,0 +1,21 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  booking-service/service.yaml — OWNED BY S5                                 ║
+# ║  Exposes booking-service inside the tripplanning namespace on port 8080.    ║
+# ║  DNS: booking-service.tripplanning.svc.cluster.local:8080                  ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v1
+kind: Service
+metadata:
+  name: booking-service
+  namespace: tripplanning
+  labels:
+    app: booking-service
+    slice: s5
+spec:
+  selector:
+    app: booking-service
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP

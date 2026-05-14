@@ -298,6 +298,27 @@ services:
       rabbitmq:
         condition: service_healthy
 
+  booking-postgres:
+    image: postgres:17
+    container_name: booking-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: tripdb-bookings
+    ports:
+      - "5436:5432"
+    volumes:
+      - booking-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d tripdb-bookings"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
   booking-service:
     build:
       context: .
@@ -306,7 +327,7 @@ services:
     ports:
       - "8085:8080"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tripplanningdb
+      SPRING_DATASOURCE_URL: jdbc:postgresql://booking-postgres:5432/tripdb-bookings
       SPRING_MONGODB_HOST: tripplanning-mongo
       SPRING_MONGODB_PORT: 27017
       SPRING_MONGODB_DATABASE: tripplanningdb
@@ -320,7 +341,7 @@ services:
       FEIGN_ITINERARY_SERVICE_URL: http://itinerary-service:8080
       FEIGN_DESTINATION_SERVICE_URL: http://destination-service:8080
     depends_on:
-      postgres:
+      booking-postgres:
         condition: service_healthy
       mongodb:
         condition: service_started
@@ -335,3 +356,4 @@ volumes:
   neo4jdata:
   cassandradata:
   rabbitmqdata:
+  booking-pgdata:

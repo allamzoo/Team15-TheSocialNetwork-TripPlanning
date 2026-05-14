@@ -44,10 +44,6 @@ public class Booking {
     @Column(name = "itin_id", nullable = false)
     private Long itineraryId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "itin_id", referencedColumnName = "id", insertable = false, updatable = false,
-            foreignKey = @ForeignKey(name = "fk_bookings_itineraries"))
-    private ItineraryRef itinerary;
 
     @JsonAlias({"user_id"})
     @Column(nullable = false)
