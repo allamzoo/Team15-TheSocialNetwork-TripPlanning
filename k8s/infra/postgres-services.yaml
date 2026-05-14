@@ -122,6 +122,7 @@ spec:
 ---
 # ┌─ S3: itinerary-postgres ───────────────────────────────────────────────────┐
 # │ DNS: itinerary-postgres.tripplanning.svc.cluster.local:5432               │
+# │ S3-READ-DB: selector updated → dedicated StatefulSet (itinerary-postgres) │
 # └────────────────────────────────────────────────────────────────────────────┘
 apiVersion: v1
 kind: Service
@@ -132,7 +133,7 @@ metadata:
     slice: s3
 spec:
   selector:
-    app: postgres
+    app: itinerary-postgres
   ports:
     - port: 5432
       targetPort: 5432

@@ -1,5 +1,12 @@
 package com.team15.tripplanning.itineraryservice.service;
 
+import com.team15.tripplanning.contracts.dto.BookingAggregateRequest;
+import com.team15.tripplanning.contracts.dto.DestinationBookingRevenueAggregateDTO;
+import com.team15.tripplanning.contracts.dto.DestinationDashboardAggregateDTO;
+import com.team15.tripplanning.contracts.dto.ItineraryAggregateDTO;
+import com.team15.tripplanning.contracts.dto.ItinerarySummaryDTO;
+import com.team15.tripplanning.contracts.dto.UserTripSummaryAggregateDTO;
+import com.team15.tripplanning.contracts.feign.BookingServiceClient;
 import com.team15.tripplanning.itineraryservice.dto.DestinationRecommendationDTO;
 import com.team15.tripplanning.itineraryservice.dto.ItineraryAnalyticsDTO;
 import com.team15.tripplanning.itineraryservice.dto.TripCostEstimateDTO;
@@ -9,6 +16,9 @@ import com.team15.tripplanning.itineraryservice.repository.ItineraryRepository;
 import com.team15.tripplanning.itineraryservice.repository.VisitGraphRepository;
 import com.team15.tripplanning.shared.observer.EntityObserver;
 import com.team15.tripplanning.itineraryservice.dto.ItineraryAnalyticsDashboardDTO;
+import feign.FeignException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -36,14 +46,17 @@ public class ItineraryService {
     private final VisitGraphRepository visitGraphRepository;
     private final List<EntityObserver> observers = new ArrayList<>();
     private final RedisTemplate<String, Object> redisTemplate;
+    private final BookingServiceClient bookingServiceClient;
 
     public ItineraryService(ItineraryRepository itineraryRepository,
                             MongoEventLogger mongoEventLogger,
                             RedisTemplate<String, Object> redisTemplate,
-                            VisitGraphRepository visitGraphRepository) {
+                            VisitGraphRepository visitGraphRepository,
+                            BookingServiceClient bookingServiceClient) {
         this.itineraryRepository = itineraryRepository;
         this.redisTemplate = redisTemplate;
         this.visitGraphRepository = visitGraphRepository;
+        this.bookingServiceClient = bookingServiceClient;
         register(mongoEventLogger);
     }
 
@@ -409,14 +422,19 @@ public class ItineraryService {
                 statusCounts.put(status, count);
             }
 
-            // Ensure all statuses appear
-            for (String s : List.of("DRAFT", "PLANNED", "IN_PROGRESS", "COMPLETED", "CANCELLED")) {
+            // Ensure all statuses appear (M3: includes saga states)
+            for (String s : List.of("DRAFT", "PLANNED", "IN_PROGRESS", "COMPLETED", "CANCELLED",
+                    "COMPLETING", "PAYMENT_PENDING", "PAID", "PAYMENT_FAILED", "REFUNDED")) {
                 statusCounts.putIfAbsent(s, 0L);
             }
 
             double averageBudget = totalItineraries > 0 ? totalBudget / totalItineraries : 0.0;
-            long completed = statusCounts.getOrDefault("COMPLETED", 0L);
-            double completionRate = totalItineraries > 0 ? (double) completed / totalItineraries : 0.0;
+            // M3: completion rate uses STATUS_COMPLETED_FAMILY
+            long completedFamily = statusCounts.getOrDefault("COMPLETED", 0L)
+                    + statusCounts.getOrDefault("COMPLETING", 0L)
+                    + statusCounts.getOrDefault("PAYMENT_PENDING", 0L)
+                    + statusCounts.getOrDefault("PAID", 0L);
+            double completionRate = totalItineraries > 0 ? (double) completedFamily / totalItineraries : 0.0;
 
             dashboard = ItineraryAnalyticsDashboardDTO.builder()
                     .totalItineraries(totalItineraries)
@@ -555,6 +573,79 @@ public class ItineraryService {
         response.put("visitCount", visitCount);
         response.put("idempotent", false);
         return response;
+    }
+
+    // ── M3 aggregate endpoints ─────────────────────────────────────────────────
+
+    public UserTripSummaryAggregateDTO getUserTripSummary(Long userId) {
+        List<Object[]> rows = itineraryRepository.getUserTripSummary(userId);
+        if (rows.isEmpty()) {
+            return UserTripSummaryAggregateDTO.empty();
+        }
+        Object[] r = rows.get(0);
+        long totalTrips     = r[0] != null ? ((Number) r[0]).longValue() : 0L;
+        long completedTrips = r[1] != null ? ((Number) r[1]).longValue() : 0L;
+        long cancelledTrips = r[2] != null ? ((Number) r[2]).longValue() : 0L;
+        BigDecimal totalBudget = r[3] != null
+                ? BigDecimal.valueOf(((Number) r[3]).doubleValue()).setScale(2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+        BigDecimal averageBudget = totalTrips > 0
+                ? totalBudget.divide(BigDecimal.valueOf(totalTrips), 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+        return new UserTripSummaryAggregateDTO(totalTrips, completedTrips, cancelledTrips, totalBudget, averageBudget);
+    }
+
+    public int getUserActiveCount(Long userId) {
+        return itineraryRepository.countActiveByUserId(userId);
+    }
+
+    public long getUserCompletedCount(Long userId) {
+        return itineraryRepository.countCompletedByUserId(userId);
+    }
+
+    public DestinationBookingRevenueAggregateDTO getDestinationBookingRevenue(
+            Long destinationId, String startDate, String endDate) {
+        List<Long> itineraryIds = itineraryRepository.findItineraryIdsByDestinationAndDateRange(
+                destinationId, LocalDate.parse(startDate), LocalDate.parse(endDate));
+        if (itineraryIds.isEmpty()) {
+            return new DestinationBookingRevenueAggregateDTO(0L, BigDecimal.ZERO, BigDecimal.ZERO);
+        }
+        try {
+            ItineraryAggregateDTO agg = bookingServiceClient.aggregateByItineraries(
+                    new BookingAggregateRequest(itineraryIds, startDate, endDate, "CONFIRMED"));
+            BigDecimal avg = agg.totalBookings() > 0
+                    ? agg.totalRevenue().divide(BigDecimal.valueOf(agg.totalBookings()), 2, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO;
+            return new DestinationBookingRevenueAggregateDTO(agg.totalBookings(), agg.totalRevenue(), avg);
+        } catch (FeignException.NotFound e) {
+            return new DestinationBookingRevenueAggregateDTO(0L, BigDecimal.ZERO, BigDecimal.ZERO);
+        } catch (FeignException e) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "Booking service temporarily unavailable");
+        }
+    }
+
+    public int getDestinationActiveCount(Long destinationId) {
+        return itineraryRepository.countActiveByDestinationId(destinationId);
+    }
+
+    public DestinationDashboardAggregateDTO getDestinationDashboardAggregate(Long destinationId) {
+        List<Object[]> rows = itineraryRepository.getDestinationDashboardStats(destinationId);
+        if (rows.isEmpty()) {
+            return new DestinationDashboardAggregateDTO(0L, 0L, 0L);
+        }
+        Object[] r = rows.get(0);
+        long totalItineraries     = r[0] != null ? ((Number) r[0]).longValue() : 0L;
+        long completedItineraries = r[1] != null ? ((Number) r[1]).longValue() : 0L;
+        long totalVisitors        = r[2] != null ? ((Number) r[2]).longValue() : 0L;
+        return new DestinationDashboardAggregateDTO(totalItineraries, completedItineraries, totalVisitors);
+    }
+
+    public List<ItinerarySummaryDTO> batchGetItineraries(List<Long> ids) {
+        return itineraryRepository.findAllById(ids).stream()
+                .map(i -> new ItinerarySummaryDTO(i.getId(), i.getDestinationId(),
+                        i.getUserId(), i.getStatus().name()))
+                .collect(Collectors.toList());
     }
 
     // S3-F12

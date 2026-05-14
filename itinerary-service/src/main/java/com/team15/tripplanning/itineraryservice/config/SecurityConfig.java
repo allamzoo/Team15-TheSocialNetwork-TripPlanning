@@ -28,6 +28,16 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/itineraries/health", "/error").permitAll()
+                        // M3 aggregate endpoints — called by S1/S2/S5 via Feign (no JWT in inter-service calls)
+                        .requestMatchers(
+                                "/api/itineraries/user/*/summary",
+                                "/api/itineraries/user/*/active-count",
+                                "/api/itineraries/user/*/completed-count",
+                                "/api/itineraries/destination/*/booking-revenue",
+                                "/api/itineraries/destination/*/active-count",
+                                "/api/itineraries/destination/*/dashboard-aggregate",
+                                "/api/itineraries/batch"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex

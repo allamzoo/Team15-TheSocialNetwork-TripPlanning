@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <springProperty name="APP_NAME" source="spring.application.name" defaultValue="itinerary-service"/>
+
+  <!-- ── Loki4J appender: ships structured logs to Loki ─────────────────────── -->
+  <appender name="LOKI4J" class="com.github.loki4j.logback.Loki4jAppender">
+    <http>
+      <url>http://loki:3100/loki/api/v1/push</url>
+    </http>
+    <format>
+      <label>
+        <pattern>app=${APP_NAME},hostname=${HOSTNAME},level=%level</pattern>
+      </label>
+      <message>
+        <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [correlationId=%X{correlationId}] [itineraryId=%X{itineraryId}] [userId=%X{userId}] [destinationId=%X{destinationId}] [settlementId=%X{settlementId}] [routingKey=%X{routingKey}] %msg%n</pattern>
+      </message>
+      <sortByTime>true</sortByTime>
+    </format>
+  </appender>
+
+  <!-- ── Console appender: local development ────────────────────────────────── -->
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - [%X{correlationId}] [itineraryId=%X{itineraryId}] [userId=%X{userId}] %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <root level="INFO">
+    <appender-ref ref="CONSOLE"/>
+    <appender-ref ref="LOKI4J"/>
+  </root>
+</configuration>

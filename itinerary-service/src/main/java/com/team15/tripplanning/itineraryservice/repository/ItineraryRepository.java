@@ -58,7 +58,7 @@ public interface ItineraryRepository extends JpaRepository<Itinerary, Long> {
     @Query(value = """
             SELECT COUNT(*) FROM itineraries
             WHERE destination_id = :destinationId
-            AND status IN ('DRAFT', 'PLANNED', 'IN_PROGRESS')
+            AND status IN ('DRAFT', 'PLANNED', 'IN_PROGRESS', 'COMPLETING', 'PAYMENT_PENDING')
             """, nativeQuery = true)
     int countActiveItinerariesForDestination(@Param("destinationId") Long destinationId);
 
@@ -131,4 +131,67 @@ public interface ItineraryRepository extends JpaRepository<Itinerary, Long> {
 
     @Query(value = "SELECT id, name, country, CAST(category AS text) FROM destinations WHERE id IN :ids", nativeQuery = true)
     List<Object[]> findDestinationDetailsByIds(@Param("ids") List<Long> ids);
+
+    // ── M3 aggregate endpoints ────────────────────────────────────────────────
+
+    @Query(value = """
+            SELECT
+                COUNT(*) AS totalTrips,
+                SUM(CASE WHEN status IN ('COMPLETED','COMPLETING','PAYMENT_PENDING','PAID') THEN 1 ELSE 0 END) AS completedTrips,
+                SUM(CASE WHEN status = 'CANCELLED' THEN 1 ELSE 0 END) AS cancelledTrips,
+                COALESCE(SUM(COALESCE(estimated_budget, 0)), 0) AS totalBudget
+            FROM itineraries
+            WHERE user_id = :userId
+            """, nativeQuery = true)
+    List<Object[]> getUserTripSummary(@Param("userId") Long userId);
+
+    @Query(value = """
+            SELECT COUNT(*) FROM itineraries
+            WHERE user_id = :userId
+            AND status IN ('DRAFT','PLANNED','IN_PROGRESS','COMPLETING','PAYMENT_PENDING')
+            """, nativeQuery = true)
+    int countActiveByUserId(@Param("userId") Long userId);
+
+    @Query(value = """
+            SELECT COUNT(*) FROM itineraries
+            WHERE user_id = :userId
+            AND status IN ('COMPLETED','COMPLETING','PAYMENT_PENDING','PAID')
+            """, nativeQuery = true)
+    long countCompletedByUserId(@Param("userId") Long userId);
+
+    @Query(value = """
+            SELECT COUNT(*) FROM itineraries
+            WHERE destination_id = :destinationId
+            AND status IN ('DRAFT','PLANNED','IN_PROGRESS','COMPLETING','PAYMENT_PENDING')
+            """, nativeQuery = true)
+    int countActiveByDestinationId(@Param("destinationId") Long destinationId);
+
+    @Query(value = """
+            SELECT
+                COUNT(*) AS totalItineraries,
+                SUM(CASE WHEN status IN ('COMPLETED','COMPLETING','PAYMENT_PENDING','PAID') THEN 1 ELSE 0 END) AS completedItineraries,
+                COUNT(DISTINCT user_id) AS totalVisitors
+            FROM itineraries
+            WHERE destination_id = :destinationId
+            """, nativeQuery = true)
+    List<Object[]> getDestinationDashboardStats(@Param("destinationId") Long destinationId);
+
+    @Query(value = """
+            SELECT id FROM itineraries
+            WHERE destination_id = :destinationId
+            AND start_date >= :startDate AND start_date <= :endDate
+            """, nativeQuery = true)
+    List<Long> findItineraryIdsByDestinationAndDateRange(
+            @Param("destinationId") Long destinationId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE itineraries SET status = :newStatus WHERE id = :id AND status = :expectedStatus",
+            nativeQuery = true)
+    int conditionalUpdateStatus(@Param("id") Long id,
+                                @Param("newStatus") String newStatus,
+                                @Param("expectedStatus") String expectedStatus);
 }
