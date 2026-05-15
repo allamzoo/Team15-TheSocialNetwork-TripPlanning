@@ -54,7 +54,98 @@ data:
   # │   log volume, error logs, slow-query logs (LogQL).                      │
   # └──────────────────────────────────────────────────────────────────────────┘
   user-dashboard.json: |
-    { "title": "User Service Dashboard", "panels": [], "schemaVersion": 36, "version": 1 }
+    {
+      "title": "User Service Dashboard",
+      "uid": "user-service-m3",
+      "schemaVersion": 36,
+      "version": 1,
+      "refresh": "30s",
+      "time": {
+        "from": "now-1h",
+        "to": "now"},
+      "tags": [
+        "user-service",
+        "m3",
+        "s1"],
+      "panels": [
+        {
+          "id": 1,
+          "type": "logs",
+          "title": "All Log Lines",
+          "description": "LogQL — all log lines from user-service. Use for volume inspection and general tracing.",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"},
+          "gridPos": {
+            "x": 0,
+            "y": 0,
+            "w": 12,
+            "h": 8},
+          "targets": [
+            {
+              "expr": "{app=\"user-service\"}",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "dedupStrategy": "none",
+            "wrapLogMessage": true,
+            "showTime": true
+          }
+        },
+        {
+          "id": 2,
+          "type": "logs",
+          "title": "WARN and ERROR Logs",
+          "description": "LogQL — WARN and ERROR level log lines from user-service. First stop for incident triage.",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"},
+          "gridPos": {
+            "x": 12,
+            "y": 0,
+            "w": 12,
+            "h": 8},
+          "targets": [
+            {
+              "expr": "{app=\"user-service\", level=~\"WARN|ERROR\"}",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "dedupStrategy": "none",
+            "showLabels": true,
+            "wrapLogMessage": true,
+            "showTime": true
+          }
+        },
+        {
+          "id": 3,
+          "type": "logs",
+          "title": "Feign Outbound Call Logs",
+          "description": "LogQL — log lines containing 'Feign →' showing outbound calls to itinerary-service and booking-service.",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"},
+          "gridPos": {
+            "x": 0,
+            "y": 8,
+            "w": 24,
+            "h": 8},
+          "targets": [
+            {
+              "expr": "{app=\"user-service\"} |= \"Feign\"",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "dedupStrategy": "none",
+            "wrapLogMessage": true,
+            "showTime": true
+          }
+        }
+      ]
+    }
 
   # ┌─ S2 OWNED BLOCK ─ PR: feature/m3-s2-infra-destination ──────────────────┐
   destination-dashboard.json: |
