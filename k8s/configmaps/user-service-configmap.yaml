@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-service-configmap
+  namespace: tripplanning
+data:
+  SPRING_DATASOURCE_URL: jdbc:postgresql://user-postgres:5432/tripdb-users
+  SPRING_DATASOURCE_USERNAME: postgres
+  SPRING_RABBITMQ_HOST: rabbitmq
+  SPRING_RABBITMQ_PORT: "5672"
+  SPRING_RABBITMQ_USERNAME: guest
+  SPRING_RABBITMQ_PASSWORD: guest
+  FEIGN_ITINERARY_SERVICE_URL: http://itinerary-service:8080
+  FEIGN_BOOKING_SERVICE_URL: http://booking-service:8080
+  M3_MESSAGING_ENABLED: "true"

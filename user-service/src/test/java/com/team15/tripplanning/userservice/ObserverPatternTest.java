@@ -6,6 +6,9 @@ import com.team15.tripplanning.userservice.dto.RegisterRequest;
 import com.team15.tripplanning.userservice.model.Role;
 import com.team15.tripplanning.userservice.model.Status;
 import com.team15.tripplanning.userservice.model.User;
+import com.team15.tripplanning.contracts.feign.BookingServiceClient;
+import com.team15.tripplanning.contracts.feign.ItineraryServiceClient;
+import com.team15.tripplanning.userservice.messaging.publisher.UserEventPublisher;
 import com.team15.tripplanning.userservice.observer.EntityObserver;
 import com.team15.tripplanning.userservice.observer.MongoEventLogger;
 import com.team15.tripplanning.userservice.repository.AuthEventRepository;
@@ -76,10 +79,14 @@ class ObserverPatternTest {
         // Real service wired with real MongoEventLogger → observer chain is live
         userService = new UserService(
                 userRepository, mongoEventLogger, passwordEncoder,
-                redisTemplate, authEventRepository);
+                redisTemplate, authEventRepository,
+                mock(ItineraryServiceClient.class),
+                mock(BookingServiceClient.class),
+                mock(UserEventPublisher.class));
 
         authService = new AuthService(
-                userRepository, passwordEncoder, jwtService, mongoEventLogger);
+                userRepository, passwordEncoder, jwtService, mongoEventLogger,
+                mock(UserEventPublisher.class));
     }
 
     // ─────────────────────────────────────────────────────────────────────────

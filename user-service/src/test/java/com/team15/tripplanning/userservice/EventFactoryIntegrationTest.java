@@ -9,6 +9,7 @@ import com.team15.tripplanning.userservice.observer.EventFactory;
 import com.team15.tripplanning.userservice.observer.EventType;
 import com.team15.tripplanning.userservice.observer.MongoEvent;
 import com.team15.tripplanning.userservice.observer.MongoEventLogger;
+import com.team15.tripplanning.userservice.messaging.publisher.UserEventPublisher;
 import com.team15.tripplanning.userservice.repository.AuthEventRepository;
 import com.team15.tripplanning.userservice.repository.UserRepository;
 import com.team15.tripplanning.userservice.security.JwtService;
@@ -55,7 +56,8 @@ class EventFactoryIntegrationTest {
                 userRepository,
                 new BCryptPasswordEncoder(),
                 jwtService,
-                mongoEventLogger
+                mongoEventLogger,
+                mock(UserEventPublisher.class)
         );
 
         mockMvc = MockMvcBuilders

@@ -3,6 +3,7 @@ package com.team15.tripplanning.userservice.service;
 import com.team15.tripplanning.userservice.dto.AuthResponse;
 import com.team15.tripplanning.userservice.dto.LoginRequest;
 import com.team15.tripplanning.userservice.dto.RegisterRequest;
+import com.team15.tripplanning.userservice.messaging.publisher.UserEventPublisher;
 import com.team15.tripplanning.userservice.model.Role;
 import com.team15.tripplanning.userservice.model.Status;
 import com.team15.tripplanning.userservice.model.User;
@@ -26,15 +27,18 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final UserEventPublisher userEventPublisher;
     private final List<EntityObserver> observers = new ArrayList<>();
 
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
-                       MongoEventLogger mongoEventLogger) {
+                       MongoEventLogger mongoEventLogger,
+                       UserEventPublisher userEventPublisher) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.userEventPublisher = userEventPublisher;
         addObserver(mongoEventLogger);
     }
 
@@ -84,6 +88,8 @@ public class AuthService {
         Map<String, Object> payload = new HashMap<>();
         payload.put("userId", user.getId());
         notifyObservers("REGISTERED", payload);
+
+        userEventPublisher.publishUserRegistered(user.getId(), user.getEmail(), user.getRole().name());
 
         String token = jwtService.generateToken(
                 user.getId(), user.getEmail(), user.getRole().name());
