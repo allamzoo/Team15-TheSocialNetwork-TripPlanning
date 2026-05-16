@@ -1,0 +1,86 @@
+{
+  "title": "User Service Dashboard",
+  "uid": "user-service-dashboard",
+  "schemaVersion": 38,
+  "version": 1,
+  "panels": [
+    {
+      "id": 1,
+      "title": "HTTP Request Rate (req/s)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "rate(http_server_requests_seconds_count{job=\"user-service\"}[5m])",
+          "legendFormat": "{{method}} {{uri}} {{status}}",
+          "refId": "A"
+        }
+      ],
+      "description": "Requests per second per endpoint — shows which user-service endpoints are under the most load."
+    },
+    {
+      "id": 2,
+      "title": "HTTP Latency Percentiles (P50 / P95 / P99)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, rate(http_server_requests_seconds_bucket{job=\"user-service\"}[5m]))",
+          "legendFormat": "P50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(http_server_requests_seconds_bucket{job=\"user-service\"}[5m]))",
+          "legendFormat": "P95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(http_server_requests_seconds_bucket{job=\"user-service\"}[5m]))",
+          "legendFormat": "P99",
+          "refId": "C"
+        }
+      ],
+      "description": "P50/P95/P99 latency — high P99 on /trip-summary or /top-travelers signals slow Feign calls."
+    },
+    {
+      "id": 3,
+      "title": "JVM Heap Usage",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "jvm_memory_used_bytes{job=\"user-service\", area=\"heap\"}",
+          "legendFormat": "Heap Used",
+          "refId": "A"
+        },
+        {
+          "expr": "jvm_memory_max_bytes{job=\"user-service\", area=\"heap\"}",
+          "legendFormat": "Heap Max",
+          "refId": "B"
+        }
+      ],
+      "description": "JVM heap used vs max — alerts on memory pressure before OOM."
+    },
+    {
+      "id": 4,
+      "title": "HikariCP DB Connection Pool",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "hikaricp_connections_active{job=\"user-service\"}",
+          "legendFormat": "Active",
+          "refId": "A"
+        },
+        {
+          "expr": "hikaricp_connections{job=\"user-service\"}",
+          "legendFormat": "Total Pool Size",
+          "refId": "B"
+        }
+      ],
+      "description": "HikariCP active connections vs pool size — detects pool exhaustion during high load."
+    }
+  ],
+  "time": { "from": "now-1h", "to": "now" },
+  "refresh": "30s"
+}

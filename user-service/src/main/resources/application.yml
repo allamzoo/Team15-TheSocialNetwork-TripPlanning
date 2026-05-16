@@ -34,6 +34,13 @@ spring:
     virtual-host: /
     listener:
       simple:
+        # §2.6 required settings
+        acknowledge-mode: auto
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          initial-interval: 1000
+          max-attempts: 3
         # Listeners do NOT start at boot unless M3_MESSAGING_ENABLED=true.
         # This prevents startup failure when the exchange hasn't been declared
         # yet (i.e., the publisher slice hasn't merged or deployed).
@@ -42,6 +49,16 @@ spring:
         # another slice. Log a warning and continue — idempotent redeclaration
         # happens when that slice's AmqpConfig bean first runs.
         missing-queues-fatal: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "prometheus,health,info"
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
 
 server:
   port: 8080

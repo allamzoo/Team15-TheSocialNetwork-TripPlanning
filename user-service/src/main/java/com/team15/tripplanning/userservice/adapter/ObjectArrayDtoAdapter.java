@@ -1,10 +1,24 @@
 package com.team15.tripplanning.userservice.adapter;
 
+import com.team15.tripplanning.contracts.dto.UserTripSummaryAggregateDTO;
 import com.team15.tripplanning.userservice.dto.UserTripSummaryDTO;
+import com.team15.tripplanning.userservice.model.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 public class ObjectArrayDtoAdapter {
+
+    public UserTripSummaryDTO adapt(User user, UserTripSummaryAggregateDTO summary) {
+        return UserTripSummaryDTO.builder()
+                .userId(user.getId())
+                .name(user.getName())
+                .totalTrips(summary.totalTrips())
+                .completedTrips(summary.completedTrips())
+                .cancelledTrips(summary.cancelledTrips())
+                .totalSpent(summary.totalBudget() != null ? summary.totalBudget().doubleValue() : 0.0)
+                .averageBudget(summary.averageBudget() != null ? summary.averageBudget().doubleValue() : 0.0)
+                .build();
+    }
 
     public UserTripSummaryDTO adapt(Object rawRow) {
         Object[] row = unwrapRow(rawRow);
