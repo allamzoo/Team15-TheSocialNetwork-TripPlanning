@@ -27,6 +27,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/itineraries/health", "/actuator/**", "/error").permitAll()
                         .requestMatchers("/api/itineraries/health", "/error").permitAll()
                         // M3 aggregate endpoints — called by S1/S2/S5 via Feign (no JWT in inter-service calls)
                         .requestMatchers(

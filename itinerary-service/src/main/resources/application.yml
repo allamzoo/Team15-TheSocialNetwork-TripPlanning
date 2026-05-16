@@ -30,19 +30,21 @@ spring:
       username: ${SPRING_NEO4J_AUTHENTICATION_USERNAME:neo4j}
       password: ${SPRING_NEO4J_AUTHENTICATION_PASSWORD:neo4jpass}
 
-  rabbitmq:
-    host: ${SPRING_RABBITMQ_HOST:rabbitmq}
-    port: ${SPRING_RABBITMQ_PORT:5672}
-    username: ${SPRING_RABBITMQ_USERNAME:guest}
-    password: ${SPRING_RABBITMQ_PASSWORD:guest}
-    listener:
-      simple:
-        acknowledge-mode: auto
-        default-requeue-rejected: false
-        retry:
-          enabled: true
-          initial-interval: 1000
-          max-attempts: 3
+rabbitmq:
+  host: ${SPRING_RABBITMQ_HOST:rabbitmq}
+  port: ${SPRING_RABBITMQ_PORT:5672}
+  username: ${SPRING_RABBITMQ_USERNAME:guest}
+  password: ${SPRING_RABBITMQ_PASSWORD:guest}
+  virtual-host: /
+  listener:
+    simple:
+      acknowledge-mode: auto
+      default-requeue-rejected: false
+      missing-queues-fatal: false
+      retry:
+        enabled: true
+        initial-interval: 1000
+        max-attempts: 3
 
 server:
   port: 8080

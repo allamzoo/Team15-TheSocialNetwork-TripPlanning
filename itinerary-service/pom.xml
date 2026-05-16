@@ -167,6 +167,16 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-neo4j</artifactId>
         </dependency>
+        <!-- S3-INFRA: exposes /actuator/prometheus for Prometheus scraping -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+            <scope>runtime</scope>
+        </dependency>
         <!-- M3: Loki4J — structured log shipping to Loki for Grafana dashboards -->
         <dependency>
             <groupId>com.github.loki4j</groupId>
