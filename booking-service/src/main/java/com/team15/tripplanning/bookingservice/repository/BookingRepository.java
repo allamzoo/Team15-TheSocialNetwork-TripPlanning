@@ -108,13 +108,8 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             @Param("endDateTime") LocalDateTime endDateTime
     );
 
-    @Query("""
-            SELECT COUNT(b), COALESCE(SUM(b.amount), 0)
-            FROM Booking b
-            WHERE b.itineraryId = :itineraryId
-              AND b.status = 'CONFIRMED'
-            """)
-    Object[] getConfirmedSummaryByItinerary(@Param("itineraryId") Long itineraryId);
+    @Query(value = "SELECT COUNT(*) FROM bookings WHERE itin_id = :itineraryId AND status = 'CONFIRMED'", nativeQuery = true)
+    long countConfirmedByItineraryId(@Param("itineraryId") Long itineraryId);
 
     @Query("""
             SELECT COUNT(b), COALESCE(SUM(b.amount), 0)

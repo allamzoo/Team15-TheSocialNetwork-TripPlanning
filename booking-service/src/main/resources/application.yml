@@ -64,6 +64,9 @@ management:
     health:
       show-details: always
 
+loki:
+  url: ${LOKI_URL:http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push}
+
 # ─── S5 OWNED BLOCK ─────────────────────────────────────────────────────────
 # Pull request: feature/m3-s5-feign-amqp-booking
 # Edit ONLY this block in your S5 PR.

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <property name="LOKI_URL" value="${LOKI_URL:http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push}"/>
+    <springProperty name="LOKI_URL" source="loki.url"
+                    defaultValue="http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push"/>
     <property name="SERVICE_NAME" value="booking-service"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">

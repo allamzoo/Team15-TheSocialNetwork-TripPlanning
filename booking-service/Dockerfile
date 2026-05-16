@@ -1,6 +1,10 @@
 FROM maven:3.9.6-eclipse-temurin-17 AS build
 WORKDIR /app
 
+COPY contracts/pom.xml ./contracts/pom.xml
+COPY contracts/src ./contracts/src
+RUN mvn install -f contracts/pom.xml -DskipTests
+
 COPY shared-lib/pom.xml ./shared-lib/pom.xml
 COPY shared-lib/src ./shared-lib/src
 RUN mvn install -f shared-lib/pom.xml -DskipTests

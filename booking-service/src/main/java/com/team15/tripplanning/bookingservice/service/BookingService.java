@@ -32,6 +32,9 @@ import com.team15.tripplanning.contracts.dto.BatchItineraryRequest;
 import com.team15.tripplanning.contracts.dto.DestinationSummaryDTO;
 import com.team15.tripplanning.contracts.dto.ItineraryDTO;
 import com.team15.tripplanning.contracts.dto.ItinerarySummaryDTO;
+import com.team15.tripplanning.bookingservice.messaging.publisher.PaymentEventPublisher;
+import com.team15.tripplanning.bookingservice.repository.SettlementRepository;
+import com.team15.tripplanning.contracts.events.PaymentRefundedEvent;
 import com.team15.tripplanning.contracts.feign.DestinationServiceClient;
 import com.team15.tripplanning.contracts.feign.ItineraryServiceClient;
 import com.team15.tripplanning.contracts.feign.UserServiceClient;
@@ -57,6 +60,8 @@ public class BookingService {
     private final UserServiceClient userServiceClient;
     private final ItineraryServiceClient itineraryServiceClient;
     private final DestinationServiceClient destinationServiceClient;
+    private final PaymentEventPublisher paymentEventPublisher;
+    private final SettlementRepository settlementRepository;
 
     public BookingService(BookingRepository bookingRepository,
                           BookingCouponRepository bookingCouponRepository,
@@ -66,7 +71,9 @@ public class BookingService {
                           RedisTemplate<String, Object> redisTemplate,
                           UserServiceClient userServiceClient,
                           ItineraryServiceClient itineraryServiceClient,
-                          DestinationServiceClient destinationServiceClient) {
+                          DestinationServiceClient destinationServiceClient,
+                          PaymentEventPublisher paymentEventPublisher,
+                          SettlementRepository settlementRepository) {
         this.bookingRepository = bookingRepository;
         this.bookingCouponRepository = bookingCouponRepository;
         this.couponRepository = couponRepository;
@@ -75,6 +82,8 @@ public class BookingService {
         this.userServiceClient = userServiceClient;
         this.itineraryServiceClient = itineraryServiceClient;
         this.destinationServiceClient = destinationServiceClient;
+        this.paymentEventPublisher = paymentEventPublisher;
+        this.settlementRepository = settlementRepository;
         register(mongoEventLogger);
     }
 
@@ -919,6 +928,15 @@ public class BookingService {
         deleteWildcard("booking-service::S5-F10::*");
         deleteWildcard("booking-service::S5-F11::" + bookingId + "::*");
         deleteWildcard("booking-service::booking::" + bookingId);
+
+        // ===== k) Publish payment.refunded (M3 AMQP event added to M2 refund flow) =====
+        Long settlementId = settlementRepository.findByItineraryId(booking.getItineraryId())
+                .map(s -> s.getId())
+                .orElse(null);
+        paymentEventPublisher.publishPaymentRefunded(
+                new PaymentRefundedEvent(settlementId, booking.getItineraryId(),
+                        java.math.BigDecimal.valueOf(result.getRefundAmount()))
+        );
 
         return response;
     }
