@@ -5,12 +5,13 @@ spring:
   autoconfigure:
     exclude:
       - org.springframework.boot.cassandra.autoconfigure.CassandraAutoConfiguration
+      - org.springframework.boot.data.cassandra.autoconfigure.DataCassandraAutoConfiguration
       - org.springframework.boot.data.cassandra.autoconfigure.DataCassandraReactiveAutoConfiguration
       - org.springframework.boot.data.cassandra.autoconfigure.DataCassandraReactiveRepositoriesAutoConfiguration
       - org.springframework.boot.data.rest.autoconfigure.RepositoryRestMvcAutoConfiguration
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/tripplanningdb}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://activity-postgres:5432/tripdb-activities}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:postgres}
 
@@ -30,12 +31,11 @@ spring:
 
   data:
     mongodb:
-      host: ${SPRING_MONGODB_HOST:tripplanning-mongo}
-      port: ${SPRING_MONGODB_PORT:27017}
-      database: ${SPRING_MONGODB_DATABASE:tripplanningdb}
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://root:rootpass@mongo:27017/tripplanningmongo?authSource=admin}
     redis:
       host: ${SPRING_REDIS_HOST:localhost}
       port: ${SPRING_REDIS_PORT:6379}
+      password: ${SPRING_REDIS_PASSWORD:redispass}
     cassandra:
       keyspace-name: ${CASSANDRA_KEYSPACE:tripplanning}
       contact-points: ${CASSANDRA_CONTACT_POINTS:localhost}
@@ -44,7 +44,6 @@ spring:
       schema-action: create-if-not-exists
       entity-base-packages: com.team15.tripplanning.activityservice.model.cassandra
 
-  # M3: RabbitMQ connection
   rabbitmq:
     host: ${SPRING_RABBITMQ_HOST:localhost}
     port: ${SPRING_RABBITMQ_PORT:5672}
@@ -71,17 +70,13 @@ jwt:
 cassandra:
   enabled: true
 
-# ─── S4 OWNED BLOCK ─────────────────────────────────────────────────────────
-# Pull request: feature/m3-s4-feign-amqp-activity
-# Edit ONLY this block in your S4 PR.
 feign:
   itinerary-service:
-    url: ${FEIGN_ITINERARY_SERVICE_URL:http://localhost:8083}
+    url: ${FEIGN_ITINERARY_SERVICE_URL:http://itinerary-service:8080}
 
 m3:
   messaging:
     enabled: ${M3_MESSAGING_ENABLED:false}
-# ─── END S4 OWNED BLOCK ─────────────────────────────────────────────────────
 
 management:
   endpoints:
