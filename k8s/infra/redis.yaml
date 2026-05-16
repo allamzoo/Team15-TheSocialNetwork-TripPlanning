@@ -1,32 +1,74 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  redis.yaml — S2-INFRA OWNED (destination-service slice)                     ║
+# ║  Defines Redis K8s StatefulSet + Service for the entire platform.            ║
+# ║  Replaces docker-compose redis service (image: redis:7-alpine).              ║
+# ║  Service name "redis" is resolvable as:                                       ║
+# ║    redis.tripplanning.svc.cluster.local:6379                                 ║
+# ║  All services connect via SPRING_REDIS_HOST env var.                         ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: tripplanning
+  labels:
+    app: redis
+spec:
+  selector:
+    app: redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+  type: ClusterIP
+  clusterIP: None
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: tripplanning-redis
+  name: redis
   namespace: tripplanning
 spec:
-  serviceName: tripplanning-redis
+  serviceName: redis
   replicas: 1
   selector:
     matchLabels:
-      app: tripplanning-redis
+      app: redis
   template:
     metadata:
       labels:
-        app: tripplanning-redis
+        app: redis
     spec:
       containers:
         - name: redis
           image: redis:7-alpine
           ports:
             - containerPort: 6379
+              name: redis
           resources:
             limits:
               memory: 256Mi
             requests:
-              memory: 64Mi
+              memory: 128Mi
+          command:
+            - redis-server
+            - "--appendonly"
+            - "yes"
+            - "--appendfsync"
+            - "everysec"
+          livenessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 15
+            periodSeconds: 10
           readinessProbe:
             exec:
-              command: ["redis-cli", "ping"]
+              command:
+                - redis-cli
+                - ping
             initialDelaySeconds: 5
             periodSeconds: 5
             failureThreshold: 20
@@ -40,17 +82,4 @@ spec:
         accessModes: ["ReadWriteOnce"]
         resources:
           requests:
-            storage: 1Gi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: tripplanning-redis
-  namespace: tripplanning
-spec:
-  selector:
-    app: tripplanning-redis
-  ports:
-    - port: 6379
-      targetPort: 6379
-  type: ClusterIP
+            storage: 2Gi
