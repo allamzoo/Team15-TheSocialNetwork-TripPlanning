@@ -4,10 +4,9 @@ public enum ItineraryStatus {
     DRAFT,
     PLANNED,
     IN_PROGRESS,
+    COMPLETING,
     COMPLETED,
     CANCELLED,
-    // M3 saga states
-    COMPLETING,
     PAYMENT_PENDING,
     PAID,
     PAYMENT_FAILED,

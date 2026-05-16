@@ -34,4 +34,10 @@ public final class UserServiceFallback implements UserServiceClient {
         log.warn("user-service fallback: getUser({}) — returning null (hard guard)", userId);
         return null;
     }
+
+    @Override
+    public UserDTO getUserInternal(Long userId) {
+        log.warn("user-service fallback: getUserInternal({}) — returning null (hard guard)", userId);
+        return null;
+    }
 }

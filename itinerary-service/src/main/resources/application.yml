@@ -30,20 +30,31 @@ spring:
       username: ${SPRING_NEO4J_AUTHENTICATION_USERNAME:neo4j}
       password: ${SPRING_NEO4J_AUTHENTICATION_PASSWORD:neo4jpass}
 
-  # M3: RabbitMQ connection
   rabbitmq:
-    host: ${SPRING_RABBITMQ_HOST:localhost}
+    host: ${SPRING_RABBITMQ_HOST:rabbitmq}
     port: ${SPRING_RABBITMQ_PORT:5672}
     username: ${SPRING_RABBITMQ_USERNAME:guest}
     password: ${SPRING_RABBITMQ_PASSWORD:guest}
-    virtual-host: /
     listener:
       simple:
-        auto-startup: ${M3_MESSAGING_ENABLED:false}
-        missing-queues-fatal: false
+        acknowledge-mode: auto
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          initial-interval: 1000
+          max-attempts: 3
 
 server:
   port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: always
 
 jwt:
   secret: ${JWT_SECRET:tripplanning-secret-key-for-jwt-token-signing}
@@ -53,6 +64,8 @@ jwt:
 # Pull request: feature/m3-s3-feign-amqp-itinerary
 # Edit ONLY this block in your S3 PR.
 feign:
+  itinerary-service:
+    url: ${FEIGN_ITINERARY_SERVICE_URL:http://itinerary-service:8080}
   user-service:
     url: ${FEIGN_USER_SERVICE_URL:http://localhost:8081}
   destination-service:
@@ -60,7 +73,4 @@ feign:
   booking-service:
     url: ${FEIGN_BOOKING_SERVICE_URL:http://localhost:8085}
 
-m3:
-  messaging:
-    enabled: ${M3_MESSAGING_ENABLED:false}
 # ─── END S3 OWNED BLOCK ─────────────────────────────────────────────────────
