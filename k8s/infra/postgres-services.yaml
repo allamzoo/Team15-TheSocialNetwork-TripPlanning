@@ -96,7 +96,7 @@ metadata:
     slice: s1
 spec:
   selector:
-    app: postgres
+    app: user-postgres
   ports:
     - port: 5432
       targetPort: 5432

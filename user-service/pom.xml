@@ -162,6 +162,12 @@
             <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
+        <!--  M3 S1-READ-DB: Loki4J — logback appender that pushes JSON logs to Loki  -->
+        <dependency>
+            <groupId>com.github.loki4j</groupId>
+            <artifactId>loki-logback-appender</artifactId>
+            <version>1.5.2</version>
+        </dependency>
     </dependencies>
 
     <build>
