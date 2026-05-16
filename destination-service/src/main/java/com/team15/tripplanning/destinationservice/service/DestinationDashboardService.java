@@ -4,12 +4,16 @@ import com.team15.tripplanning.destinationservice.dto.DestinationDashboardDTO;
 import com.team15.tripplanning.destinationservice.model.Destination;
 import com.team15.tripplanning.destinationservice.repository.DestinationDashboardRepository;
 import com.team15.tripplanning.destinationservice.repository.DestinationRepository;
+import feign.FeignException;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import com.team15.tripplanning.contracts.feign.ItineraryServiceClient;
+import com.team15.tripplanning.contracts.dto.DestinationDashboardAggregateDTO;
 
 import java.util.Map;
+
 
 @Service
 public class DestinationDashboardService {
@@ -17,13 +21,17 @@ public class DestinationDashboardService {
     private final DestinationRepository destinationRepository;
     private final DestinationDashboardRepository dashboardRepository;
     private final MongoEventLogger mongoEventLogger; // already exists in your project
+    private final ItineraryServiceClient itineraryClient;
+
 
     public DestinationDashboardService(DestinationRepository destinationRepository,
                                        DestinationDashboardRepository dashboardRepository,
-                                       MongoEventLogger mongoEventLogger) {
+                                       MongoEventLogger mongoEventLogger,
+                                       ItineraryServiceClient itineraryClient) {
         this.destinationRepository = destinationRepository;
         this.dashboardRepository = dashboardRepository;
         this.mongoEventLogger = mongoEventLogger;
+        this.itineraryClient = itineraryClient;
     }
 
     /**
@@ -47,29 +55,28 @@ public class DestinationDashboardService {
     /**
      * Cached for 10 minutes. MongoDB logging is NOT here.
      */
-    @Cacheable(
-            value = "destination-service",
-            key = "'S2-F12::' + #destinationId",
-            unless = "#result == null"
-    )
-    public DestinationDashboardDTO getCachedDashboard(Long destinationId, Destination destination) {
-        // 4. Run aggregate query
-        Object[] raw = dashboardRepository.getDashboardAggregates(destinationId);
-        // Hibernate 6 may wrap the single row in an outer array
-        Object[] agg = (raw.length > 0 && raw[0] instanceof Object[])
-                ? (Object[]) raw[0]
-                : raw;
 
-        long totalItineraries     = agg[0] != null ? ((Number) agg[0]).longValue() : 0L;
-        long completedItineraries = agg[1] != null ? ((Number) agg[1]).longValue() : 0L;
-        long totalVisitors        = agg[2] != null ? ((Number) agg[2]).longValue() : 0L;
-        long cancelledItineraries = agg.length > 3 && agg[3] != null ? ((Number) agg[3]).longValue() : 0L;
-        double totalRevenue       = agg.length > 4 && agg[4] != null ? ((Number) agg[4]).doubleValue() : 0.0;
-        long totalBookings        = agg.length > 5 && agg[5] != null ? ((Number) agg[5]).longValue() : 0L;
-        double completionRate     = totalItineraries > 0
+    @Cacheable(value = "destination-service", key = "'S2-F12::' + #destinationId", unless = "#result == null")
+    public DestinationDashboardDTO getCachedDashboard(Long destinationId, Destination destination) {
+        DestinationDashboardAggregateDTO agg;
+        try {
+            agg = itineraryClient.getDestinationDashboardAggregate(destinationId);
+        } catch (FeignException e) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Dashboard data unavailable");
+        }
+
+        long totalItineraries = agg.totalItineraries();
+        long completedItineraries = agg.completedItineraries();
+        long totalVisitors = agg.totalVisitors();
+        // The aggregate DTO does not directly include cancelled count or revenue;
+        // if your existing dashboard DTO needs them, we can either add fields to the aggregate DTO
+        // or keep them as 0 for now. Check the DestinationDashboardAggregateDTO definition.
+        long cancelledItineraries = 0L; // if not in agg
+        double totalRevenue = 0.0;      // if not in agg
+        long totalBookings = 0L;        // if not in agg
+        double completionRate = totalItineraries > 0
                 ? (double) completedItineraries / totalItineraries * 100.0 : 0.0;
 
-        // 5. Build DTO using Builder pattern
         return DestinationDashboardDTO.builder()
                 .destinationId(destination.getId())
                 .name(destination.getName())

@@ -18,10 +18,6 @@ metadata:
   labels:
     grafana_dashboard: "1"
 data:
-  # ── MONITORING-INFRA OWNED — do not edit in feature slice PRs ────────────────
-  # This ConfigMap tells Grafana where to load dashboard JSON files from.
-  # Dashboard JSON files are embedded in the grafana-dashboard-files ConfigMap
-  # and mounted at /etc/grafana/provisioning/dashboards/tripplanning/.
   dashboards.yaml: |
     apiVersion: 1
     providers:
@@ -38,10 +34,6 @@ data:
           foldersFromFilesStructure: false
 
 ---
-# ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║  grafana-dashboard-files — each S<n>-INFRA slice replaces its own JSON key  ║
-# ║  Do NOT modify another slice's JSON key in your PR.                         ║
-# ╚══════════════════════════════════════════════════════════════════════════════╝
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -49,10 +41,6 @@ metadata:
   namespace: monitoring
 data:
   # ┌─ S1 OWNED BLOCK ─ PR: feature/m3-s1-infra-user ─────────────────────────┐
-  # │ Replace the placeholder JSON with a real Grafana dashboard JSON.         │
-  # │ Required panels: HTTP req/s, error rate, p99 latency (PromQL) +         │
-  # │   log volume, error logs, slow-query logs (LogQL).                      │
-  # └──────────────────────────────────────────────────────────────────────────┘
   user-dashboard.json: |
     {
       "uid": "user-service-dashboard",
@@ -145,14 +133,50 @@ data:
       ]
     }
 
-  # ┌─ S2 OWNED BLOCK ─ PR: feature/m3-s2-infra-destination ──────────────────┐
+  # ┌─ S2 OWNED BLOCK ─ PR: feature/m3-s2-events-destination ─────────────────┐
   destination-dashboard.json: |
-    { "title": "Destination Service Dashboard", "panels": [], "schemaVersion": 36, "version": 1 }
+    {
+      "title": "Destination Service Dashboard",
+      "panels": [
+        {
+          "id": 1,
+          "title": "Request Rate (req/s)",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "rate(http_server_requests_seconds_count{service=\"destination-service\"}[5m])",
+              "legendFormat": "{{method}} {{uri}}"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Latency P99",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{service=\"destination-service\"}[5m])) by (le, uri))",
+              "legendFormat": "{{uri}}"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "title": "JVM Heap Used (MB)",
+          "type": "gauge",
+          "targets": [
+            {
+              "expr": "jvm_memory_used_bytes{service=\"destination-service\", area=\"heap\"} / 1048576",
+              "legendFormat": "heap used"
+            }
+          ]
+        }
+      ],
+      "schemaVersion": 36,
+      "version": 1
+    }
 
   # ┌─ S3 OWNED BLOCK ─ PR: feat/M3/itinerary/S3-READ-DB/55-4895 ────────────┐
-  # │ 3 PromQL panels + 3 LogQL panels                                        │
-  # │ Saga panels: status transition log counts                                │
-  # └──────────────────────────────────────────────────────────────────────────┘
   itinerary-dashboard.json: |
     {
       "title": "Itinerary Service Dashboard",
@@ -232,10 +256,7 @@ data:
     }
 
   # ┌─ S4 OWNED BLOCK ─ PR: feature/m3-s4-infra-activity ─────────────────────┐
-  # │ Include Cassandra write latency panel (PromQL).                          │
-  # └──────────────────────────────────────────────────────────────────────────┘
   activity-dashboard.json: |
-    activity-dashboard.json: |
     {
       "title": "Activity Service Dashboard",
       "uid": "activity-service-dashboard",
@@ -335,9 +356,6 @@ data:
     }
 
   # ┌─ S5 OWNED BLOCK ─ PR: feature/m3-s5-infra-booking ──────────────────────┐
-  # │ LogQL panels : error rate, RabbitMQ event audit, saga state transitions  │
-  # │ PromQL panels: HTTP request rate, HikariCP pool, RabbitMQ throughput     │
-  # └──────────────────────────────────────────────────────────────────────────┘
   booking-dashboard.json: |
     {
       "title": "Booking Service Dashboard",

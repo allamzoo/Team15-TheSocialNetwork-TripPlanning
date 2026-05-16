@@ -1,5 +1,9 @@
 package com.team15.tripplanning.destinationservice.service;
 
+import com.team15.tripplanning.contracts.dto.ItineraryDTO;
+import com.team15.tripplanning.contracts.dto.UserDTO;
+
+import com.team15.tripplanning.contracts.feign.UserServiceClient;
 import com.team15.tripplanning.destinationservice.dto.DestinationRateRequest;
 import com.team15.tripplanning.destinationservice.dto.DestinationRevenueDTO;
 import com.team15.tripplanning.destinationservice.dto.DestinationReviewAlertDTO;
@@ -19,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+
+import feign.FeignException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.Cacheable;
@@ -28,6 +34,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.team15.tripplanning.contracts.feign.ItineraryServiceClient;
+import com.team15.tripplanning.contracts.dto.DestinationBookingRevenueAggregateDTO;
+
+import com.team15.tripplanning.contracts.feign.ItineraryServiceClient;
+import com.team15.tripplanning.destinationservice.messaging.publisher.DestinationEventPublisher;
+
 @Service
 public class DestinationService {
     private static final Logger log = LoggerFactory.getLogger(DestinationService.class);
@@ -36,16 +48,26 @@ public class DestinationService {
     private final List<EntityObserver> observers = new ArrayList<>();
     private final RedisTemplate<String, Object> redisTemplate;
     private final DestinationSearchService searchService;
+    private final ItineraryServiceClient itineraryClient;
+    private final DestinationEventPublisher eventPublisher;
+    private final UserServiceClient userClient;
+
 
     public DestinationService(DestinationRepository destinationRepository,
                               DestinationReviewRepository destinationReviewRepository,
                               MongoEventLogger mongoEventLogger,
                               RedisTemplate<String, Object> redisTemplate,
-                              DestinationSearchService searchService) {
+                              DestinationSearchService searchService,
+                              ItineraryServiceClient itineraryClient,
+                              DestinationEventPublisher eventPublisher,
+                              UserServiceClient userClient) {
         this.destinationRepository = destinationRepository;
         this.destinationReviewRepository = destinationReviewRepository;
         this.redisTemplate = redisTemplate;
         this.searchService = searchService;
+        this.itineraryClient = itineraryClient;
+        this.eventPublisher = eventPublisher;
+        this.userClient = userClient;
         register(mongoEventLogger);
     }
 
@@ -203,58 +225,65 @@ public class DestinationService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Destination not found: " + id));
 
+        String oldStatus = destination.getStatus().name();   // capture for the event
+
+        // When deactivating, check active itineraries via Feign
         if (newStatus == DestinationStatus.INACTIVE) {
-            long activeItineraries = destinationRepository.countActiveItinerariesForDestination(id);
-            if (activeItineraries > 0) {
+            int activeCount;
+            try {
+                activeCount = itineraryClient.getDestinationActiveCount(id);
+            } catch (FeignException e) {
+                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                        "Unable to verify active itineraries at this time");
+            }
+            if (activeCount > 0) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Cannot set destination to INACTIVE: " + activeItineraries + " active itinerary(ies) reference it");
+                        "Cannot set destination to INACTIVE: " + activeCount + " active itinerary(ies) reference it");
             }
         }
 
         destination.setStatus(newStatus);
         Destination saved = destinationRepository.save(destination);
+
+        // Publish event
+        eventPublisher.publishStatusChanged(saved.getId(), oldStatus, newStatus.name());
+
+        // Invalidate caches
+        deleteWildcard("s2-destinations::*");
+        deleteWildcard("s2-top-rated::*");
+        deleteWildcard("s2-dest-search::*");
+        deleteWildcard("destination-service::S2-F3::" + id + "::*");
+        deleteWildcard("destination-service::S2-F12::" + id);
+
         Map<String, Object> payload = new HashMap<>();
         payload.put("destinationId", saved.getId());
         payload.put("status", newStatus.name());
         notifyObservers("STATUS_CHANGED", payload);
-        deleteWildcard("s2-destinations::*");
-        deleteWildcard("s2-top-rated::*");
-        deleteWildcard("s2-dest-search::*");
         return saved;
     }
 
-    @Cacheable(value = "s2-dest-revenue", key = "'S2::S2-F4::' + #id + '::' + #startDate + '::' + #endDate")
+    @Cacheable(value = "destination-service", key = "'S2-F3::' + #id + '::' + #startDate + '::' + #endDate")
     public DestinationRevenueDTO getDestinationRevenueSummary(Long id, LocalDate startDate, LocalDate endDate) {
         if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "startDate cannot be after endDate");
         }
         Destination destination = destinationRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Destination not found: " + id));
-        List<Object[]> results = destinationRepository.getDestinationRevenueSummary(id, startDate, endDate);
-        Long totalBookings = 0L;
-        Double totalRevenue = 0.0;
-        Double averageBookingAmount = 0.0;
 
-        if (results != null && !results.isEmpty()) {
-            Object[] row = results.get(0);
-
-            if (row[0] != null) {
-                totalBookings = ((Number) row[0]).longValue();
-            }
-            if (row[1] != null) {
-                totalRevenue = ((Number) row[1]).doubleValue();
-            }
-            if (row[2] != null) {
-                averageBookingAmount = ((Number) row[2]).doubleValue();
-            }
+        // NEW: call itinerary-service via Feign
+        DestinationBookingRevenueAggregateDTO agg;
+        try {
+            agg = itineraryClient.getDestinationBookingRevenue(id, startDate.toString(), endDate.toString());
+        } catch (FeignException e) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Revenue data temporarily unavailable");
         }
 
         return DestinationRevenueDTO.builder()
                 .destinationId(destination.getId())
                 .name(destination.getName())
-                .totalBookings(totalBookings)
-                .totalRevenue(totalRevenue)
-                .averageBookingAmount(averageBookingAmount)
+                .totalBookings(agg.totalBookings())
+                .totalRevenue(agg.totalRevenue() != null ? agg.totalRevenue().doubleValue() : 0.0)
+                .averageBookingAmount(agg.averageBookingAmount() != null ? agg.averageBookingAmount().doubleValue() : 0.0)
                 .build();
     }
 
@@ -301,30 +330,46 @@ public class DestinationService {
         Destination destination = destinationRepository.findById(destinationId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Destination not found"));
 
-        if (destinationRepository.countItineraryById(request.itineraryId()) == 0) {
+        // Validate itinerary via Feign
+        ItineraryDTO itinerary;
+        try {
+            itinerary = itineraryClient.getItinerary(request.itineraryId());
+        } catch (FeignException.NotFound e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found");
+        } catch (FeignException e) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Itinerary service unavailable");
         }
 
-        if (destinationRepository.countValidItinerary(request.itineraryId(), destinationId) == 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Itinerary is either not completed or for a different destination");
+        // Check destination match
+        if (!itinerary.destinationId().equals(destinationId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Itinerary does not belong to this destination");
         }
 
+        // Check status is COMPLETED or PAID
+        if (!List.of("COMPLETED", "PAID").contains(itinerary.status())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Itinerary is not completed or paid");
+        }
+
+        // Recompute rating
         double currentAvg = (destination.getRating() != null) ? destination.getRating() : 0.0;
         int currentTotal = (destination.getTotalRatings() != null) ? destination.getTotalRatings() : 0;
-
         double newAvg = ((currentAvg * currentTotal) + request.rating()) / (currentTotal + 1);
-
         destination.setRating(newAvg);
         destination.setTotalRatings(currentTotal + 1);
         Destination saved = destinationRepository.save(destination);
+
+        // Publish event
+        eventPublisher.publishRated(saved.getId(), request.itineraryId(), Double.valueOf(request.rating()), itinerary.userId());
+
+        // Invalidate caches
+        deleteWildcard("s2-destinations::*");
+        deleteWildcard("s2-top-rated::*");
+        deleteWildcard("s2-dest-search::*");
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("destinationId", saved.getId());
         payload.put("rating", request.rating());
         notifyObservers("RATING_ADDED", payload);
-        deleteWildcard("s2-destinations::*");
-        deleteWildcard("s2-top-rated::*");
-        deleteWildcard("s2-dest-search::*");
         return saved;
     }
 
@@ -344,11 +389,20 @@ public class DestinationService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot verify a review for a future visit");
         }
 
-        String role = destinationRepository.findUserRoleById(verifierId);
-        if (role == null || !role.equalsIgnoreCase("ADMIN")) {
+        // Feign call to user-service for ADMIN check
+        UserDTO verifier;
+        try {
+            verifier = userClient.getUser(verifierId);
+        } catch (FeignException.NotFound e) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User not found");
+        } catch (FeignException e) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "User service unavailable");
+        }
+        if (!"ADMIN".equals(verifier.role())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "User is not an Admin");
         }
 
+        // Mark as verified
         review.setVerified(true);
         Map<String, Object> metadata = review.getMetadata();
         if (metadata == null) {
