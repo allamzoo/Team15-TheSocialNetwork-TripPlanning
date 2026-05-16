@@ -1,5 +1,9 @@
 package com.team15.tripplanning.bookingservice.messaging.publisher;
 
+import org.springframework.amqp.core.Binding;
+import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -7,25 +11,8 @@ import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * S5-INFRA — RabbitMQ exchange, queue and binding declarations for booking-service.
- *
- * Topology owned by this service:
- *
- *   PUBLISHES TO  → payment.events (TopicExchange)
- *                    routing keys: payment.initiated | payment.completed |
- *                                  payment.failed   | payment.refunded
- *
- *   CONSUMES FROM → itinerary.events.booking-consumer  (Queue)
- *                    bound to: itinerary.events (TopicExchange, owned by itinerary-service)
- *                    routing key: itinerary.completed
- *
- * DLQ: itinerary.events.booking-consumer.dlq — receives messages that fail
- * all 3 retry attempts so they are not silently dropped.
- */
 @Configuration
 public class AmqpConfig {
-
     // ── Exchange names ─────────────────────────────────────────────────────────
     public static final String PAYMENT_EXCHANGE   = "payment.events";
     public static final String ITINERARY_EXCHANGE = "itinerary.events";
@@ -43,62 +30,70 @@ public class AmqpConfig {
     public static final String ROUTING_PAYMENT_FAILED     = "payment.failed";
     public static final String ROUTING_PAYMENT_REFUNDED   = "payment.refunded";
 
-    // ── Exchange beans ─────────────────────────────────────────────────────────
-
-    /** TopicExchange this service publishes payment events to. */
-    @Bean
-    TopicExchange paymentExchange() {
-        return new TopicExchange(PAYMENT_EXCHANGE, true, false);
-    }
-
-    /**
-     * itinerary.events is declared by itinerary-service, but we redeclare it here
-     * so the binding below can be created even when itinerary-service is not running.
-     * RabbitMQ is idempotent about duplicate exchange declarations with identical arguments.
-     */
-    @Bean
-    TopicExchange itineraryExchange() {
-        return new TopicExchange(ITINERARY_EXCHANGE, true, false);
-    }
-
-    // ── Queue beans ────────────────────────────────────────────────────────────
+    // ─── Exchanges ────────────────────────────────────────────────────────────
 
     @Bean
-    Queue bookingConsumerDlq() {
-        return QueueBuilder.durable(BOOKING_CONSUMER_DLQ).build();
+    public TopicExchange paymentEventsExchange() {
+        return new TopicExchange("payment.events", true, false);
     }
 
     @Bean
-    Queue bookingConsumerQueue() {
-        return QueueBuilder.durable(BOOKING_CONSUMER_QUEUE)
+    public TopicExchange itineraryEventsExchange() {
+        return new TopicExchange("itinerary.events", true, false);
+    }
+
+    // ─── Queue: booking-service consumes itinerary.completed events ───────────
+
+    @Bean
+    public Queue itineraryBookingConsumerQueue() {
+        return QueueBuilder.durable("itinerary.events.booking-consumer")
                 .withArgument("x-dead-letter-exchange", "")
-                .withArgument("x-dead-letter-routing-key", BOOKING_CONSUMER_DLQ)
+                .withArgument("x-dead-letter-routing-key", "itinerary.events.booking-consumer.dlq")
                 .build();
     }
 
-    // ── Binding ────────────────────────────────────────────────────────────────
-
     @Bean
-    Binding bookingConsumerBinding(Queue bookingConsumerQueue,
-                                   TopicExchange itineraryExchange) {
-        return BindingBuilder
-                .bind(bookingConsumerQueue)
-                .to(itineraryExchange)
-                .with(ROUTING_ITINERARY_COMPLETED);
+    public Queue bookingConsumerDlq() {
+        return QueueBuilder.durable("itinerary.events.booking-consumer.dlq").build();
     }
 
-    // ── Jackson message converter ──────────────────────────────────────────────
+    @Bean
+    public Binding itineraryCompletedBinding(Queue itineraryBookingConsumerQueue,
+                                              TopicExchange itineraryEventsExchange) {
+        return BindingBuilder
+                .bind(itineraryBookingConsumerQueue)
+                .to(itineraryEventsExchange)
+                .with("itinerary.completed");
+    }
+
+    // ─── Queue: booking-service consumes itinerary.cancelled events ───────────
 
     @Bean
-    Jackson2JsonMessageConverter jsonMessageConverter() {
+    public Queue itineraryCancelledBookingQueue() {
+        return new Queue("itinerary.events.booking-cancelled-consumer", true);
+    }
+
+    @Bean
+    public Binding itineraryCancelledBinding(Queue itineraryCancelledBookingQueue,
+                                              TopicExchange itineraryEventsExchange) {
+        return BindingBuilder
+                .bind(itineraryCancelledBookingQueue)
+                .to(itineraryEventsExchange)
+                .with("itinerary.cancelled");
+    }
+
+    // ─── Jackson JSON message converter ──────────────────────────────────────
+
+    @Bean
+    public Jackson2JsonMessageConverter messageConverter() {
         return new Jackson2JsonMessageConverter();
     }
 
     @Bean
-    RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory,
-                                  Jackson2JsonMessageConverter jsonMessageConverter) {
+    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory,
+                                          Jackson2JsonMessageConverter messageConverter) {
         RabbitTemplate template = new RabbitTemplate(connectionFactory);
-        template.setMessageConverter(jsonMessageConverter);
+        template.setMessageConverter(messageConverter);
         return template;
     }
 }

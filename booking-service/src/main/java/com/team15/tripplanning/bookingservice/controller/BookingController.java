@@ -1,12 +1,21 @@
 package com.team15.tripplanning.bookingservice.controller;
 
+import com.team15.tripplanning.bookingservice.dto.AggregateByItinerariesRequest;
+import com.team15.tripplanning.bookingservice.dto.AggregateResultDTO;
 import com.team15.tripplanning.bookingservice.dto.CreateBookingRequest;
 import com.team15.tripplanning.bookingservice.dto.DestinationSeasonRevenueDTO;
+import com.team15.tripplanning.bookingservice.dto.RefundCancellationRequest;
 import com.team15.tripplanning.bookingservice.dto.RevenueReportDTO;
 import com.team15.tripplanning.bookingservice.dto.SaleAuditTrailDTO;
+import com.team15.tripplanning.bookingservice.dto.SettlementProcessRequest;
+import com.team15.tripplanning.bookingservice.dto.SettlementResultDTO;
 import com.team15.tripplanning.bookingservice.dto.UserBookingSummaryDTO;
+import com.team15.tripplanning.bookingservice.dto.UserBookingTotalDTO;
 import com.team15.tripplanning.bookingservice.model.Booking;
+import com.team15.tripplanning.bookingservice.security.JwtService;
 import com.team15.tripplanning.bookingservice.service.BookingService;
+import com.team15.tripplanning.bookingservice.service.SettlementService;
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,15 +32,20 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import com.team15.tripplanning.bookingservice.dto.RefundCancellationRequest;
 
 @RestController
 @RequestMapping("/api/bookings")
 public class BookingController {
     private final BookingService bookingService;
+    private final SettlementService settlementService;
+    private final JwtService jwtService;
 
-    public BookingController(BookingService bookingService) {
+    public BookingController(BookingService bookingService,
+                             SettlementService settlementService,
+                             JwtService jwtService) {
         this.bookingService = bookingService;
+        this.settlementService = settlementService;
+        this.jwtService = jwtService;
     }
 
     @PostMapping
@@ -189,6 +203,50 @@ public class BookingController {
         }
 
         Map<String, Object> result = bookingService.processRefundCancellationTier(id, request);
+        return ResponseEntity.ok(result);
+    }
+
+    // ===== S5-READ-DB: 3 aggregate endpoints + 1 settlement endpoint =====
+
+    /** GET /api/bookings/user/{userId}/total?startDate=&endDate= */
+    @GetMapping("/user/{userId}/total")
+    public ResponseEntity<UserBookingTotalDTO> getUserBookingTotal(
+            @PathVariable Long userId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate
+    ) {
+        return ResponseEntity.ok(bookingService.getUserBookingTotal(userId, startDate, endDate));
+    }
+
+    /** POST /api/bookings/aggregate-by-itineraries */
+    @PostMapping("/aggregate-by-itineraries")
+    public ResponseEntity<AggregateResultDTO> aggregateByItineraries(
+            @RequestBody AggregateByItinerariesRequest request
+    ) {
+        return ResponseEntity.ok(bookingService.aggregateByItineraries(request));
+    }
+
+    /** GET /api/bookings/itinerary/{itineraryId}/confirmed-summary */
+    @GetMapping("/itinerary/{itineraryId}/confirmed-summary")
+    public ResponseEntity<AggregateResultDTO> getConfirmedSummaryForItinerary(
+            @PathVariable Long itineraryId
+    ) {
+        return ResponseEntity.ok(bookingService.getConfirmedSummaryForItinerary(itineraryId));
+    }
+
+    /** POST /api/bookings/settlement/process */
+    @PostMapping("/settlement/process")
+    public ResponseEntity<SettlementResultDTO> processSettlement(
+            @RequestBody SettlementProcessRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        String header = httpRequest.getHeader("Authorization");
+        if (header == null || !header.startsWith("Bearer ")) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED, "Missing or invalid Authorization header");
+        }
+        Long jwtUserId = jwtService.extractUserId(header.substring(7));
+        SettlementResultDTO result = settlementService.processSettlement(request, jwtUserId);
         return ResponseEntity.ok(result);
     }
 }

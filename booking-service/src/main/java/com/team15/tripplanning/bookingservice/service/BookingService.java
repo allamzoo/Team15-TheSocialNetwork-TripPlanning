@@ -1,5 +1,7 @@
 package com.team15.tripplanning.bookingservice.service;
 
+import com.team15.tripplanning.bookingservice.dto.AggregateByItinerariesRequest;
+import com.team15.tripplanning.bookingservice.dto.AggregateResultDTO;
 import com.team15.tripplanning.bookingservice.dto.AppliedCouponDTO;
 import com.team15.tripplanning.bookingservice.dto.AuditEventDTO;
 import com.team15.tripplanning.bookingservice.dto.BookingDetailsDTO;
@@ -9,9 +11,14 @@ import com.team15.tripplanning.bookingservice.dto.CreateBookingRequest;
 import com.team15.tripplanning.bookingservice.dto.RevenueReportDTO;
 import com.team15.tripplanning.bookingservice.dto.SaleAuditTrailDTO;
 import com.team15.tripplanning.bookingservice.dto.UserBookingSummaryDTO;
+import com.team15.tripplanning.bookingservice.dto.UserBookingTotalDTO;
 import com.team15.tripplanning.bookingservice.dto.RefundCancellationRequest;
 import com.team15.tripplanning.bookingservice.dto.ItineraryRefundInfo;
-import com.team15.tripplanning.bookingservice.dto.CreateBookingRequest;
+import com.team15.tripplanning.contracts.feign.DestinationServiceClient;
+import com.team15.tripplanning.contracts.feign.ItineraryServiceClient;
+import com.team15.tripplanning.contracts.feign.UserServiceClient;
+import com.team15.tripplanning.contracts.dto.DestinationDTO;
+import com.team15.tripplanning.contracts.dto.ItineraryDTO;
 import com.team15.tripplanning.bookingservice.model.mongo.PaymentAuditEvent;
 import com.team15.tripplanning.bookingservice.repository.PaymentAuditEventRepository;
 import com.team15.tripplanning.bookingservice.model.Booking;
@@ -21,6 +28,9 @@ import com.team15.tripplanning.bookingservice.repository.BookingCouponRepository
 import com.team15.tripplanning.bookingservice.repository.BookingRepository;
 import com.team15.tripplanning.bookingservice.repository.CouponRepository;
 import com.team15.tripplanning.shared.observer.EntityObserver;
+import feign.FeignException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
@@ -30,6 +40,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.team15.tripplanning.bookingservice.strategy.*;
 
 
+import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -38,27 +49,40 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.LinkedHashMap;
 
 @Service
 public class BookingService {
+
+    private static final Logger log = LoggerFactory.getLogger(BookingService.class);
+
     private final BookingRepository bookingRepository;
     private final BookingCouponRepository bookingCouponRepository;
     private final CouponRepository couponRepository;
     private final PaymentAuditEventRepository paymentAuditEventRepository;
     private final List<EntityObserver> observers = new ArrayList<>();
     private final RedisTemplate<String, Object> redisTemplate;
+    private final UserServiceClient userServiceClient;
+    private final ItineraryServiceClient itineraryServiceClient;
+    private final DestinationServiceClient destinationServiceClient;
 
     public BookingService(BookingRepository bookingRepository,
                           BookingCouponRepository bookingCouponRepository,
                           CouponRepository couponRepository,
                           PaymentAuditEventRepository paymentAuditEventRepository,
                           MongoEventLogger mongoEventLogger,
-                          RedisTemplate<String, Object> redisTemplate) {
+                          RedisTemplate<String, Object> redisTemplate,
+                          UserServiceClient userServiceClient,
+                          ItineraryServiceClient itineraryServiceClient,
+                          DestinationServiceClient destinationServiceClient) {
         this.bookingRepository = bookingRepository;
         this.bookingCouponRepository = bookingCouponRepository;
         this.couponRepository = couponRepository;
         this.paymentAuditEventRepository = paymentAuditEventRepository;
         this.redisTemplate = redisTemplate;
+        this.userServiceClient = userServiceClient;
+        this.itineraryServiceClient = itineraryServiceClient;
+        this.destinationServiceClient = destinationServiceClient;
         register(mongoEventLogger);
     }
 
@@ -114,7 +138,9 @@ public class BookingService {
 
         Long userId = request.getUserId();
         if (userId == null) {
-            userId = bookingRepository.getItineraryUserId(request.getItineraryId());
+            // Feign call to itinerary-service to get the itinerary's owner
+            ItineraryDTO itin = fetchItineraryOrThrow(request.getItineraryId());
+            userId = itin.userId();
         }
         if (userId == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found");
@@ -206,8 +232,13 @@ public class BookingService {
     // ===== S5-F3: User Booking Summary =====
     @Cacheable(value = "s5-booking-summary", key = "'S5::S5-F3::' + #userId")
     public UserBookingSummaryDTO getUserBookingSummary(Long userId) {
-        if (bookingRepository.countUserById(userId) == 0) {
+        // Feign call to user-service instead of local cross-service DB query
+        try {
+            userServiceClient.getUser(userId);
+        } catch (FeignException.NotFound e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found: " + userId);
+        } catch (FeignException e) {
+            log.warn("user-service unavailable for userId={}, proceeding with local data: {}", userId, e.getMessage());
         }
 
         List<Booking> userBookings = bookingRepository.findByUserId(userId);
@@ -563,21 +594,71 @@ public class BookingService {
         LocalDateTime start = startDate.atStartOfDay();
         LocalDateTime end = endDate.atTime(23, 59, 59, 999000000);
 
-        List<Object[]> rows = bookingRepository.getRevenueByDestinationAndSeason(start, end);
+        // Step 1 — query local bookings table only (no cross-service JOIN)
+        List<Object[]> rows = bookingRepository.getRevenueByItinerary(start, end);
 
-        List<DestinationSeasonRevenueDTO> result = new ArrayList<>();
+        // Step 2 — aggregate per destinationId using Feign calls
+        // Map: destinationId → running totals
+        Map<Long, double[]> destTotals = new HashMap<>();   // [totalRevenue, surchargeRevenue, peakCount, offPeakCount]
+        Map<Long, Long>     destIdByItinerary = new HashMap<>();
+
         for (Object[] row : rows) {
+            long itineraryId   = ((Number) row[0]).longValue();
+            double totalRev    = ((Number) row[1]).doubleValue();
+            double surchargeRev = ((Number) row[2]).doubleValue();
+            long   peakCount   = ((Number) row[3]).longValue();
+            long   offPeakCount = ((Number) row[4]).longValue();
+
+            // Feign: get destinationId for this itinerary
+            Long destinationId = destIdByItinerary.computeIfAbsent(itineraryId, iid -> {
+                try {
+                    ItineraryDTO itin = itineraryServiceClient.getItinerary(iid);
+                    return itin != null ? itin.destinationId() : null;
+                } catch (FeignException e) {
+                    log.warn("itinerary-service unavailable for itineraryId={}: {}", iid, e.getMessage());
+                    return null;
+                }
+            });
+
+            if (destinationId == null) continue;
+
+            destTotals.merge(destinationId, new double[]{totalRev, surchargeRev, peakCount, offPeakCount},
+                    (existing, incoming) -> new double[]{
+                            existing[0] + incoming[0],
+                            existing[1] + incoming[1],
+                            existing[2] + incoming[2],
+                            existing[3] + incoming[3]
+                    });
+        }
+
+        // Step 3 — enrich with destination names via Feign
+        List<DestinationSeasonRevenueDTO> result = new ArrayList<>();
+        for (Map.Entry<Long, double[]> entry : destTotals.entrySet()) {
+            Long destinationId = entry.getKey();
+            double[] totals    = entry.getValue();
+
+            String destinationName = "Unknown";
+            try {
+                DestinationDTO dest = destinationServiceClient.getDestination(destinationId);
+                if (dest != null && dest.name() != null) {
+                    destinationName = dest.name();
+                }
+            } catch (FeignException e) {
+                log.warn("destination-service unavailable for destinationId={}: {}", destinationId, e.getMessage());
+            }
+
             result.add(DestinationSeasonRevenueDTO.builder()
-                    .destinationId(((Number) row[0]).longValue())
-                    .destinationName((String) row[1])
-                    .totalRevenue(((Number) row[2]).doubleValue())
-                    .surchargeRevenue(((Number) row[3]).doubleValue())
-                    .baseRevenue(((Number) row[4]).doubleValue())
-                    .peakBookingCount(((Number) row[5]).longValue())
-                    .offPeakBookingCount(((Number) row[6]).longValue())
+                    .destinationId(destinationId)
+                    .destinationName(destinationName)
+                    .totalRevenue(totals[0])
+                    .surchargeRevenue(totals[1])
+                    .baseRevenue(totals[0] - totals[1])
+                    .peakBookingCount((long) totals[2])
+                    .offPeakBookingCount((long) totals[3])
                     .build());
         }
 
+        result.sort((a, b) -> Double.compare(b.getTotalRevenue(), a.getTotalRevenue()));
         return result;
     }
 
@@ -661,20 +742,86 @@ public class BookingService {
                 .build();
     }
 
+    // ===== S5-READ-DB: extra aggregate endpoints =====
+
+    /** GET /api/bookings/user/{userId}/total — CONFIRMED bookings in date range. */
+    public UserBookingTotalDTO getUserBookingTotal(Long userId,
+                                                   LocalDateTime startDate,
+                                                   LocalDateTime endDate) {
+        Object[] row = bookingRepository.getUserBookingTotal(userId, startDate, endDate);
+        // result may be wrapped in an outer array by some JDBC drivers
+        if (row.length == 1 && row[0] instanceof Object[] nested) {
+            row = nested;
+        }
+        BigDecimal total = new java.math.BigDecimal(row[0].toString());
+        long count = ((Number) row[1]).longValue();
+
+        UserBookingTotalDTO dto = new UserBookingTotalDTO();
+        dto.setUserId(userId);
+        dto.setTotalAmount(total);
+        dto.setBookingCount(count);
+        dto.setStartDate(startDate);
+        dto.setEndDate(endDate);
+        return dto;
+    }
+
+    /** POST /api/bookings/aggregate-by-itineraries — batch aggregate by itinerary list. */
+    public AggregateResultDTO aggregateByItineraries(AggregateByItinerariesRequest request) {
+        if (request.getItineraryIds() == null || request.getItineraryIds().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "itineraryIds must not be empty");
+        }
+        String status = request.getStatus() != null ? request.getStatus().toUpperCase() : "CONFIRMED";
+        LocalDateTime start = request.getStartDate() != null
+                ? request.getStartDate() : LocalDateTime.of(2000, 1, 1, 0, 0);
+        LocalDateTime end = request.getEndDate() != null
+                ? request.getEndDate() : LocalDateTime.now().plusYears(10);
+
+        Object[] row = bookingRepository.aggregateByItineraries(
+                request.getItineraryIds(), status, start, end);
+        if (row.length == 1 && row[0] instanceof Object[] nested) {
+            row = nested;
+        }
+        long count = ((Number) row[0]).longValue();
+        BigDecimal total = new java.math.BigDecimal(row[1].toString());
+        return new AggregateResultDTO(count, total);
+    }
+
+    /** GET /api/bookings/itinerary/{itineraryId}/confirmed-summary */
+    public AggregateResultDTO getConfirmedSummaryForItinerary(Long itineraryId) {
+        Object[] row = bookingRepository.getConfirmedSummaryForItinerary(itineraryId);
+        if (row.length == 1 && row[0] instanceof Object[] nested) {
+            row = nested;
+        }
+        long count = ((Number) row[0]).longValue();
+        BigDecimal total = new java.math.BigDecimal(row[1].toString());
+        return new AggregateResultDTO(count, total);
+    }
+
     private void validateItineraryAllowsBooking(Long itineraryId) {
-        if (bookingRepository.countItineraryById(itineraryId) == 0) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found");
-        }
+        // Feign call to itinerary-service replaces native SQL against local shadow table
+        ItineraryDTO itin = fetchItineraryOrThrow(itineraryId);
 
-        String status = bookingRepository.getItineraryStatus(itineraryId);
-        if (status == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found");
-        }
-
-        String normalized = status.trim().toUpperCase();
+        String normalized = itin.status() != null ? itin.status().trim().toUpperCase() : "";
         if (!normalized.equals("PLANNED") && !normalized.equals("IN_PROGRESS")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Booking is allowed only for PLANNED or IN_PROGRESS itineraries");
+        }
+    }
+
+    /** Fetches itinerary from itinerary-service via Feign; throws 404 if not found. */
+    private ItineraryDTO fetchItineraryOrThrow(Long itineraryId) {
+        try {
+            ItineraryDTO itin = itineraryServiceClient.getItinerary(itineraryId);
+            if (itin == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found: " + itineraryId);
+            }
+            return itin;
+        } catch (FeignException.NotFound e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found: " + itineraryId);
+        } catch (FeignException e) {
+            log.error("itinerary-service unavailable for itineraryId={}: {}", itineraryId, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "itinerary-service unavailable — cannot validate itinerary");
         }
     }
 
@@ -693,18 +840,18 @@ public class BookingService {
                         "Booking not found: " + bookingId
                 ));
 
-        // ===== c) Fetch itinerary info (for status check) =====
+        // ===== c) Fetch itinerary info via Feign (S5-F12: replaces findItineraryRefundInfoRaw) =====
         String itineraryStatus = null;
         Long itineraryId = booking.getItineraryId();
         if (itineraryId != null) {
-            Object[] raw = bookingRepository.findItineraryRefundInfoRaw(itineraryId);
-            if (raw != null) {
-                if (raw.length == 1 && raw[0] instanceof Object[] nested) {
-                    raw = nested;
+            try {
+                ItineraryDTO itin = itineraryServiceClient.getItinerary(itineraryId);
+                if (itin != null && itin.status() != null) {
+                    itineraryStatus = itin.status();
                 }
-                if (raw.length >= 2 && raw[1] != null) {
-                    itineraryStatus = raw[1].toString();
-                }
+            } catch (FeignException e) {
+                log.warn("itinerary-service unavailable for itineraryId={}, falling back to booking status: {}",
+                        itineraryId, e.getMessage());
             }
         }
 

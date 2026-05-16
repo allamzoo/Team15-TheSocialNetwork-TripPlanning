@@ -78,11 +78,10 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @Query(value = "SELECT COUNT(*) FROM users WHERE id = :userId", nativeQuery = true)
     int countUserById(@Param("userId") Long userId);
 
-    // S5-F10
+    // S5-F10 — local-only query (no JOIN to external tables); enrichment via Feign
     @Query(value = """
         SELECT
-            d.id                                                          AS destinationId,
-            d.name                                                        AS destinationName,
+            b.itin_id                                                     AS itineraryId,
             COALESCE(SUM(b.amount), 0)                                    AS totalRevenue,
             COALESCE(SUM(
                 CAST(COALESCE(
@@ -90,12 +89,6 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
                     '0'
                 ) AS NUMERIC)
             ), 0)                                                         AS surchargeRevenue,
-            COALESCE(SUM(b.amount), 0) - COALESCE(SUM(
-                CAST(COALESCE(
-                    NULLIF(b.booking_details->>'seasonalSurcharge', ''),
-                    '0'
-                ) AS NUMERIC)
-            ), 0)                                                         AS baseRevenue,
             COUNT(CASE WHEN CAST(COALESCE(
                 NULLIF(b.booking_details->>'seasonalSurcharge', ''),
                 '0'
@@ -105,24 +98,61 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
                 '0'
             ) AS NUMERIC) = 0 THEN 1 END)                                AS offPeakBookingCount
         FROM bookings b
-        JOIN itineraries i ON i.id = b.itin_id
-        JOIN destinations d ON d.id = i.destination_id
         WHERE b.status = 'CONFIRMED'
           AND b.created_at >= :startDate
           AND b.created_at <= :endDate
-        GROUP BY d.id, d.name
+        GROUP BY b.itin_id
         ORDER BY SUM(b.amount) DESC
         """, nativeQuery = true)
-    List<Object[]> getRevenueByDestinationAndSeason(
+    List<Object[]> getRevenueByItinerary(
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
     );
 
+    // ─── M3 new endpoints ────────────────────────────────────────────────────
+
+    /** S1-F6: total CONFIRMED booking amount + count for a user in a date range. */
     @Query(value = """
-    SELECT i.id, i.status, i.start_date
-    FROM itineraries i
-    WHERE i.id = :itineraryId
-    """, nativeQuery = true)
+        SELECT COALESCE(SUM(b.amount), 0), COUNT(*)
+        FROM bookings b
+        WHERE b.user_id   = :userId
+          AND b.status    = 'CONFIRMED'
+          AND b.created_at BETWEEN :startDate AND :endDate
+        """, nativeQuery = true)
+    Object[] getUserBookingTotal(
+            @Param("userId")    Long userId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate")   LocalDateTime endDate
+    );
+
+    /** S2-F3 / S3-F4: batch aggregate across a list of itinerary IDs. */
+    @Query(value = """
+        SELECT COUNT(*), COALESCE(SUM(b.amount), 0)
+        FROM bookings b
+        WHERE b.itin_id   IN :itineraryIds
+          AND b.status    = :status
+          AND b.created_at BETWEEN :startDate AND :endDate
+        """, nativeQuery = true)
+    Object[] aggregateByItineraries(
+            @Param("itineraryIds") List<Long> itineraryIds,
+            @Param("status")       String status,
+            @Param("startDate")    LocalDateTime startDate,
+            @Param("endDate")      LocalDateTime endDate
+    );
+
+    /** S3-F4 saga pre-check + budget calculation: CONFIRMED count + sum for one itinerary. */
+    @Query(value = """
+        SELECT COUNT(*), COALESCE(SUM(b.amount), 0)
+        FROM bookings b
+        WHERE b.itin_id = :itineraryId
+          AND b.status  = 'CONFIRMED'
+        """, nativeQuery = true)
+    Object[] getConfirmedSummaryForItinerary(@Param("itineraryId") Long itineraryId);
+    @Query(value = """
+SELECT i.id, i.status, i.start_date
+FROM itineraries i
+WHERE i.id = :itineraryId
+""", nativeQuery = true)
     Object[] findItineraryRefundInfoRaw(@Param("itineraryId") Long itineraryId);
 
     /**
@@ -131,10 +161,10 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
      * Used by BookingAggregateService.getConfirmedSummary().
      */
     @Query("""
-            SELECT COUNT(b), COALESCE(SUM(b.amount), 0.0)
-            FROM Booking b
-            WHERE b.itineraryId = :itineraryId
-              AND b.status = com.team15.tripplanning.bookingservice.model.Booking.BookingStatus.CONFIRMED
-            """)
+        SELECT COUNT(b), COALESCE(SUM(b.amount), 0.0)
+        FROM Booking b
+        WHERE b.itineraryId = :itineraryId
+          AND b.status = com.team15.tripplanning.bookingservice.model.Booking.BookingStatus.CONFIRMED
+        """)
     List<Object[]> countAndSumConfirmed(@Param("itineraryId") Long itineraryId);
 }

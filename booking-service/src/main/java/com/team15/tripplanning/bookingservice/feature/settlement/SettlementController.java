@@ -3,7 +3,14 @@ package com.team15.tripplanning.bookingservice.feature.settlement;
 import com.team15.tripplanning.bookingservice.saga.SettlementSaga;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.server.ResponseStatusException;
+import com.team15.tripplanning.bookingservice.model.Settlement;
+import com.team15.tripplanning.bookingservice.repository.SettlementRepository;
 import java.math.BigDecimal;
 import java.util.Map;
 
@@ -30,6 +37,19 @@ public class SettlementController {
     @GetMapping("/settlements/{itineraryId}")
     public ResponseEntity<SettlementDTO> getByItinerary(@PathVariable Long itineraryId) {
         return ResponseEntity.ok(settlementService.getByItineraryId(itineraryId));
+    }
+    /**
+     * GET /api/bookings/settlements
+     * Returns a paginated list of all settlements. ADMIN only.
+     */
+    @GetMapping("/settlements")
+    public ResponseEntity<Page<Settlement>> listAll(
+            @RequestHeader(value = "X-User-Role", required = false) String role,
+            @PageableDefault(size = 20) Pageable pageable) {
+        if (!"ADMIN".equalsIgnoreCase(role)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin access required");
+        }
+        return ResponseEntity.ok(settlementRepository.findAll(pageable));
     }
 
     /**

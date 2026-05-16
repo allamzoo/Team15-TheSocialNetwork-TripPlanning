@@ -1,0 +1,110 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  booking-service/deployment.yaml — OWNED BY S5                              ║
+# ║  Deploys the booking-service into the tripplanning namespace.               ║
+# ║  DB DNS  : booking-postgres.tripplanning.svc.cluster.local:5432             ║
+# ║  MQ DNS  : rabbitmq.tripplanning.svc.cluster.local:5672                     ║
+# ║  Loki DNS: loki.monitoring.svc.cluster.local:3100                           ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-service
+  namespace: tripplanning
+  labels:
+    app: booking-service
+    slice: s5
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: booking-service
+  template:
+    metadata:
+      labels:
+        app: booking-service
+        slice: s5
+    spec:
+      containers:
+        - name: booking-service
+          image: booking-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            # ── PostgreSQL (isolated booking-postgres) ──────────────────────────
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://booking-postgres.tripplanning.svc.cluster.local:5432/tripdb-bookings
+            - name: SPRING_DATASOURCE_USERNAME
+              value: postgres
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: postgres
+
+            # ── MongoDB ─────────────────────────────────────────────────────────
+            - name: SPRING_MONGODB_HOST
+              value: tripplanning-mongo.tripplanning.svc.cluster.local
+            - name: SPRING_MONGODB_PORT
+              value: "27017"
+            - name: SPRING_MONGODB_DATABASE
+              value: tripplanningdb
+
+            # ── Redis ───────────────────────────────────────────────────────────
+            - name: SPRING_DATA_REDIS_HOST
+              value: tripplanning-redis.tripplanning.svc.cluster.local
+            - name: SPRING_DATA_REDIS_PORT
+              value: "6379"
+
+            # ── RabbitMQ ─────────────────────────────────────────────────────────
+            - name: SPRING_RABBITMQ_HOST
+              value: rabbitmq.tripplanning.svc.cluster.local
+            - name: SPRING_RABBITMQ_PORT
+              value: "5672"
+            - name: SPRING_RABBITMQ_USERNAME
+              value: guest
+            - name: SPRING_RABBITMQ_PASSWORD
+              value: guest
+            - name: M3_MESSAGING_ENABLED
+              value: "true"
+
+            # ── Feign downstream URLs ────────────────────────────────────────────
+            - name: FEIGN_USER_SERVICE_URL
+              value: http://user-service.tripplanning.svc.cluster.local:8080
+            - name: FEIGN_ITINERARY_SERVICE_URL
+              value: http://itinerary-service.tripplanning.svc.cluster.local:8080
+            - name: FEIGN_DESTINATION_SERVICE_URL
+              value: http://destination-service.tripplanning.svc.cluster.local:8080
+
+            # ── Loki (logback-spring.xml reads this env var) ─────────────────────
+            - name: LOKI_URL
+              value: http://loki.monitoring.svc.cluster.local:3100
+
+            # ── Spring profile — activates Loki4J appender ──────────────────────
+            - name: SPRING_PROFILES_ACTIVE
+              value: k8s
+
+            # ── JWT ──────────────────────────────────────────────────────────────
+            - name: JWT_SECRET
+              value: tripplanning-secret-key-for-jwt-token-signing
+
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 250m
+            limits:
+              memory: 512Mi
+              cpu: 500m
+
+          readinessProbe:
+            httpGet:
+              path: /api/bookings/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 5
+
+          livenessProbe:
+            httpGet:
+              path: /api/bookings/health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            failureThreshold: 3
