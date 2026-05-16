@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import com.team15.tripplanning.activityservice.messaging.publisher.ActivityEventPublisher;
 
 @Service
 public class ActivityService {
@@ -39,16 +40,19 @@ public class ActivityService {
     private final ActivityLifecycleEventStore lifecycleEventRepository;
     private final List<EntityObserver> observers = new ArrayList<>();
     private final RedisTemplate<String, Object> redisTemplate;
+    private final ActivityEventPublisher activityEventPublisher;
 
 
 
     public ActivityService(ActivityRepository activityRepository,
                            ActivityLifecycleEventStore lifecycleEventRepository,
                            MongoEventLogger mongoEventLogger,
-                           RedisTemplate<String, Object> redisTemplate) {
+                           RedisTemplate<String, Object> redisTemplate,
+                           ActivityEventPublisher activityEventPublisher) {
         this.activityRepository = activityRepository;
         this.lifecycleEventRepository = lifecycleEventRepository;
         this.redisTemplate = redisTemplate;
+        this.activityEventPublisher = activityEventPublisher;
         register(mongoEventLogger);
     }
 
@@ -141,6 +145,12 @@ public class ActivityService {
         }
         activity.setItineraryId(itineraryId);
         Activity saved = activityRepository.save(activity);
+        // M3: publish activity.created event
+        activityEventPublisher.publishActivityCreated(
+                saved.getId(),
+                itineraryId,
+                saved.getCategory().name()
+        );
         Map<String, Object> payload = new HashMap<>();
         payload.put("activityId", saved.getId());
         payload.put("itineraryId", itineraryId);
@@ -317,6 +327,14 @@ public class ActivityService {
         }
 
         List<Activity> saved = activityRepository.saveAll(activities);
+        // M3: publish one activity.created event per saved activity
+        for (Activity s : saved) {
+            activityEventPublisher.publishActivityCreated(
+                    s.getId(),
+                    itineraryId,
+                    s.getCategory().name()
+            );
+        }
         Map<String, Object> payload = new HashMap<>();
         payload.put("itineraryId", itineraryId);
         payload.put("count", saved.size());

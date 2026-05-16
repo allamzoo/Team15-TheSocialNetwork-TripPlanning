@@ -235,7 +235,104 @@ data:
   # │ Include Cassandra write latency panel (PromQL).                          │
   # └──────────────────────────────────────────────────────────────────────────┘
   activity-dashboard.json: |
-    { "title": "Activity Service Dashboard", "panels": [], "schemaVersion": 36, "version": 1 }
+    activity-dashboard.json: |
+    {
+      "title": "Activity Service Dashboard",
+      "uid": "activity-service-dashboard",
+      "schemaVersion": 36,
+      "version": 1,
+      "refresh": "30s",
+      "panels": [
+        {
+          "id": 1,
+          "title": "HTTP Request Rate (req/s)",
+          "type": "timeseries",
+          "description": "PromQL Panel 1 - Requests per second on activity-service endpoints",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "rate(http_server_requests_seconds_count{job=\"activity-service\"}[5m])",
+              "legendFormat": "{{uri}} {{method}}"
+            }
+          ],
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+        },
+        {
+          "id": 2,
+          "title": "JVM Heap Usage (bytes)",
+          "type": "timeseries",
+          "description": "PromQL Panel 2 - Heap memory used vs max",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "jvm_memory_used_bytes{job=\"activity-service\", area=\"heap\"}",
+              "legendFormat": "heap used"
+            },
+            {
+              "expr": "jvm_memory_max_bytes{job=\"activity-service\", area=\"heap\"}",
+              "legendFormat": "heap max"
+            }
+          ],
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+        },
+        {
+          "id": 3,
+          "title": "RabbitMQ Consumer Throughput",
+          "type": "timeseries",
+          "description": "PromQL Panel 3 - Messages consumed per minute on activity.itinerary.saga-listener",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "increase(spring_rabbitmq_listener_seconds_count{job=\"activity-service\"}[1m])",
+              "legendFormat": "messages consumed/min"
+            }
+          ],
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }
+        },
+        {
+          "id": 4,
+          "title": "Error Rate (errors/min)",
+          "type": "timeseries",
+          "description": "LogQL Panel 1 - ERROR-level log lines per minute",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "targets": [
+            {
+              "expr": "sum(count_over_time({service=\"activity-service\", level=\"ERROR\"}[1m]))",
+              "legendFormat": "errors/min"
+            }
+          ],
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }
+        },
+        {
+          "id": 5,
+          "title": "RabbitMQ Event Audit (activity.events)",
+          "type": "timeseries",
+          "description": "LogQL Panel 2 - activity.* routing key publish and consume log lines",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "targets": [
+            {
+              "expr": "count_over_time({service=\"activity-service\"} | json | routingKey=~\"activity\\\\..*\"[5m])",
+              "legendFormat": "activity events/5m"
+            }
+          ],
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 }
+        },
+        {
+          "id": 6,
+          "title": "Cassandra Lifecycle Writes (COMPLETED / CANCELLED)",
+          "type": "logs",
+          "description": "LogQL Panel 3 - Log lines for fresh Cassandra status row inserts",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "targets": [
+            {
+              "expr": "{service=\"activity-service\"} | json | message=~\".*saved with status=(COMPLETED|CANCELLED).*\"",
+              "legendFormat": ""
+            }
+          ],
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 24 }
+        }
+      ]
+    }
 
   # ┌─ S5 OWNED BLOCK ─ PR: feature/m3-s5-infra-booking ──────────────────────┐
   # │ LogQL panels : error rate, RabbitMQ event audit, saga state transitions  │

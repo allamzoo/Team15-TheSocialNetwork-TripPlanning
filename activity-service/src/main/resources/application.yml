@@ -53,8 +53,13 @@ spring:
     virtual-host: /
     listener:
       simple:
-        auto-startup: ${M3_MESSAGING_ENABLED:false}
+        acknowledge-mode: auto
+        default-requeue-rejected: false
         missing-queues-fatal: false
+        retry:
+          enabled: true
+          initial-interval: 1000
+          max-attempts: 3
 
 server:
   port: 8080
@@ -77,3 +82,13 @@ m3:
   messaging:
     enabled: ${M3_MESSAGING_ENABLED:false}
 # ─── END S4 OWNED BLOCK ─────────────────────────────────────────────────────
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "prometheus,health,info"
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
