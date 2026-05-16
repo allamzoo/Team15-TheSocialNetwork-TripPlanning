@@ -1,0 +1,67 @@
+{
+  "title": "Activity Service — Mario Sameh (55-0677)",
+  "uid": "activity-service-mario-55-0677",
+  "description": "S4-READ-DB observability dashboard — 3 LogQL panels for activity-service",
+  "tags": ["tripplanning", "activity-service", "team15"],
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Panel 1 — Error Rate (activity-service)",
+      "description": "Count of ERROR-level log lines per minute. A spike means something is broken — check Feign calls to itinerary-service first.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "sum(count_over_time({app=\"tripplanning\", service=\"activity-service\", level=\"ERROR\"}[1m]))",
+          "legendFormat": "errors / min"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Panel 2 — Feign Call Outcomes (activity-service → itinerary-service)",
+      "description": "Successful Feign responses vs FeignException catches over 5 minutes. Detects when itinerary-service is degraded so S4-F2 and S4-F4 start failing.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "sum(count_over_time({app=\"tripplanning\", service=\"activity-service\"} | json | message =~ \"itinerary-service.getItinerary returned successfully\" [5m]))",
+          "legendFormat": "feign-success"
+        },
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "sum(count_over_time({app=\"tripplanning\", service=\"activity-service\"} | json | message =~ \"Feign call to itinerary-service failed\" [5m]))",
+          "legendFormat": "feign-error"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Panel 3 — Activity Created Log Stream",
+      "description": "Live log lines where an activity was persisted. Filter by itineraryId to trace which itinerary triggered the creation. Verifies S4-F2 and S4-F4 call Feign before inserting rows.",
+      "type": "logs",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "{app=\"tripplanning\", service=\"activity-service\"} | json | message =~ \"saved with status=CREATED\"",
+          "legendFormat": ""
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending"
+      }
+    }
+  ],
+  "templating": { "list": [] },
+  "annotations": { "list": [] }
+}
