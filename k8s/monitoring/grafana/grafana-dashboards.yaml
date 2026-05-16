@@ -74,8 +74,163 @@ data:
     { "title": "Activity Service Dashboard", "panels": [], "schemaVersion": 36, "version": 1 }
 
   # ┌─ S5 OWNED BLOCK ─ PR: feature/m3-s5-infra-booking ──────────────────────┐
-  # │ Include settlement saga panels: SETTLEMENT_PENDING/SETTLED/REFUNDED     │
-  # │ counts + payment failure rate (PromQL counter metrics from SettlementSaga).│
+  # │ LogQL panels : error rate, RabbitMQ event audit, saga state transitions  │
+  # │ PromQL panels: HTTP request rate, HikariCP pool, RabbitMQ throughput     │
   # └──────────────────────────────────────────────────────────────────────────┘
   booking-dashboard.json: |
-    { "title": "Booking Service Dashboard", "panels": [], "schemaVersion": 36, "version": 1 }
+    {
+      "title": "Booking Service Dashboard",
+      "uid": "booking-service",
+      "schemaVersion": 36,
+      "version": 1,
+      "refresh": "30s",
+      "time": { "from": "now-1h", "to": "now" },
+      "templating": { "list": [] },
+      "annotations": { "list": [] },
+      "panels": [
+        {
+          "id": 1,
+          "title": "Error Rate (errors/min)",
+          "description": "Count of ERROR-level log lines from booking-service per minute. Spike = saga failure or bad payment event.",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "datasource": { "type": "loki", "uid": "loki" },
+          "targets": [
+            {
+              "expr": "sum(count_over_time({app=\"tripplanning\", service=\"booking-service\", level=\"ERROR\"} [1m]))",
+              "legendFormat": "errors/min",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "fixed", "fixedColor": "red" },
+              "custom": { "lineWidth": 2 }
+            }
+          }
+        },
+        {
+          "id": 2,
+          "title": "RabbitMQ Event Audit",
+          "description": "Log lines emitted by event publishers and consumers filtered by routing key. Shows itinerary.completed consumed vs payment.initiated published in the last hour.",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "datasource": { "type": "loki", "uid": "loki" },
+          "targets": [
+            {
+              "expr": "sum(count_over_time({app=\"tripplanning\", service=\"booking-service\"} |= \"itinerary.completed\" [1m]))",
+              "legendFormat": "itinerary.completed consumed",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(count_over_time({app=\"tripplanning\", service=\"booking-service\"} |= \"payment.initiated\" [1m]))",
+              "legendFormat": "payment.initiated published",
+              "refId": "B"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Saga State Transitions",
+          "description": "Log lines at each saga step filtered by saga keywords. Visualizes SETTLEMENT_PENDING → SETTLED / PAYMENT_FAILED flow over time.",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+          "datasource": { "type": "loki", "uid": "loki" },
+          "targets": [
+            {
+              "expr": "sum(count_over_time({app=\"tripplanning\", service=\"booking-service\"} |= \"SETTLEMENT_PENDING\" [1m]))",
+              "legendFormat": "SETTLEMENT_PENDING",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(count_over_time({app=\"tripplanning\", service=\"booking-service\"} |= \"SETTLED\" [1m]))",
+              "legendFormat": "SETTLED",
+              "refId": "B"
+            },
+            {
+              "expr": "sum(count_over_time({app=\"tripplanning\", service=\"booking-service\"} |= \"PAYMENT_FAILED\" [1m]))",
+              "legendFormat": "PAYMENT_FAILED",
+              "refId": "C"
+            },
+            {
+              "expr": "sum(count_over_time({app=\"tripplanning\", service=\"booking-service\"} |= \"REFUNDED\" [1m]))",
+              "legendFormat": "REFUNDED",
+              "refId": "D"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "title": "HTTP Request Rate (req/s)",
+          "description": "Requests per second per booking endpoint. Shows which endpoints are under most load during peak booking hours.",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "sum by (uri) (rate(http_server_requests_seconds_count{job=\"booking-service\"}[5m]))",
+              "legendFormat": "{{uri}}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "title": "HikariCP Connection Pool",
+          "description": "Active DB connections vs pool size. Pool exhaustion alert — booking-service during saga fan-out may use all connections simultaneously.",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "hikaricp_connections_active{job=\"booking-service\"}",
+              "legendFormat": "active connections",
+              "refId": "A"
+            },
+            {
+              "expr": "hikaricp_connections_max{job=\"booking-service\"}",
+              "legendFormat": "pool max size",
+              "refId": "B"
+            },
+            {
+              "expr": "hikaricp_connections_pending{job=\"booking-service\"}",
+              "legendFormat": "threads waiting",
+              "refId": "C"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": { "lineWidth": 2 }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "pool max size" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": 6,
+          "title": "RabbitMQ Consumer Throughput",
+          "description": "Messages published vs consumed on payment queues. Consumer lag = published count > consumed count by > 100 — indicates saga backlog.",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "sum(rate(rabbitmq_channel_messages_published_total{job=\"booking-service\"}[5m]))",
+              "legendFormat": "published/s",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(rate(rabbitmq_channel_messages_consumed_total{job=\"booking-service\"}[5m]))",
+              "legendFormat": "consumed/s",
+              "refId": "B"
+            }
+          ]
+        }
+      ]
+    }

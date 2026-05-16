@@ -124,4 +124,17 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     WHERE i.id = :itineraryId
     """, nativeQuery = true)
     Object[] findItineraryRefundInfoRaw(@Param("itineraryId") Long itineraryId);
+
+    /**
+     * S5-F4 aggregate query — returns [count, totalRevenue] for CONFIRMED bookings
+     * without loading the full entity (avoids the JSON bookingDetails column).
+     * Used by BookingAggregateService.getConfirmedSummary().
+     */
+    @Query("""
+            SELECT COUNT(b), COALESCE(SUM(b.amount), 0.0)
+            FROM Booking b
+            WHERE b.itineraryId = :itineraryId
+              AND b.status = com.team15.tripplanning.bookingservice.model.Booking.BookingStatus.CONFIRMED
+            """)
+    List<Object[]> countAndSumConfirmed(@Param("itineraryId") Long itineraryId);
 }

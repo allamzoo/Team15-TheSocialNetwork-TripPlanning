@@ -1,0 +1,15 @@
+# k8s/pvcs/elasticsearch-pvc.yaml
+# S5-INFRA — Elasticsearch persistent storage
+# Mounted at /usr/share/elasticsearch/data inside the StatefulSet pod.
+# Elasticsearch recommends ≥ 5 Gi for even a single-node dev cluster.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: elasticsearch-pvc
+  namespace: tripplanning
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi

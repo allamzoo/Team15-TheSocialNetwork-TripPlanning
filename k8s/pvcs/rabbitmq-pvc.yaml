@@ -1,0 +1,14 @@
+# k8s/pvcs/rabbitmq-pvc.yaml
+# S5-INFRA — RabbitMQ persistent storage (≥ 2 Gi as per §10.1)
+# Mounted at /var/lib/rabbitmq inside the StatefulSet pod.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rabbitmq-pvc
+  namespace: tripplanning
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi

@@ -1,0 +1,23 @@
+# k8s/services/rabbitmq-svc.yaml
+# S5-INFRA — RabbitMQ ClusterIP Service
+# All 5 services connect to "rabbitmq:5672" (matching application.yml host=rabbitmq).
+# Port 15672 is also exposed so developers can kubectl port-forward to the
+# management UI without needing NodePort.
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  namespace: tripplanning
+spec:
+  selector:
+    app: rabbitmq
+  type: ClusterIP
+  ports:
+    - name: amqp
+      port: 5672
+      targetPort: 5672
+      protocol: TCP
+    - name: management
+      port: 15672
+      targetPort: 15672
+      protocol: TCP
