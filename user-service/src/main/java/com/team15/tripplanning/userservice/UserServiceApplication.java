@@ -1,5 +1,7 @@
 package com.team15.tripplanning.userservice;
 
+import com.team15.tripplanning.contracts.feign.BookingServiceClient;
+import com.team15.tripplanning.contracts.feign.ItineraryServiceClient;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.openfeign.EnableFeignClients;

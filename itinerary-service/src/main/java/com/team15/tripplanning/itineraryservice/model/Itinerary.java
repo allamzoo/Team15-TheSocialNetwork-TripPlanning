@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -28,8 +29,21 @@ public class Itinerary {
         PLANNED,
         IN_PROGRESS,
         COMPLETED,
-        CANCELLED
+        CANCELLED,
+        // M3 saga states
+        COMPLETING,
+        PAYMENT_PENDING,
+        PAID,
+        PAYMENT_FAILED,
+        REFUNDED
     }
+
+    public static final Set<ItineraryStatus> STATUS_COMPLETED_FAMILY = Set.of(
+            ItineraryStatus.COMPLETED,
+            ItineraryStatus.COMPLETING,
+            ItineraryStatus.PAYMENT_PENDING,
+            ItineraryStatus.PAID
+    );
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -1,5 +1,10 @@
 package com.team15.tripplanning.itineraryservice.controller;
 
+import com.team15.tripplanning.contracts.dto.BatchItineraryRequest;
+import com.team15.tripplanning.contracts.dto.DestinationBookingRevenueAggregateDTO;
+import com.team15.tripplanning.contracts.dto.DestinationDashboardAggregateDTO;
+import com.team15.tripplanning.contracts.dto.ItinerarySummaryDTO;
+import com.team15.tripplanning.contracts.dto.UserTripSummaryAggregateDTO;
 import com.team15.tripplanning.itineraryservice.dto.DestinationRecommendationDTO;
 import com.team15.tripplanning.itineraryservice.dto.EstimateRequest;
 import com.team15.tripplanning.itineraryservice.dto.ItineraryAnalyticsDTO;
@@ -168,6 +173,48 @@ public class ItineraryController {
 
         ItineraryAnalyticsDashboardDTO dashboard = itineraryService.getItineraryAnalyticsDashboard(startDate, endDate);
         return ResponseEntity.ok(dashboard);
+    }
+
+    // ── M3 aggregate endpoints (called by S1, S2, S5 via Feign) ─────────────────
+
+    @GetMapping("/user/{userId}/summary")
+    public ResponseEntity<UserTripSummaryAggregateDTO> getUserTripSummary(@PathVariable Long userId) {
+        return ResponseEntity.ok(itineraryService.getUserTripSummary(userId));
+    }
+
+    @GetMapping("/user/{userId}/active-count")
+    public ResponseEntity<Integer> getUserActiveCount(@PathVariable Long userId) {
+        return ResponseEntity.ok(itineraryService.getUserActiveCount(userId));
+    }
+
+    @GetMapping("/user/{userId}/completed-count")
+    public ResponseEntity<Long> getUserCompletedCount(@PathVariable Long userId) {
+        return ResponseEntity.ok(itineraryService.getUserCompletedCount(userId));
+    }
+
+    @GetMapping("/destination/{destinationId}/booking-revenue")
+    public ResponseEntity<DestinationBookingRevenueAggregateDTO> getDestinationBookingRevenue(
+            @PathVariable Long destinationId,
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+        return ResponseEntity.ok(itineraryService.getDestinationBookingRevenue(destinationId, startDate, endDate));
+    }
+
+    @GetMapping("/destination/{destinationId}/active-count")
+    public ResponseEntity<Integer> getDestinationActiveCount(@PathVariable Long destinationId) {
+        return ResponseEntity.ok(itineraryService.getDestinationActiveCount(destinationId));
+    }
+
+    @GetMapping("/destination/{destinationId}/dashboard-aggregate")
+    public ResponseEntity<DestinationDashboardAggregateDTO> getDestinationDashboardAggregate(
+            @PathVariable Long destinationId) {
+        return ResponseEntity.ok(itineraryService.getDestinationDashboardAggregate(destinationId));
+    }
+
+    @PostMapping("/batch")
+    public ResponseEntity<List<ItinerarySummaryDTO>> batchGetItineraries(
+            @RequestBody BatchItineraryRequest request) {
+        return ResponseEntity.ok(itineraryService.batchGetItineraries(request.itineraryIds()));
     }
 
     // S3-F12
