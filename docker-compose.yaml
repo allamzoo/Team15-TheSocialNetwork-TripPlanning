@@ -179,10 +179,10 @@ services:
       SPRING_MONGODB_DATABASE: tripplanningdb
       SPRING_REDIS_HOST: tripplanning-redis
       SPRING_REDIS_PORT: 6379
-      # M3 — S1 OWNED: set to "true" only in docker-compose.override.yml (S5-INFRA)
+      # M3 — S1 OWNED: enabled for testing
       SPRING_RABBITMQ_HOST: tripplanning-rabbitmq
       SPRING_RABBITMQ_PORT: 5672
-      M3_MESSAGING_ENABLED: "false"
+      M3_MESSAGING_ENABLED: "true"
       FEIGN_ITINERARY_SERVICE_URL: http://itinerary-service:8080
       FEIGN_BOOKING_SERVICE_URL: http://booking-service:8080
     depends_on:

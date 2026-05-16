@@ -5,6 +5,10 @@ COPY shared-lib/pom.xml ./shared-lib/pom.xml
 COPY shared-lib/src ./shared-lib/src
 RUN mvn install -f shared-lib/pom.xml -DskipTests
 
+COPY contracts/pom.xml ./contracts/pom.xml
+COPY contracts/src ./contracts/src
+RUN mvn install -f contracts/pom.xml -DskipTests
+
 COPY itinerary-service/pom.xml ./itinerary-service/pom.xml
 COPY itinerary-service/src ./itinerary-service/src
 RUN mvn clean package -f itinerary-service/pom.xml -DskipTests

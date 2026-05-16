@@ -197,4 +197,22 @@ public class ItineraryController {
         List<DestinationRecommendationDTO> recommendations = itineraryService.getRecommendations(userId, limit);
         return ResponseEntity.ok(recommendations);
     }
+
+    /** Internal: S1-F4 — count active itineraries for a user (no auth, service-to-service). */
+    @GetMapping("/user/{userId}/active-count")
+    public ResponseEntity<Integer> getActiveCountForUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(itineraryService.getActiveCountForUser(userId));
+    }
+
+    /** Internal: S1-F9 — count completed itineraries for a user (no auth, service-to-service). */
+    @GetMapping("/user/{userId}/completed-count")
+    public ResponseEntity<Long> getCompletedCountForUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(itineraryService.getCompletedCountForUser(userId));
+    }
+
+    /** Internal: S1-F9 — trip summary for a user (no auth, service-to-service). */
+    @GetMapping("/user/{userId}/summary")
+    public ResponseEntity<Map<String, Object>> getSummaryForUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(itineraryService.getSummaryForUser(userId));
+    }
 }

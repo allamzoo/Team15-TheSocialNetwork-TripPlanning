@@ -42,3 +42,25 @@ services:
   booking-service:
     environment:
       M3_MESSAGING_ENABLED: "true"
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: tripplanning-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus-local.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - user-service
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: tripplanning-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./k8s/monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus

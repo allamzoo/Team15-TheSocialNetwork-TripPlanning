@@ -27,7 +27,10 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/itineraries/health", "/error").permitAll()
+                        .requestMatchers("/api/itineraries/health", "/error",
+                                "/api/itineraries/user/*/active-count",
+                                "/api/itineraries/user/*/completed-count",
+                                "/api/itineraries/user/*/summary").permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex

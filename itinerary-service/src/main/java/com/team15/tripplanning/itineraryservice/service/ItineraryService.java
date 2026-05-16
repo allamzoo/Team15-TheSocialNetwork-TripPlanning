@@ -598,4 +598,27 @@ public class ItineraryService {
 
         return result;
     }
+
+    // ── Internal service-to-service helpers (S1-F4, S1-F9) ─────────────────
+    public int getActiveCountForUser(Long userId) {
+        return (int) itineraryRepository.findByUserId(userId).stream()
+                .filter(i -> i.getStatus() == Itinerary.ItineraryStatus.DRAFT
+                          || i.getStatus() == Itinerary.ItineraryStatus.PLANNED
+                          || i.getStatus() == Itinerary.ItineraryStatus.IN_PROGRESS)
+                .count();
+    }
+
+    public long getCompletedCountForUser(Long userId) {
+        return itineraryRepository.findByUserId(userId).stream()
+                .filter(i -> i.getStatus() == Itinerary.ItineraryStatus.COMPLETED)
+                .count();
+    }
+
+    public java.util.Map<String, Object> getSummaryForUser(Long userId) {
+        var list = itineraryRepository.findByUserId(userId);
+        long total     = list.size();
+        long completed = list.stream().filter(i -> i.getStatus() == Itinerary.ItineraryStatus.COMPLETED).count();
+        long cancelled = list.stream().filter(i -> i.getStatus() == Itinerary.ItineraryStatus.CANCELLED).count();
+        return java.util.Map.of("totalTrips", total, "completedTrips", completed, "cancelledTrips", cancelled);
+    }
 }
