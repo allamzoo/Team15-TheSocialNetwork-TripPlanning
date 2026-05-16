@@ -11,7 +11,6 @@ import com.team15.tripplanning.bookingservice.dto.SaleAuditTrailDTO;
 import com.team15.tripplanning.bookingservice.dto.UserBookingSummaryDTO;
 import com.team15.tripplanning.bookingservice.dto.RefundCancellationRequest;
 import com.team15.tripplanning.bookingservice.dto.ItineraryRefundInfo;
-import com.team15.tripplanning.bookingservice.dto.CreateBookingRequest;
 import com.team15.tripplanning.bookingservice.model.mongo.PaymentAuditEvent;
 import com.team15.tripplanning.bookingservice.repository.PaymentAuditEventRepository;
 import com.team15.tripplanning.bookingservice.model.Booking;
@@ -28,7 +27,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import com.team15.tripplanning.bookingservice.strategy.*;
-
+import com.team15.tripplanning.contracts.dto.BatchDestinationRequest;
+import com.team15.tripplanning.contracts.dto.BatchItineraryRequest;
+import com.team15.tripplanning.contracts.dto.DestinationSummaryDTO;
+import com.team15.tripplanning.contracts.dto.ItineraryDTO;
+import com.team15.tripplanning.contracts.dto.ItinerarySummaryDTO;
+import com.team15.tripplanning.contracts.feign.DestinationServiceClient;
+import com.team15.tripplanning.contracts.feign.ItineraryServiceClient;
+import com.team15.tripplanning.contracts.feign.UserServiceClient;
+import feign.FeignException;
 
 import java.sql.Timestamp;
 import java.time.LocalDate;
@@ -47,18 +54,27 @@ public class BookingService {
     private final PaymentAuditEventRepository paymentAuditEventRepository;
     private final List<EntityObserver> observers = new ArrayList<>();
     private final RedisTemplate<String, Object> redisTemplate;
+    private final UserServiceClient userServiceClient;
+    private final ItineraryServiceClient itineraryServiceClient;
+    private final DestinationServiceClient destinationServiceClient;
 
     public BookingService(BookingRepository bookingRepository,
                           BookingCouponRepository bookingCouponRepository,
                           CouponRepository couponRepository,
                           PaymentAuditEventRepository paymentAuditEventRepository,
                           MongoEventLogger mongoEventLogger,
-                          RedisTemplate<String, Object> redisTemplate) {
+                          RedisTemplate<String, Object> redisTemplate,
+                          UserServiceClient userServiceClient,
+                          ItineraryServiceClient itineraryServiceClient,
+                          DestinationServiceClient destinationServiceClient) {
         this.bookingRepository = bookingRepository;
         this.bookingCouponRepository = bookingCouponRepository;
         this.couponRepository = couponRepository;
         this.paymentAuditEventRepository = paymentAuditEventRepository;
         this.redisTemplate = redisTemplate;
+        this.userServiceClient = userServiceClient;
+        this.itineraryServiceClient = itineraryServiceClient;
+        this.destinationServiceClient = destinationServiceClient;
         register(mongoEventLogger);
     }
 
@@ -110,11 +126,11 @@ public class BookingService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "itineraryId, amount and type are required");
         }
 
-        validateItineraryAllowsBooking(request.getItineraryId());
+        ItineraryDTO itinerary = validateItineraryAllowsBooking(request.getItineraryId());
 
         Long userId = request.getUserId();
         if (userId == null) {
-            userId = bookingRepository.getItineraryUserId(request.getItineraryId());
+            userId = itinerary.userId();
         }
         if (userId == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found");
@@ -137,6 +153,12 @@ public class BookingService {
         if (request.getProviderName() != null && !request.getProviderName().isBlank()) {
             details.put("providerName", request.getProviderName());
         }
+        Integer activeCount = null;
+        if (itinerary.destinationId() != null) {
+            activeCount = itineraryServiceClient.getDestinationActiveCount(itinerary.destinationId());
+        }
+        double seasonalSurcharge = calculateSeasonalSurcharge(request.getAmount(), activeCount != null ? activeCount : 0);
+        details.put("seasonalSurcharge", seasonalSurcharge);
         booking.setBookingDetails(details);
 
         Booking saved = bookingRepository.save(booking);
@@ -206,8 +228,12 @@ public class BookingService {
     // ===== S5-F3: User Booking Summary =====
     @Cacheable(value = "s5-booking-summary", key = "'S5::S5-F3::' + #userId")
     public UserBookingSummaryDTO getUserBookingSummary(Long userId) {
-        if (bookingRepository.countUserById(userId) == 0) {
+        try {
+            userServiceClient.getUser(userId);
+        } catch (FeignException.NotFound ex) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found: " + userId);
+        } catch (FeignException ex) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "User service unavailable");
         }
 
         List<Booking> userBookings = bookingRepository.findByUserId(userId);
@@ -563,22 +589,77 @@ public class BookingService {
         LocalDateTime start = startDate.atStartOfDay();
         LocalDateTime end = endDate.atTime(23, 59, 59, 999000000);
 
-        List<Object[]> rows = bookingRepository.getRevenueByDestinationAndSeason(start, end);
-
-        List<DestinationSeasonRevenueDTO> result = new ArrayList<>();
-        for (Object[] row : rows) {
-            result.add(DestinationSeasonRevenueDTO.builder()
-                    .destinationId(((Number) row[0]).longValue())
-                    .destinationName((String) row[1])
-                    .totalRevenue(((Number) row[2]).doubleValue())
-                    .surchargeRevenue(((Number) row[3]).doubleValue())
-                    .baseRevenue(((Number) row[4]).doubleValue())
-                    .peakBookingCount(((Number) row[5]).longValue())
-                    .offPeakBookingCount(((Number) row[6]).longValue())
-                    .build());
+        List<Booking> bookings = bookingRepository.findConfirmedByCreatedAtBetween(start, end);
+        if (bookings.isEmpty()) {
+            return new ArrayList<>();
         }
 
-        return result;
+        List<Long> itineraryIds = bookings.stream()
+                .map(Booking::getItineraryId)
+                .distinct()
+                .toList();
+
+        Map<Long, Long> itineraryToDestination = new HashMap<>();
+        if (!itineraryIds.isEmpty()) {
+            List<ItinerarySummaryDTO> itinerarySummaries =
+                    itineraryServiceClient.batchGetItineraries(new BatchItineraryRequest(itineraryIds));
+            for (ItinerarySummaryDTO summary : itinerarySummaries) {
+                itineraryToDestination.put(summary.itineraryId(), summary.destinationId());
+            }
+        }
+
+        List<Long> destinationIds = itineraryToDestination.values().stream()
+                .distinct()
+                .toList();
+
+        Map<Long, String> destinationNames = new HashMap<>();
+        if (!destinationIds.isEmpty()) {
+            List<DestinationSummaryDTO> destinations =
+                    destinationServiceClient.batchGetDestinations(new BatchDestinationRequest(destinationIds));
+            for (DestinationSummaryDTO destination : destinations) {
+                destinationNames.put(destination.destinationId(), destination.name());
+            }
+        }
+
+        Map<Long, DestinationSeasonRevenueDTO> aggregates = new HashMap<>();
+        for (Booking booking : bookings) {
+            Long destinationId = itineraryToDestination.get(booking.getItineraryId());
+            if (destinationId == null) {
+                continue;
+            }
+
+            String destinationName = destinationNames.getOrDefault(destinationId, "");
+            double surcharge = extractSeasonalSurcharge(booking.getBookingDetails());
+            double amount = booking.getAmount() != null ? booking.getAmount() : 0.0;
+
+            DestinationSeasonRevenueDTO current = aggregates.get(destinationId);
+            if (current == null) {
+                current = DestinationSeasonRevenueDTO.builder()
+                        .destinationId(destinationId)
+                        .destinationName(destinationName)
+                        .totalRevenue(0.0)
+                        .surchargeRevenue(0.0)
+                        .baseRevenue(0.0)
+                        .peakBookingCount(0L)
+                        .offPeakBookingCount(0L)
+                        .build();
+            }
+
+            double totalRevenue = current.getTotalRevenue() + amount;
+            double surchargeRevenue = current.getSurchargeRevenue() + surcharge;
+            double baseRevenue = current.getBaseRevenue() + (amount - surcharge);
+            long peakCount = current.getPeakBookingCount() + (surcharge > 0.0 ? 1 : 0);
+            long offPeakCount = current.getOffPeakBookingCount() + (surcharge > 0.0 ? 0 : 1);
+
+            current.setTotalRevenue(totalRevenue);
+            current.setSurchargeRevenue(surchargeRevenue);
+            current.setBaseRevenue(baseRevenue);
+            current.setPeakBookingCount(peakCount);
+            current.setOffPeakBookingCount(offPeakCount);
+            aggregates.put(destinationId, current);
+        }
+
+        return new ArrayList<>(aggregates.values());
     }
 
     // S5-F10 — log ANALYTICS_VIEWED on every call including cache hits
@@ -661,21 +742,51 @@ public class BookingService {
                 .build();
     }
 
-    private void validateItineraryAllowsBooking(Long itineraryId) {
-        if (bookingRepository.countItineraryById(itineraryId) == 0) {
+    private ItineraryDTO validateItineraryAllowsBooking(Long itineraryId) {
+        ItineraryDTO itinerary;
+        try {
+            itinerary = itineraryServiceClient.getItinerary(itineraryId);
+        } catch (FeignException.NotFound ex) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found");
+        } catch (FeignException ex) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Itinerary service unavailable");
         }
 
-        String status = bookingRepository.getItineraryStatus(itineraryId);
-        if (status == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found");
-        }
-
-        String normalized = status.trim().toUpperCase();
+        String normalized = itinerary.status() != null ? itinerary.status().trim().toUpperCase() : "";
         if (!normalized.equals("PLANNED") && !normalized.equals("IN_PROGRESS")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Booking is allowed only for PLANNED or IN_PROGRESS itineraries");
         }
+
+        return itinerary;
+    }
+
+    private double calculateSeasonalSurcharge(double amount, int activeCount) {
+        double multiplier = 0.0;
+        if (activeCount >= 5) {
+            multiplier = 0.20;
+        } else if (activeCount >= 3) {
+            multiplier = 0.10;
+        }
+        return amount * multiplier;
+    }
+
+    private double extractSeasonalSurcharge(Map<String, Object> details) {
+        if (details == null) {
+            return 0.0;
+        }
+        Object value = details.get("seasonalSurcharge");
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        if (value instanceof String text) {
+            try {
+                return Double.parseDouble(text);
+            } catch (NumberFormatException ex) {
+                return 0.0;
+            }
+        }
+        return 0.0;
     }
 
     @Transactional
@@ -693,27 +804,28 @@ public class BookingService {
                         "Booking not found: " + bookingId
                 ));
 
-        // ===== c) Fetch itinerary info (for status check) =====
-        String itineraryStatus = null;
+        // ===== c) Fetch itinerary info (for status + startDate) =====
         Long itineraryId = booking.getItineraryId();
+        ItineraryDTO itineraryDto = null;
         if (itineraryId != null) {
-            Object[] raw = bookingRepository.findItineraryRefundInfoRaw(itineraryId);
-            if (raw != null) {
-                if (raw.length == 1 && raw[0] instanceof Object[] nested) {
-                    raw = nested;
-                }
-                if (raw.length >= 2 && raw[1] != null) {
-                    itineraryStatus = raw[1].toString();
-                }
+            try {
+                itineraryDto = itineraryServiceClient.getItinerary(itineraryId);
+            } catch (FeignException.NotFound ex) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found");
+            } catch (FeignException ex) {
+                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Itinerary service unavailable");
             }
         }
 
-        // ===== d) Build refund info using BOOKING's startDate =====
-        // The booking's startDate (set by test helper) determines days until departure
-        LocalDate bookingStartDate = booking.getStartDate();
-        if (bookingStartDate == null) {
-            // fallback: use booking's createdAt date
-            bookingStartDate = booking.getCreatedAt() != null
+        String itineraryStatus = itineraryDto != null ? itineraryDto.status() : null;
+
+        // ===== d) Build refund info using itinerary startDate =====
+        LocalDate startDate = itineraryDto != null ? itineraryDto.startDate() : null;
+        if (startDate == null) {
+            startDate = booking.getStartDate();
+        }
+        if (startDate == null) {
+            startDate = booking.getCreatedAt() != null
                     ? booking.getCreatedAt().toLocalDate()
                     : LocalDate.now();
         }
@@ -726,7 +838,7 @@ public class BookingService {
         ItineraryRefundInfo itinerary = new ItineraryRefundInfo(
                 itineraryId,
                 effectiveStatus,
-                bookingStartDate
+                startDate
         );
 
         // ===== e) Select strategy =====
@@ -749,7 +861,7 @@ public class BookingService {
         response.put("reason", request != null ? request.getReason() : null);
         response.put("status", booking.getStatus() != null ? booking.getStatus().name() : null);
 
-        // ===== g) NoRefundStrategy: log but return 2xx with refundedAmount=0 =====
+        // ===== g) NoRefundStrategy: log then 400 =====
         if (strategy instanceof NoRefundStrategy) {
             Map<String, Object> payload = new HashMap<>();
             payload.put("bookingId", booking.getId());
@@ -762,10 +874,19 @@ public class BookingService {
             deleteWildcard("booking-service::S5-F10::*");
             deleteWildcard("booking-service::S5-F11::" + bookingId + "::*");
             deleteWildcard("booking-service::booking::" + bookingId);
-            return response;
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Refund denied by policy");
         }
 
-        // ===== h) Apply refund - update booking =====
+        // ===== h) Apply refund - atomic status transition =====
+        int updated = bookingRepository.updateStatusByIdAndStatus(
+                bookingId,
+                Booking.BookingStatus.CANCELLED.name(),
+                Booking.BookingStatus.CONFIRMED.name()
+        );
+        if (updated == 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Refund already in progress");
+        }
+
         booking.setStatus(Booking.BookingStatus.CANCELLED);
 
         Map<String, Object> details = booking.getBookingDetails();

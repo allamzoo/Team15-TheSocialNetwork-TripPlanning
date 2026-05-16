@@ -78,4 +78,73 @@ data:
   # │ counts + payment failure rate (PromQL counter metrics from SettlementSaga).│
   # └──────────────────────────────────────────────────────────────────────────┘
   booking-dashboard.json: |
-    { "title": "Booking Service Dashboard", "panels": [], "schemaVersion": 36, "version": 1 }
+    {
+      "title": "Booking Service Dashboard",
+      "schemaVersion": 36,
+      "version": 1,
+      "panels": [
+        {
+          "type": "timeseries",
+          "title": "HTTP Request Rate",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "sum(rate(http_server_requests_seconds_count{job=\"booking-service\"}[5m]))",
+              "legendFormat": "req/s"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "HTTP Error Rate (5xx)",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "sum(rate(http_server_requests_seconds_count{job=\"booking-service\",status=~\"5..\"}[5m]))",
+              "legendFormat": "5xx req/s"
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "HTTP P95 Latency",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{job=\"booking-service\"}[5m])) by (le))",
+              "legendFormat": "p95"
+            }
+          ]
+        },
+        {
+          "type": "logs",
+          "title": "Booking Service Logs",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "targets": [
+            {
+              "expr": "{app=\"booking-service\"}"
+            }
+          ]
+        },
+        {
+          "type": "logs",
+          "title": "Booking Service Errors",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "targets": [
+            {
+              "expr": "{app=\"booking-service\"} |= \"ERROR\""
+            }
+          ]
+        },
+        {
+          "type": "logs",
+          "title": "Settlement Processing Logs",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "targets": [
+            {
+              "expr": "{app=\"booking-service\"} |= \"SETTLEMENT\""
+            }
+          ]
+        }
+      ]
+    }

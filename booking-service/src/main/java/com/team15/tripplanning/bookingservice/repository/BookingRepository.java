@@ -17,18 +17,20 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     List<Booking> findByItineraryId(@Param("itineraryId") Long itineraryId);
     List<Booking> findByStatus(Booking.BookingStatus status);
 
-    @Query(value = """
-            SELECT b.id, b.amount, b.status, i.title AS itinerary_title
-            FROM bookings b
-            LEFT JOIN itineraries i ON i.id = b.itin_id
-            WHERE b.user_id = :userId
-            """, nativeQuery = true)
-    List<Object[]> findBookingsWithItineraryTitleByUser(@Param("userId") Long userId);
 
     @Modifying
     @Transactional
     @Query(value = "UPDATE bookings SET status = :status WHERE id = :id", nativeQuery = true)
     int updateStatusById(@Param("id") Long id, @Param("status") String status);
+
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE bookings SET status = :newStatus WHERE id = :id AND status = :expectedStatus", nativeQuery = true)
+    int updateStatusByIdAndStatus(
+            @Param("id") Long id,
+            @Param("newStatus") String newStatus,
+            @Param("expectedStatus") String expectedStatus
+    );
 
     @Query("""
             SELECT
@@ -66,62 +68,65 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             """)
     List<Object[]> getBookingSummaryByUser(@Param("userId") Long userId);
 
-    @Query(value = "SELECT status FROM itineraries WHERE id = :itineraryId", nativeQuery = true)
-    String getItineraryStatus(@Param("itineraryId") Long itineraryId);
 
-    @Query(value = "SELECT COUNT(*) FROM itineraries WHERE id = :itineraryId", nativeQuery = true)
-    int countItineraryById(@Param("itineraryId") Long itineraryId);
 
-    @Query(value = "SELECT user_id FROM itineraries WHERE id = :itineraryId", nativeQuery = true)
-    Long getItineraryUserId(@Param("itineraryId") Long itineraryId);
 
-    @Query(value = "SELECT COUNT(*) FROM users WHERE id = :userId", nativeQuery = true)
-    int countUserById(@Param("userId") Long userId);
+    @Query(value = "SELECT COALESCE(SUM(amount), 0) FROM bookings WHERE itin_id = :itineraryId AND status = 'CONFIRMED'", nativeQuery = true)
+    Double sumConfirmedAmountByItineraryId(@Param("itineraryId") Long itineraryId);
 
-    // S5-F10
-    @Query(value = """
-        SELECT
-            d.id                                                          AS destinationId,
-            d.name                                                        AS destinationName,
-            COALESCE(SUM(b.amount), 0)                                    AS totalRevenue,
-            COALESCE(SUM(
-                CAST(COALESCE(
-                    NULLIF(b.booking_details->>'seasonalSurcharge', ''),
-                    '0'
-                ) AS NUMERIC)
-            ), 0)                                                         AS surchargeRevenue,
-            COALESCE(SUM(b.amount), 0) - COALESCE(SUM(
-                CAST(COALESCE(
-                    NULLIF(b.booking_details->>'seasonalSurcharge', ''),
-                    '0'
-                ) AS NUMERIC)
-            ), 0)                                                         AS baseRevenue,
-            COUNT(CASE WHEN CAST(COALESCE(
-                NULLIF(b.booking_details->>'seasonalSurcharge', ''),
-                '0'
-            ) AS NUMERIC) > 0 THEN 1 END)                                AS peakBookingCount,
-            COUNT(CASE WHEN CAST(COALESCE(
-                NULLIF(b.booking_details->>'seasonalSurcharge', ''),
-                '0'
-            ) AS NUMERIC) = 0 THEN 1 END)                                AS offPeakBookingCount
-        FROM bookings b
-        JOIN itineraries i ON i.id = b.itin_id
-        JOIN destinations d ON d.id = i.destination_id
-        WHERE b.status = 'CONFIRMED'
-          AND b.created_at >= :startDate
-          AND b.created_at <= :endDate
-        GROUP BY d.id, d.name
-        ORDER BY SUM(b.amount) DESC
-        """, nativeQuery = true)
-    List<Object[]> getRevenueByDestinationAndSeason(
-            @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate
+    @Query("""
+            SELECT b FROM Booking b
+            WHERE b.status = 'CONFIRMED'
+              AND b.createdAt BETWEEN :startDateTime AND :endDateTime
+            """)
+    List<Booking> findConfirmedByCreatedAtBetween(
+            @Param("startDateTime") LocalDateTime startDateTime,
+            @Param("endDateTime") LocalDateTime endDateTime
     );
 
-    @Query(value = """
-    SELECT i.id, i.status, i.start_date
-    FROM itineraries i
-    WHERE i.id = :itineraryId
-    """, nativeQuery = true)
-    Object[] findItineraryRefundInfoRaw(@Param("itineraryId") Long itineraryId);
+    @Query("""
+            SELECT COALESCE(SUM(b.amount), 0) FROM Booking b
+            WHERE b.userId = :userId
+              AND b.status = 'CONFIRMED'
+              AND b.createdAt BETWEEN :startDateTime AND :endDateTime
+            """)
+    Double sumConfirmedAmountByUserAndRange(
+            @Param("userId") Long userId,
+            @Param("startDateTime") LocalDateTime startDateTime,
+            @Param("endDateTime") LocalDateTime endDateTime
+    );
+
+    @Query("""
+            SELECT COUNT(b) FROM Booking b
+            WHERE b.userId = :userId
+              AND b.status = 'CONFIRMED'
+              AND b.createdAt BETWEEN :startDateTime AND :endDateTime
+            """)
+    long countConfirmedByUserAndRange(
+            @Param("userId") Long userId,
+            @Param("startDateTime") LocalDateTime startDateTime,
+            @Param("endDateTime") LocalDateTime endDateTime
+    );
+
+    @Query("""
+            SELECT COUNT(b), COALESCE(SUM(b.amount), 0)
+            FROM Booking b
+            WHERE b.itineraryId = :itineraryId
+              AND b.status = 'CONFIRMED'
+            """)
+    Object[] getConfirmedSummaryByItinerary(@Param("itineraryId") Long itineraryId);
+
+    @Query("""
+            SELECT COUNT(b), COALESCE(SUM(b.amount), 0)
+            FROM Booking b
+            WHERE b.itineraryId IN :itineraryIds
+              AND b.createdAt BETWEEN :startDateTime AND :endDateTime
+              AND (:status IS NULL OR b.status = :status)
+            """)
+    Object[] aggregateByItineraryIds(
+            @Param("itineraryIds") List<Long> itineraryIds,
+            @Param("startDateTime") LocalDateTime startDateTime,
+            @Param("endDateTime") LocalDateTime endDateTime,
+            @Param("status") Booking.BookingStatus status
+    );
 }

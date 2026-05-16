@@ -41,6 +41,12 @@ spring:
       simple:
         auto-startup: ${M3_MESSAGING_ENABLED:false}
         missing-queues-fatal: false
+        acknowledge-mode: auto
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          initial-interval: 1000
+          max-attempts: 3
 
 server:
   port: 8080
@@ -48,6 +54,15 @@ server:
 jwt:
   secret: ${JWT_SECRET:tripplanning-secret-key-for-jwt-token-signing}
   expiration: ${JWT_EXPIRATION:86400000}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: always
 
 # ─── S5 OWNED BLOCK ─────────────────────────────────────────────────────────
 # Pull request: feature/m3-s5-feign-amqp-booking
