@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\LENOVO\\\\AppData\\\\Local\" -ErrorAction SilentlyContinue | Select-Object Name, @{N='Size_GB';E={[math]::Round\\(\\(Get-ChildItem $_.FullName -Recurse -ErrorAction SilentlyContinue | Measure-Object Length -Sum\\).Sum/1GB,1\\)}} | Sort-Object Size_GB -Descending | Select-Object -First 10)"
+    ]
+  }
+}

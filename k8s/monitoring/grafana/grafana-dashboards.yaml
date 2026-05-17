@@ -68,10 +68,178 @@ data:
     { "title": "Itinerary Service Dashboard", "panels": [], "schemaVersion": 36, "version": 1 }
 
   # ┌─ S4 OWNED BLOCK ─ PR: feature/m3-s4-infra-activity ─────────────────────┐
-  # │ Include Cassandra write latency panel (PromQL).                          │
+  # │ PromQL panels: HTTP req/s, error rate, p99 latency, Cassandra write p99  │
+  # │ LogQL panels:  log volume by level, error logs, slow/timeout logs         │
   # └──────────────────────────────────────────────────────────────────────────┘
   activity-dashboard.json: |
-    { "title": "Activity Service Dashboard", "panels": [], "schemaVersion": 36, "version": 1 }
+    {
+      "uid": "activity-service",
+      "title": "Activity Service Dashboard",
+      "description": "HTTP metrics + Cassandra write latency (PromQL) and log streams (LogQL)",
+      "schemaVersion": 36,
+      "version": 1,
+      "refresh": "30s",
+      "time": { "from": "now-1h", "to": "now" },
+      "timepicker": {},
+      "templating": { "list": [] },
+      "annotations": { "list": [] },
+      "panels": [
+        {
+          "id": 1,
+          "type": "timeseries",
+          "title": "HTTP Request Rate (req/s)",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(rate(http_server_requests_seconds_count{job=\"activity-service\"}[1m])) by (uri, method)",
+              "legendFormat": "{{method}} {{uri}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "custom": { "lineWidth": 1, "fillOpacity": 10 }
+            }
+          },
+          "options": { "tooltip": { "mode": "multi" } }
+        },
+        {
+          "id": 2,
+          "type": "timeseries",
+          "title": "HTTP Error Rate — 5xx (req/s)",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "sum(rate(http_server_requests_seconds_count{job=\"activity-service\",status=~\"5..\"}[1m])) by (uri, status)",
+              "legendFormat": "{{status}} {{uri}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "color": { "mode": "fixed", "fixedColor": "red" },
+              "custom": { "lineWidth": 1, "fillOpacity": 10 }
+            }
+          },
+          "options": { "tooltip": { "mode": "multi" } }
+        },
+        {
+          "id": 3,
+          "type": "timeseries",
+          "title": "HTTP P99 Latency (s)",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{job=\"activity-service\"}[5m])) by (le, uri))",
+              "legendFormat": "p99 {{uri}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "custom": { "lineWidth": 1, "fillOpacity": 10 }
+            }
+          },
+          "options": { "tooltip": { "mode": "multi" } }
+        },
+        {
+          "id": 4,
+          "type": "timeseries",
+          "title": "Cassandra Write Latency P99 (s)",
+          "description": "P99 write latency via Spring Data Cassandra Micrometer db.client.calls metrics",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "expr": "histogram_quantile(0.99, sum(rate(db_client_calls_seconds_bucket{job=\"activity-service\",db_system=\"cassandra\"}[5m])) by (le, db_operation))",
+              "legendFormat": "p99 Cassandra {{db_operation}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "color": { "mode": "palette-classic" },
+              "custom": { "lineWidth": 1, "fillOpacity": 10 }
+            }
+          },
+          "options": { "tooltip": { "mode": "multi" } }
+        },
+        {
+          "id": 5,
+          "type": "timeseries",
+          "title": "Log Volume by Level",
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+          "datasource": { "type": "loki", "uid": "loki" },
+          "targets": [
+            {
+              "datasource": { "type": "loki", "uid": "loki" },
+              "expr": "sum by (level) (count_over_time({app=\"tripplanning\", service=\"activity-service\"}[1m]))",
+              "legendFormat": "{{level}}",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "custom": { "lineWidth": 1, "fillOpacity": 10 }
+            }
+          },
+          "options": { "tooltip": { "mode": "multi" } }
+        },
+        {
+          "id": 6,
+          "type": "logs",
+          "title": "Error Logs",
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 24 },
+          "datasource": { "type": "loki", "uid": "loki" },
+          "targets": [
+            {
+              "datasource": { "type": "loki", "uid": "loki" },
+              "expr": "{app=\"tripplanning\", service=\"activity-service\"} |~ \"(?i)(error|exception|failed)\"",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "dedupStrategy": "none",
+            "wrapLogMessage": true,
+            "showTime": true,
+            "showLabels": false,
+            "sortOrder": "Descending"
+          }
+        },
+        {
+          "id": 7,
+          "type": "logs",
+          "title": "Slow / Timeout Warning Logs",
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 34 },
+          "datasource": { "type": "loki", "uid": "loki" },
+          "targets": [
+            {
+              "datasource": { "type": "loki", "uid": "loki" },
+              "expr": "{app=\"tripplanning\", service=\"activity-service\"} |~ \"(?i)(slow|timeout|warn|cassandra)\"",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "dedupStrategy": "none",
+            "wrapLogMessage": true,
+            "showTime": true,
+            "showLabels": false,
+            "sortOrder": "Descending"
+          }
+        }
+      ]
+    }
 
   # ┌─ S5 OWNED BLOCK ─ PR: feature/m3-s5-infra-booking ──────────────────────┐
   # │ Include settlement saga panels: SETTLEMENT_PENDING/SETTLED/REFUNDED     │

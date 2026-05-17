@@ -1,12 +1,14 @@
 # ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║  prometheus.yaml — MONITORING-INFRA OWNED (committed at Day-0 kickoff)      ║
-# ║  Fixes the K8s Service name "prometheus" in the monitoring namespace so     ║
-# ║  Grafana and each service's alerting rules can resolve it via DNS:          ║
+# ║  prometheus.yaml — S3-INFRA OWNED (feature/m3-s3-infra-itinerary)           ║
+# ║  Prometheus ClusterIP Service + Deployment in the monitoring namespace.     ║
+# ║  Config is loaded from prometheus-configmap.yaml (each slice edits only     ║
+# ║  its own scrape_configs job block there).                                    ║
+# ║                                                                              ║
+# ║  DNS used by Grafana datasource:                                             ║
 # ║    http://prometheus.monitoring.svc.cluster.local:9090                      ║
 # ║                                                                              ║
-# ║  Referenced in grafana-datasources.yaml (already committed).               ║
-# ║  The scrape config is in prometheus-configmap.yaml — each slice edits       ║
-# ║  only its own job block there.                                               ║
+# ║  NOTE: Grafana Deployment + Service are owned by S4-INFRA and live in       ║
+# ║  k8s/monitoring/grafana/ — do NOT add Grafana resources to this file.       ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 apiVersion: v1
 kind: Service
@@ -41,7 +43,7 @@ spec:
     spec:
       containers:
         - name: prometheus
-          image: prom/prometheus:v2.51.0
+          image: prom/prometheus:v2.51.2
           args:
             - --config.file=/etc/prometheus/prometheus.yml
             - --storage.tsdb.path=/prometheus
@@ -54,6 +56,12 @@ spec:
               memory: 512Mi
             requests:
               memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 9090
+            initialDelaySeconds: 30
+            periodSeconds: 10
           volumeMounts:
             - name: prometheus-config
               mountPath: /etc/prometheus
@@ -64,68 +72,5 @@ spec:
           configMap:
             name: prometheus-config    # declared in prometheus-configmap.yaml
         - name: prometheus-data
-          emptyDir: {}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: grafana
-  namespace: monitoring
-  labels:
-    app: grafana
-spec:
-  selector:
-    app: grafana
-  ports:
-    - name: http
-      port: 3000
-      targetPort: 3000
-  type: ClusterIP
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: grafana
-  namespace: monitoring
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: grafana
-  template:
-    metadata:
-      labels:
-        app: grafana
-    spec:
-      containers:
-        - name: grafana
-          image: grafana/grafana:10.4.0
-          ports:
-            - containerPort: 3000
-          env:
-            - name: GF_AUTH_ANONYMOUS_ENABLED
-              value: "true"
-            - name: GF_AUTH_ANONYMOUS_ORG_ROLE
-              value: Viewer
-          resources:
-            limits:
-              memory: 256Mi
-            requests:
-              memory: 128Mi
-          volumeMounts:
-            - name: grafana-datasources
-              mountPath: /etc/grafana/provisioning/datasources
-            - name: grafana-dashboards-config
-              mountPath: /etc/grafana/provisioning/dashboards
-            - name: grafana-dashboard-files
-              mountPath: /etc/grafana/provisioning/dashboards/tripplanning
-      volumes:
-        - name: grafana-datasources
-          configMap:
-            name: grafana-datasources          # declared in grafana-datasources.yaml
-        - name: grafana-dashboards-config
-          configMap:
-            name: grafana-dashboards-config    # declared in grafana-dashboards.yaml
-        - name: grafana-dashboard-files
-          configMap:
-            name: grafana-dashboard-files      # declared in grafana-dashboards.yaml
+          persistentVolumeClaim:
+            claimName: prometheus-pvc  # declared in prometheus/prometheus-pvc.yaml

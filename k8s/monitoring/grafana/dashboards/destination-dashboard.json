@@ -1,0 +1,13 @@
+{
+  "uid": "destination-service",
+  "title": "Destination Service Dashboard",
+  "description": "S2-INFRA OWNED — replace panels in feature/m3-s2-infra-destination PR",
+  "schemaVersion": 36,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "templating": { "list": [] },
+  "annotations": { "list": [] },
+  "panels": []
+}
