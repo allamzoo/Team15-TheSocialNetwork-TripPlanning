@@ -133,7 +133,7 @@ public class ActivityController {
     // ---------- S4-F4 ----------
     @PostMapping("/batch")
     public ResponseEntity<BatchActivityResponseDTO> batchActivityCreation(@RequestBody BatchActivityRequestDTO request) {
-        List<Activity> createdActivities = activityService.batchActivitiyCreation(request);
+        List<Activity> createdActivities = activityService.batchActivityCreation(request);
         BatchActivityResponseDTO response = new BatchActivityResponseDTO(
                 createdActivities.size(),
                 "Successfully created " + createdActivities.size() + " activities");

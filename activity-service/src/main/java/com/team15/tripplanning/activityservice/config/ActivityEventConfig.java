@@ -110,6 +110,15 @@ public class ActivityEventConfig {
                 .with(RK_ITINERARY_CANCELLED);
     }
 
+    /** Routes dead-lettered messages from the DLX into the DLQ queue. */
+    @Bean
+    public Binding dlqBinding() {
+        return BindingBuilder
+                .bind(activityItinerarySagaDlq())
+                .to(activityDlx())
+                .with(ITINERARY_SAGA_DLQ);
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // JSON message converter — all services use Jackson for AMQP payloads
     // ─────────────────────────────────────────────────────────────────────────

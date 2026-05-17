@@ -93,61 +93,59 @@
     },
     {
       "id": 5,
-      "type": "logs",
-      "title": "All Log Lines",
-      "description": "LogQL — all log lines from user-service. Use for volume inspection and general tracing.",
-      "datasource": { "type": "loki", "uid": "loki" },
+      "title": "Error Rate (errors/min)",
+      "description": "Count of ERROR-level log lines from user-service per minute. Spike = auth failure storm or upstream Feign degradation.",
+      "type": "timeseries",
       "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "datasource": { "type": "loki", "uid": "loki" },
       "targets": [
         {
-          "expr": "{app=\"user-service\"}",
+          "expr": "sum(count_over_time({app=\"tripplanning\", service=\"user-service\", level=\"ERROR\"} [1m]))",
+          "legendFormat": "errors/min",
           "refId": "A"
         }
       ],
-      "options": {
-        "dedupStrategy": "none",
-        "wrapLogMessage": true,
-        "showTime": true
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "red" },
+          "custom": { "lineWidth": 2 }
+        }
       }
     },
     {
       "id": 6,
-      "type": "logs",
-      "title": "WARN and ERROR Logs",
-      "description": "LogQL — WARN and ERROR level log lines from user-service. First stop for incident triage.",
-      "datasource": { "type": "loki", "uid": "loki" },
+      "title": "Feign Call Outcomes",
+      "description": "Successful Feign responses vs FeignException catches per minute. Detects when downstream services (itinerary-service, booking-service) are degraded.",
+      "type": "timeseries",
       "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+      "datasource": { "type": "loki", "uid": "loki" },
       "targets": [
         {
-          "expr": "{app=\"user-service\", level=~\"WARN|ERROR\"}",
+          "expr": "sum(count_over_time({app=\"tripplanning\", service=\"user-service\"} |= \"FeignException\" [1m]))",
+          "legendFormat": "Feign errors/min",
           "refId": "A"
+        },
+        {
+          "expr": "sum(count_over_time({app=\"tripplanning\", service=\"user-service\"} |= \"Feign\" != \"FeignException\" [1m]))",
+          "legendFormat": "Feign success/min",
+          "refId": "B"
         }
-      ],
-      "options": {
-        "dedupStrategy": "none",
-        "showLabels": true,
-        "wrapLogMessage": true,
-        "showTime": true
-      }
+      ]
     },
     {
       "id": 7,
-      "type": "logs",
-      "title": "Feign Outbound Call Logs",
-      "description": "LogQL — log lines containing 'Feign' showing outbound calls to itinerary-service and booking-service.",
-      "datasource": { "type": "loki", "uid": "loki" },
+      "title": "Correlation ID Trace",
+      "description": "All log lines from user-service filtered by X-Correlation-ID. Use the variable $correlationId to trace a single request end-to-end across services.",
+      "type": "timeseries",
       "gridPos": { "x": 0, "y": 24, "w": 24, "h": 8 },
+      "datasource": { "type": "loki", "uid": "loki" },
       "targets": [
         {
-          "expr": "{app=\"user-service\"} |= \"Feign\"",
+          "expr": "sum(count_over_time({app=\"tripplanning\", service=\"user-service\"} | json | correlationId=~\".+\" [1m]))",
+          "legendFormat": "log lines with correlationId/min",
           "refId": "A"
         }
-      ],
-      "options": {
-        "dedupStrategy": "none",
-        "wrapLogMessage": true,
-        "showTime": true
-      }
+      ]
     }
   ]
 }

@@ -42,6 +42,12 @@ spring:
       simple:
         auto-startup: ${M3_MESSAGING_ENABLED:false}
         missing-queues-fatal: false
+        acknowledge-mode: auto
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          initial-interval: 1000
+          max-attempts: 3
 
 server:
   port: 8080

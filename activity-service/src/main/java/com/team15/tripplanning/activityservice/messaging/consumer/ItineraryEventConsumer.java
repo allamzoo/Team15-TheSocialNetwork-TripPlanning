@@ -16,6 +16,9 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.data.cassandra.core.CassandraOperations;
+import org.springframework.data.cassandra.core.InsertOptions;
+import org.springframework.data.cassandra.core.WriteResult;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -28,15 +31,18 @@ public class ItineraryEventConsumer {
 
     private final ActivityRepository activityRepository;
     private final ActivityLifecycleEventStore lifecycleEventStore;
+    private final CassandraOperations cassandraOperations;
     private final ActivityEventPublisher publisher;
     private final ObjectMapper objectMapper;
 
     public ItineraryEventConsumer(ActivityRepository activityRepository,
                                   ActivityLifecycleEventStore lifecycleEventStore,
+                                  CassandraOperations cassandraOperations,
                                   ActivityEventPublisher publisher,
                                   ObjectMapper objectMapper) {
         this.activityRepository = activityRepository;
         this.lifecycleEventStore = lifecycleEventStore;
+        this.cassandraOperations = cassandraOperations;
         this.publisher = publisher;
         this.objectMapper = objectMapper;
     }
@@ -90,14 +96,6 @@ public class ItineraryEventConsumer {
                     activityRepository.findByItineraryId(event.itineraryId());
 
             for (Activity activity : activities) {
-                List<ActivityLifecycleEvent> existing =
-                        lifecycleEventStore.findByActivityIdAndStatus(
-                                activity.getId(), "SCHEDULED");
-                if (!existing.isEmpty()) {
-                    log.info("Skipping duplicate SCHEDULED row for activityId={}",
-                            activity.getId());
-                    continue;
-                }
                 ActivityLifecycleEventKey key =
                         new ActivityLifecycleEventKey(activity.getId(), Instant.now());
                 ActivityLifecycleEvent lifecycleEvent = new ActivityLifecycleEvent();
@@ -106,7 +104,13 @@ public class ItineraryEventConsumer {
                 lifecycleEvent.setCategory(activity.getCategory().name());
                 lifecycleEvent.setLatitude(activity.getLatitude());
                 lifecycleEvent.setLongitude(activity.getLongitude());
-                lifecycleEventStore.save(lifecycleEvent);
+                WriteResult result = cassandraOperations.insert(
+                        lifecycleEvent, InsertOptions.builder().withIfNotExists().build());
+                if (!result.wasApplied()) {
+                    log.info("Skipping duplicate SCHEDULED row for activityId={}",
+                            activity.getId());
+                    continue;
+                }
                 log.info("Processed {} — SCHEDULED row written for activityId={}",
                         routingKey, activity.getId());
             }
@@ -129,16 +133,7 @@ public class ItineraryEventConsumer {
             for (Activity activity : activities) {
                 MDC.put("activityId", String.valueOf(activity.getId()));
                 try {
-                    // Idempotency — check before insert
-                    List<ActivityLifecycleEvent> existing =
-                            lifecycleEventStore.findByActivityIdAndStatus(
-                                    activity.getId(), "COMPLETED");
-                    if (!existing.isEmpty()) {
-                        log.info("Duplicate consume — COMPLETED row already exists " +
-                                "for activityId={}", activity.getId());
-                        continue;
-                    }
-
+                    // Idempotency — atomic INSERT IF NOT EXISTS (Cassandra LWT)
                     ActivityLifecycleEventKey key =
                             new ActivityLifecycleEventKey(activity.getId(), Instant.now());
                     ActivityLifecycleEvent lifecycleEvent = new ActivityLifecycleEvent();
@@ -147,7 +142,13 @@ public class ItineraryEventConsumer {
                     lifecycleEvent.setCategory(activity.getCategory().name());
                     lifecycleEvent.setLatitude(activity.getLatitude());
                     lifecycleEvent.setLongitude(activity.getLongitude());
-                    lifecycleEventStore.save(lifecycleEvent);
+                    WriteResult result = cassandraOperations.insert(
+                            lifecycleEvent, InsertOptions.builder().withIfNotExists().build());
+                    if (!result.wasApplied()) {
+                        log.info("Duplicate consume — COMPLETED row already exists " +
+                                "for activityId={}", activity.getId());
+                        continue;
+                    }
 
                     log.info("DB write: activityId={} saved with status=COMPLETED",
                             activity.getId());
@@ -179,16 +180,7 @@ public class ItineraryEventConsumer {
             for (Activity activity : activities) {
                 MDC.put("activityId", String.valueOf(activity.getId()));
                 try {
-                    // Idempotency — check before insert
-                    List<ActivityLifecycleEvent> existing =
-                            lifecycleEventStore.findByActivityIdAndStatus(
-                                    activity.getId(), "CANCELLED");
-                    if (!existing.isEmpty()) {
-                        log.info("Duplicate consume — CANCELLED row already exists " +
-                                "for activityId={}", activity.getId());
-                        continue;
-                    }
-
+                    // Idempotency — atomic INSERT IF NOT EXISTS (Cassandra LWT)
                     ActivityLifecycleEventKey key =
                             new ActivityLifecycleEventKey(activity.getId(), Instant.now());
                     ActivityLifecycleEvent lifecycleEvent = new ActivityLifecycleEvent();
@@ -197,7 +189,13 @@ public class ItineraryEventConsumer {
                     lifecycleEvent.setCategory(activity.getCategory().name());
                     lifecycleEvent.setLatitude(activity.getLatitude());
                     lifecycleEvent.setLongitude(activity.getLongitude());
-                    lifecycleEventStore.save(lifecycleEvent);
+                    WriteResult result = cassandraOperations.insert(
+                            lifecycleEvent, InsertOptions.builder().withIfNotExists().build());
+                    if (!result.wasApplied()) {
+                        log.info("Duplicate consume — CANCELLED row already exists " +
+                                "for activityId={}", activity.getId());
+                        continue;
+                    }
 
                     log.info("DB write: activityId={} saved with status=CANCELLED",
                             activity.getId());
