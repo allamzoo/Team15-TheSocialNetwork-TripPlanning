@@ -30,6 +30,12 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
+
+          # Bulk config from ConfigMap (production overrides)
+          envFrom:
+            - configMapRef:
+                name: booking-service-configmap
+
           env:
             # ── PostgreSQL (isolated booking-postgres) ──────────────────────────
             - name: SPRING_DATASOURCE_URL
@@ -81,9 +87,12 @@ spec:
             - name: SPRING_PROFILES_ACTIVE
               value: k8s
 
-            # ── JWT ──────────────────────────────────────────────────────────────
+            # ── JWT (from Secret) ────────────────────────────────────────────────
             - name: JWT_SECRET
-              value: tripplanning-secret-key-for-jwt-token-signing
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-secret
+                  key: jwt-secret
 
           resources:
             requests:
@@ -95,7 +104,7 @@ spec:
 
           readinessProbe:
             httpGet:
-              path: /api/bookings/health
+              path: /actuator/health
               port: 8080
             initialDelaySeconds: 30
             periodSeconds: 10
@@ -103,7 +112,7 @@ spec:
 
           livenessProbe:
             httpGet:
-              path: /api/bookings/health
+              path: /actuator/health
               port: 8080
             initialDelaySeconds: 60
             periodSeconds: 30

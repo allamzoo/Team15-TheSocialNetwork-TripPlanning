@@ -6,40 +6,36 @@ import com.team15.tripplanning.bookingservice.dto.AppliedCouponDTO;
 import com.team15.tripplanning.bookingservice.dto.AuditEventDTO;
 import com.team15.tripplanning.bookingservice.dto.BookingDetailsDTO;
 import com.team15.tripplanning.bookingservice.dto.CouponUsageDTO;
-import com.team15.tripplanning.bookingservice.dto.DestinationSeasonRevenueDTO;
 import com.team15.tripplanning.bookingservice.dto.CreateBookingRequest;
+import com.team15.tripplanning.bookingservice.dto.DestinationSeasonRevenueDTO;
+import com.team15.tripplanning.bookingservice.dto.ItineraryRefundInfo;
+import com.team15.tripplanning.bookingservice.dto.RefundCancellationRequest;
 import com.team15.tripplanning.bookingservice.dto.RevenueReportDTO;
 import com.team15.tripplanning.bookingservice.dto.SaleAuditTrailDTO;
 import com.team15.tripplanning.bookingservice.dto.UserBookingSummaryDTO;
 import com.team15.tripplanning.bookingservice.dto.UserBookingTotalDTO;
-import com.team15.tripplanning.bookingservice.dto.RefundCancellationRequest;
-import com.team15.tripplanning.bookingservice.dto.ItineraryRefundInfo;
-import com.team15.tripplanning.contracts.feign.DestinationServiceClient;
-import com.team15.tripplanning.contracts.feign.ItineraryServiceClient;
-import com.team15.tripplanning.contracts.feign.UserServiceClient;
-import com.team15.tripplanning.contracts.dto.DestinationDTO;
-import com.team15.tripplanning.contracts.dto.ItineraryDTO;
-import com.team15.tripplanning.bookingservice.model.mongo.PaymentAuditEvent;
-import com.team15.tripplanning.bookingservice.repository.PaymentAuditEventRepository;
+import com.team15.tripplanning.bookingservice.messaging.publisher.PaymentEventPublisher;
 import com.team15.tripplanning.bookingservice.model.Booking;
 import com.team15.tripplanning.bookingservice.model.BookingCoupon;
 import com.team15.tripplanning.bookingservice.model.Coupon;
+import com.team15.tripplanning.bookingservice.model.mongo.PaymentAuditEvent;
 import com.team15.tripplanning.bookingservice.repository.BookingCouponRepository;
 import com.team15.tripplanning.bookingservice.repository.BookingRepository;
 import com.team15.tripplanning.bookingservice.repository.CouponRepository;
+import com.team15.tripplanning.bookingservice.repository.PaymentAuditEventRepository;
+import com.team15.tripplanning.bookingservice.repository.SettlementRepository;
+import com.team15.tripplanning.bookingservice.strategy.*;
+import com.team15.tripplanning.contracts.dto.BatchDestinationRequest;
+import com.team15.tripplanning.contracts.dto.BatchItineraryRequest;
+import com.team15.tripplanning.contracts.dto.DestinationSummaryDTO;
+import com.team15.tripplanning.contracts.dto.ItineraryDTO;
+import com.team15.tripplanning.contracts.dto.ItinerarySummaryDTO;
+import com.team15.tripplanning.contracts.events.PaymentRefundedEvent;
+import com.team15.tripplanning.contracts.feign.DestinationServiceClient;
+import com.team15.tripplanning.contracts.feign.ItineraryServiceClient;
+import com.team15.tripplanning.contracts.feign.UserServiceClient;
 import com.team15.tripplanning.shared.observer.EntityObserver;
 import feign.FeignException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
-import com.team15.tripplanning.bookingservice.strategy.*;
-
-
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.LocalDate;
@@ -49,12 +45,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.LinkedHashMap;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class BookingService {
-
-    private static final Logger log = LoggerFactory.getLogger(BookingService.class);
 
     private final BookingRepository bookingRepository;
     private final BookingCouponRepository bookingCouponRepository;
@@ -65,6 +64,8 @@ public class BookingService {
     private final UserServiceClient userServiceClient;
     private final ItineraryServiceClient itineraryServiceClient;
     private final DestinationServiceClient destinationServiceClient;
+    private final PaymentEventPublisher paymentEventPublisher;
+    private final SettlementRepository settlementRepository;
 
     public BookingService(BookingRepository bookingRepository,
                           BookingCouponRepository bookingCouponRepository,
@@ -74,7 +75,9 @@ public class BookingService {
                           RedisTemplate<String, Object> redisTemplate,
                           UserServiceClient userServiceClient,
                           ItineraryServiceClient itineraryServiceClient,
-                          DestinationServiceClient destinationServiceClient) {
+                          DestinationServiceClient destinationServiceClient,
+                          PaymentEventPublisher paymentEventPublisher,
+                          SettlementRepository settlementRepository) {
         this.bookingRepository = bookingRepository;
         this.bookingCouponRepository = bookingCouponRepository;
         this.couponRepository = couponRepository;
@@ -83,6 +86,8 @@ public class BookingService {
         this.userServiceClient = userServiceClient;
         this.itineraryServiceClient = itineraryServiceClient;
         this.destinationServiceClient = destinationServiceClient;
+        this.paymentEventPublisher = paymentEventPublisher;
+        this.settlementRepository = settlementRepository;
         register(mongoEventLogger);
     }
 
@@ -108,6 +113,7 @@ public class BookingService {
     }
 
     // ===== CRUD =====
+
     public Booking create(Booking booking) {
         if (booking.getStatus() == null) {
             booking.setStatus(Booking.BookingStatus.PENDING);
@@ -134,13 +140,11 @@ public class BookingService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "itineraryId, amount and type are required");
         }
 
-        validateItineraryAllowsBooking(request.getItineraryId());
+        ItineraryDTO itinerary = validateItineraryAllowsBooking(request.getItineraryId());
 
         Long userId = request.getUserId();
         if (userId == null) {
-            // Feign call to itinerary-service to get the itinerary's owner
-            ItineraryDTO itin = fetchItineraryOrThrow(request.getItineraryId());
-            userId = itin.userId();
+            userId = itinerary.userId();
         }
         if (userId == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found");
@@ -163,6 +167,12 @@ public class BookingService {
         if (request.getProviderName() != null && !request.getProviderName().isBlank()) {
             details.put("providerName", request.getProviderName());
         }
+        Integer activeCount = null;
+        if (itinerary.destinationId() != null) {
+            activeCount = itineraryServiceClient.getDestinationActiveCount(itinerary.destinationId());
+        }
+        double seasonalSurcharge = calculateSeasonalSurcharge(request.getAmount(), activeCount != null ? activeCount : 0);
+        details.put("seasonalSurcharge", seasonalSurcharge);
         booking.setBookingDetails(details);
 
         Booking saved = bookingRepository.save(booking);
@@ -194,24 +204,13 @@ public class BookingService {
 
     public Booking update(Long id, Booking booking) {
         Booking existing = findById(id);
-        if (booking.getItineraryId() != null) {
-            existing.setItineraryId(booking.getItineraryId());
-        }
-        if (booking.getUserId() != null) {
-            existing.setUserId(booking.getUserId());
-        }
-        if (booking.getAmount() != null) {
-            existing.setAmount(booking.getAmount());
-        }
-        if (booking.getType() != null) {
-            existing.setType(booking.getType());
-        }
-        if (booking.getStatus() != null) {
-            existing.setStatus(booking.getStatus());
-        }
-        if (booking.getBookingDetails() != null) {
-            existing.setBookingDetails(booking.getBookingDetails());
-        }
+        if (booking.getItineraryId() != null) existing.setItineraryId(booking.getItineraryId());
+        if (booking.getUserId() != null)       existing.setUserId(booking.getUserId());
+        if (booking.getAmount() != null)       existing.setAmount(booking.getAmount());
+        if (booking.getType() != null)         existing.setType(booking.getType());
+        if (booking.getStatus() != null)       existing.setStatus(booking.getStatus());
+        if (booking.getBookingDetails() != null) existing.setBookingDetails(booking.getBookingDetails());
+
         Booking saved = bookingRepository.save(existing);
         deleteWildcard("s5-booking-summary::S5::S5-F3::" + saved.getUserId());
         deleteWildcard("s5-booking-details::S5::S5-F4::" + id);
@@ -229,16 +228,37 @@ public class BookingService {
         deleteWildcard("s5-destination-season::*");
     }
 
+    // ===== S5-F1 =====
+
+    public List<Booking> getBookings(String statusStr, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        Booking.BookingStatus status = null;
+
+        if (statusStr != null && !statusStr.isBlank()) {
+            status = Booking.BookingStatus.valueOf(statusStr.toUpperCase());
+        }
+
+        if (status != null && startDateTime != null && endDateTime != null) {
+            return bookingRepository.searchBookings(status, startDateTime, endDateTime);
+        }
+        if (startDateTime != null && endDateTime != null) {
+            return bookingRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(startDateTime, endDateTime);
+        }
+        if (status != null) {
+            return bookingRepository.findByStatus(status);
+        }
+        return bookingRepository.findAll();
+    }
+
     // ===== S5-F3: User Booking Summary =====
+
     @Cacheable(value = "s5-booking-summary", key = "'S5::S5-F3::' + #userId")
     public UserBookingSummaryDTO getUserBookingSummary(Long userId) {
-        // Feign call to user-service instead of local cross-service DB query
         try {
             userServiceClient.getUser(userId);
-        } catch (FeignException.NotFound e) {
+        } catch (FeignException.NotFound ex) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found: " + userId);
-        } catch (FeignException e) {
-            log.warn("user-service unavailable for userId={}, proceeding with local data: {}", userId, e.getMessage());
+        } catch (FeignException ex) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "User service unavailable");
         }
 
         List<Booking> userBookings = bookingRepository.findByUserId(userId);
@@ -254,7 +274,6 @@ public class BookingService {
             typeBreakdown.put(type, amount);
             totalAmount += amount;
         }
-
         for (Booking b : userBookings) {
             if (b.getStatus() == Booking.BookingStatus.CONFIRMED) {
                 totalBookings++;
@@ -272,39 +291,28 @@ public class BookingService {
     @Transactional
     public Booking retryBooking(Long id) {
         Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Booking not found: " + id
-                ));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found: " + id));
 
         if (booking.getStatus() != Booking.BookingStatus.FAILED) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Only FAILED bookings can be retried"
-            );
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only FAILED bookings can be retried");
         }
 
         booking.setStatus(Booking.BookingStatus.CONFIRMED);
 
         Map<String, Object> details = booking.getBookingDetails();
-        if (details == null) {
-            details = new HashMap<>();
-        }
+        if (details == null) details = new HashMap<>();
 
         int retryAttempt = 0;
         Object retryObj = details.get("retryAttempt");
-
         if (retryObj instanceof Integer) {
             retryAttempt = (Integer) retryObj;
         } else if (retryObj instanceof Number) {
             retryAttempt = ((Number) retryObj).intValue();
         }
-
         retryAttempt++;
 
         details.put("retryAttempt", retryAttempt);
         details.put("confirmationNumber", "RETRY-" + id + "-" + retryAttempt);
-
         booking.setBookingDetails(details);
 
         Booking saved = bookingRepository.save(booking);
@@ -327,13 +335,9 @@ public class BookingService {
     @Cacheable(value = "s5-booking-details", key = "'S5::S5-F4::' + #bookingId")
     public BookingDetailsDTO getBookingDetails(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Booking not found: " + bookingId
-                ));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found: " + bookingId));
 
         List<BookingCoupon> bookingCoupons = booking.getBookingCoupons();
-
         List<AppliedCouponDTO> appliedCoupons = new ArrayList<>();
         double totalDiscount = 0.0;
 
@@ -347,7 +351,6 @@ public class BookingService {
             dto.setAppliedAt(bc.getAppliedAt());
 
             totalDiscount += bc.getDiscountApplied() != null ? bc.getDiscountApplied() : 0;
-
             appliedCoupons.add(dto);
         }
 
@@ -370,22 +373,21 @@ public class BookingService {
     @Transactional
     public void cancelPendingBookingsByItinerary(Long itineraryId) {
         List<Booking> bookings = bookingRepository.findByItineraryId(itineraryId);
-
         for (Booking booking : bookings) {
             if (booking.getStatus() == Booking.BookingStatus.PENDING) {
                 booking.setStatus(Booking.BookingStatus.CANCELLED);
             }
         }
-
         bookingRepository.saveAll(bookings);
         deleteWildcard("s5-revenue-report::*");
         deleteWildcard("s5-destination-season::*");
     }
 
+    // ===== S5-F5 =====
+
     @Cacheable(value = "s5-top-coupons", key = "'S5::S5-F5::' + #limit")
     public List<CouponUsageDTO> getTopUsedCoupons(int limit) {
         List<Object[]> results = bookingCouponRepository.findTopUsedCoupons(limit);
-
         List<CouponUsageDTO> response = new ArrayList<>();
 
         for (Object[] row : results) {
@@ -395,7 +397,6 @@ public class BookingService {
             } else if (row[7] instanceof Timestamp ts) {
                 expiryDate = ts.toLocalDateTime();
             }
-
             boolean expired = expiryDate != null && expiryDate.isBefore(LocalDateTime.now());
 
             response.add(CouponUsageDTO.builder()
@@ -409,9 +410,10 @@ public class BookingService {
                     .expired(expired)
                     .build());
         }
-
         return response;
     }
+
+    // ===== S5-F6 =====
 
     @Cacheable(value = "s5-revenue-report", key = "'S5::S5-F6::' + #startDate + '::' + #endDate")
     public RevenueReportDTO getRevenueReport(LocalDate startDate, LocalDate endDate) {
@@ -423,7 +425,6 @@ public class BookingService {
         LocalDateTime end = endDate.atTime(23, 59, 59);
 
         Object[] result = bookingRepository.getRevenueStats(start, end);
-
         Object[] row;
         if (result.length == 1 && result[0] instanceof Object[]) {
             row = (Object[]) result[0];
@@ -431,11 +432,10 @@ public class BookingService {
             row = result;
         }
 
-        double totalRevenue = ((Number) row[0]).doubleValue();
-        long totalBookings = ((Number) row[1]).longValue();
+        double totalRevenue    = ((Number) row[0]).doubleValue();
+        long totalBookings     = ((Number) row[1]).longValue();
         double cancelledAmount = ((Number) row[2]).doubleValue();
-        long cancelledCount = ((Number) row[3]).longValue();
-
+        long cancelledCount    = ((Number) row[3]).longValue();
         double average = totalBookings == 0 ? 0 : totalRevenue / totalBookings;
 
         return RevenueReportDTO.builder()
@@ -447,28 +447,7 @@ public class BookingService {
                 .build();
     }
 
-    // ===== S5-F1 =====
-    public List<Booking> getBookings(String statusStr, LocalDateTime startDateTime, LocalDateTime endDateTime) {
-        Booking.BookingStatus status = null;
-
-        if (statusStr != null && !statusStr.isBlank()) {
-            status = Booking.BookingStatus.valueOf(statusStr.toUpperCase());
-        }
-
-        if (status != null && startDateTime != null && endDateTime != null) {
-            return bookingRepository.searchBookings(status, startDateTime, endDateTime);
-        }
-
-        if (startDateTime != null && endDateTime != null) {
-            return bookingRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(startDateTime, endDateTime);
-        }
-
-        if (status != null) {
-            return bookingRepository.findByStatus(status);
-        }
-
-        return bookingRepository.findAll();
-    }
+    // ===== Coupon =====
 
     @Transactional
     public Booking applyCoupon(Long bookingId, Long couponId) {
@@ -481,10 +460,8 @@ public class BookingService {
 
         if (booking.getStatus() == Booking.BookingStatus.CONFIRMED
                 || booking.getStatus() == Booking.BookingStatus.CANCELLED) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "cannot apply coupon to a confirmed/cancelled booking"
-            );
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "cannot apply coupon to a confirmed/cancelled booking");
         }
 
         Coupon coupon = couponRepository.findById(couponId)
@@ -499,7 +476,6 @@ public class BookingService {
         if (coupon.getCurrentUses() >= coupon.getMaxUses()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Coupon usage limit reached");
         }
-
         if (bookingCouponRepository.existsByBooking_IdAndCoupon_Id(bookingId, couponId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "coupon already applied");
         }
@@ -518,7 +494,6 @@ public class BookingService {
         bookingCoupon.setDiscountApplied(discount);
 
         coupon.setCurrentUses(coupon.getCurrentUses() + 1);
-
         booking.getBookingCoupons().add(bookingCoupon);
         bookingCouponRepository.save(bookingCoupon);
         couponRepository.save(coupon);
@@ -540,24 +515,16 @@ public class BookingService {
     @Transactional
     public Booking cancelBooking(Long id, String reason) {
         Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Booking not found: " + id
-                ));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found: " + id));
 
         if (booking.getStatus() != Booking.BookingStatus.CONFIRMED) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Only CONFIRMED bookings can be cancelled"
-            );
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only CONFIRMED bookings can be cancelled");
         }
 
         booking.setStatus(Booking.BookingStatus.CANCELLED);
 
         Map<String, Object> details = booking.getBookingDetails();
-        if (details == null) {
-            details = new HashMap<>();
-        }
+        if (details == null) details = new HashMap<>();
         details.put("cancellationReason", reason != null ? reason : "No reason provided");
         details.put("cancelledAt", LocalDateTime.now().toString());
         booking.setBookingDetails(details);
@@ -579,90 +546,86 @@ public class BookingService {
     }
 
     // ===== S5-F10: Revenue by Destination and Season =====
+
     @Cacheable(value = "s5-destination-season", key = "'S5::S5-F10::' + #startDate + '::' + #endDate")
     public List<DestinationSeasonRevenueDTO> getRevenueByDestinationAndSeason(
             LocalDate startDate, LocalDate endDate) {
 
         if (startDate == null) startDate = LocalDate.now().minusYears(1);
-        if (endDate == null) endDate = LocalDate.now();
+        if (endDate == null)   endDate   = LocalDate.now();
 
         if (startDate.isAfter(endDate)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "startDate must not be after endDate");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "startDate must not be after endDate");
         }
 
         LocalDateTime start = startDate.atStartOfDay();
-        LocalDateTime end = endDate.atTime(23, 59, 59, 999000000);
+        LocalDateTime end   = endDate.atTime(23, 59, 59, 999000000);
 
-        // Step 1 — query local bookings table only (no cross-service JOIN)
-        List<Object[]> rows = bookingRepository.getRevenueByItinerary(start, end);
+        List<Booking> bookings = bookingRepository.findConfirmedByCreatedAtBetween(start, end);
+        if (bookings.isEmpty()) {
+            return new ArrayList<>();
+        }
 
-        // Step 2 — aggregate per destinationId using Feign calls
-        // Map: destinationId → running totals
-        Map<Long, double[]> destTotals = new HashMap<>();   // [totalRevenue, surchargeRevenue, peakCount, offPeakCount]
-        Map<Long, Long>     destIdByItinerary = new HashMap<>();
+        List<Long> itineraryIds = bookings.stream()
+                .map(Booking::getItineraryId)
+                .distinct()
+                .toList();
 
-        for (Object[] row : rows) {
-            long itineraryId   = ((Number) row[0]).longValue();
-            double totalRev    = ((Number) row[1]).doubleValue();
-            double surchargeRev = ((Number) row[2]).doubleValue();
-            long   peakCount   = ((Number) row[3]).longValue();
-            long   offPeakCount = ((Number) row[4]).longValue();
+        Map<Long, Long> itineraryToDestination = new HashMap<>();
+        if (!itineraryIds.isEmpty()) {
+            List<ItinerarySummaryDTO> itinerarySummaries =
+                    itineraryServiceClient.batchGetItineraries(new BatchItineraryRequest(itineraryIds));
+            for (ItinerarySummaryDTO summary : itinerarySummaries) {
+                itineraryToDestination.put(summary.itineraryId(), summary.destinationId());
+            }
+        }
 
-            // Feign: get destinationId for this itinerary
-            Long destinationId = destIdByItinerary.computeIfAbsent(itineraryId, iid -> {
-                try {
-                    ItineraryDTO itin = itineraryServiceClient.getItinerary(iid);
-                    return itin != null ? itin.destinationId() : null;
-                } catch (FeignException e) {
-                    log.warn("itinerary-service unavailable for itineraryId={}: {}", iid, e.getMessage());
-                    return null;
-                }
-            });
+        List<Long> destinationIds = itineraryToDestination.values().stream()
+                .distinct()
+                .toList();
 
+        Map<Long, String> destinationNames = new HashMap<>();
+        if (!destinationIds.isEmpty()) {
+            List<DestinationSummaryDTO> destinations =
+                    destinationServiceClient.batchGetDestinations(new BatchDestinationRequest(destinationIds));
+            for (DestinationSummaryDTO destination : destinations) {
+                destinationNames.put(destination.destinationId(), destination.name());
+            }
+        }
+
+        Map<Long, DestinationSeasonRevenueDTO> aggregates = new HashMap<>();
+        for (Booking booking : bookings) {
+            Long destinationId = itineraryToDestination.get(booking.getItineraryId());
             if (destinationId == null) continue;
 
-            destTotals.merge(destinationId, new double[]{totalRev, surchargeRev, peakCount, offPeakCount},
-                    (existing, incoming) -> new double[]{
-                            existing[0] + incoming[0],
-                            existing[1] + incoming[1],
-                            existing[2] + incoming[2],
-                            existing[3] + incoming[3]
-                    });
-        }
+            String destinationName = destinationNames.getOrDefault(destinationId, "");
+            double surcharge = extractSeasonalSurcharge(booking.getBookingDetails());
+            double amount = booking.getAmount() != null ? booking.getAmount() : 0.0;
 
-        // Step 3 — enrich with destination names via Feign
-        List<DestinationSeasonRevenueDTO> result = new ArrayList<>();
-        for (Map.Entry<Long, double[]> entry : destTotals.entrySet()) {
-            Long destinationId = entry.getKey();
-            double[] totals    = entry.getValue();
-
-            String destinationName = "Unknown";
-            try {
-                DestinationDTO dest = destinationServiceClient.getDestination(destinationId);
-                if (dest != null && dest.name() != null) {
-                    destinationName = dest.name();
-                }
-            } catch (FeignException e) {
-                log.warn("destination-service unavailable for destinationId={}: {}", destinationId, e.getMessage());
+            DestinationSeasonRevenueDTO current = aggregates.get(destinationId);
+            if (current == null) {
+                current = DestinationSeasonRevenueDTO.builder()
+                        .destinationId(destinationId)
+                        .destinationName(destinationName)
+                        .totalRevenue(0.0)
+                        .surchargeRevenue(0.0)
+                        .baseRevenue(0.0)
+                        .peakBookingCount(0L)
+                        .offPeakBookingCount(0L)
+                        .build();
             }
 
-            result.add(DestinationSeasonRevenueDTO.builder()
-                    .destinationId(destinationId)
-                    .destinationName(destinationName)
-                    .totalRevenue(totals[0])
-                    .surchargeRevenue(totals[1])
-                    .baseRevenue(totals[0] - totals[1])
-                    .peakBookingCount((long) totals[2])
-                    .offPeakBookingCount((long) totals[3])
-                    .build());
+            current.setTotalRevenue(current.getTotalRevenue() + amount);
+            current.setSurchargeRevenue(current.getSurchargeRevenue() + surcharge);
+            current.setBaseRevenue(current.getBaseRevenue() + (amount - surcharge));
+            current.setPeakBookingCount(current.getPeakBookingCount() + (surcharge > 0.0 ? 1 : 0));
+            current.setOffPeakBookingCount(current.getOffPeakBookingCount() + (surcharge > 0.0 ? 0 : 1));
+            aggregates.put(destinationId, current);
         }
 
-        result.sort((a, b) -> Double.compare(b.getTotalRevenue(), a.getTotalRevenue()));
-        return result;
+        return new ArrayList<>(aggregates.values());
     }
 
-    // S5-F10 — log ANALYTICS_VIEWED on every call including cache hits
     public void logAnalyticsViewed(LocalDate startDate, LocalDate endDate) {
         Map<String, Object> payload = new HashMap<>();
         payload.put("bookingId", 0L);
@@ -674,26 +637,22 @@ public class BookingService {
     }
 
     // ===== S5-F11: Payment Audit History per Booking =====
+
     public com.team15.tripplanning.bookingservice.dto.PaginatedPaymentHistoryDTO getPaymentHistory(
             Long bookingId, int page, int size) {
         findById(bookingId);
 
-        // Log ANALYTICS_VIEWED event
         Map<String, Object> viewPayload = new HashMap<>();
         viewPayload.put("bookingId", bookingId);
         viewPayload.put("amount", 0.0);
         viewPayload.put("method", "PAYMENT_HISTORY_VIEW");
         notifyObservers("ANALYTICS_VIEWED", viewPayload);
 
-        // Retrieve all events, filter out ANALYTICS_VIEWED, then paginate in-memory
         List<PaymentAuditEvent> allEvents = paymentAuditEventRepository
                 .findByBookingIdOrderByTimestampDesc(bookingId);
 
         List<PaymentAuditEvent> filtered = allEvents.stream()
-                .filter(e -> {
-                    String et = e.effectiveEventType();
-                    return !"ANALYTICS_VIEWED".equals(et);
-                })
+                .filter(e -> !"ANALYTICS_VIEWED".equals(e.effectiveEventType()))
                 .toList();
 
         long totalElements = filtered.size();
@@ -742,18 +701,17 @@ public class BookingService {
                 .build();
     }
 
-    // ===== S5-READ-DB: extra aggregate endpoints =====
+    // ===== S5-READ-DB: aggregate endpoints =====
 
     /** GET /api/bookings/user/{userId}/total — CONFIRMED bookings in date range. */
     public UserBookingTotalDTO getUserBookingTotal(Long userId,
                                                    LocalDateTime startDate,
                                                    LocalDateTime endDate) {
         Object[] row = bookingRepository.getUserBookingTotal(userId, startDate, endDate);
-        // result may be wrapped in an outer array by some JDBC drivers
         if (row.length == 1 && row[0] instanceof Object[] nested) {
             row = nested;
         }
-        BigDecimal total = new java.math.BigDecimal(row[0].toString());
+        BigDecimal total = new BigDecimal(row[0].toString());
         long count = ((Number) row[1]).longValue();
 
         UserBookingTotalDTO dto = new UserBookingTotalDTO();
@@ -776,13 +734,12 @@ public class BookingService {
         LocalDateTime end = request.getEndDate() != null
                 ? request.getEndDate() : LocalDateTime.now().plusYears(10);
 
-        Object[] row = bookingRepository.aggregateByItineraries(
-                request.getItineraryIds(), status, start, end);
+        Object[] row = bookingRepository.aggregateByItineraries(request.getItineraryIds(), status, start, end);
         if (row.length == 1 && row[0] instanceof Object[] nested) {
             row = nested;
         }
         long count = ((Number) row[0]).longValue();
-        BigDecimal total = new java.math.BigDecimal(row[1].toString());
+        BigDecimal total = new BigDecimal(row[1].toString());
         return new AggregateResultDTO(count, total);
     }
 
@@ -793,97 +750,56 @@ public class BookingService {
             row = nested;
         }
         long count = ((Number) row[0]).longValue();
-        BigDecimal total = new java.math.BigDecimal(row[1].toString());
+        BigDecimal total = new BigDecimal(row[1].toString());
         return new AggregateResultDTO(count, total);
     }
 
-    private void validateItineraryAllowsBooking(Long itineraryId) {
-        // Feign call to itinerary-service replaces native SQL against local shadow table
-        ItineraryDTO itin = fetchItineraryOrThrow(itineraryId);
-
-        String normalized = itin.status() != null ? itin.status().trim().toUpperCase() : "";
-        if (!normalized.equals("PLANNED") && !normalized.equals("IN_PROGRESS")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Booking is allowed only for PLANNED or IN_PROGRESS itineraries");
-        }
-    }
-
-    /** Fetches itinerary from itinerary-service via Feign; throws 404 if not found. */
-    private ItineraryDTO fetchItineraryOrThrow(Long itineraryId) {
-        try {
-            ItineraryDTO itin = itineraryServiceClient.getItinerary(itineraryId);
-            if (itin == null) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found: " + itineraryId);
-            }
-            return itin;
-        } catch (FeignException.NotFound e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found: " + itineraryId);
-        } catch (FeignException e) {
-            log.error("itinerary-service unavailable for itineraryId={}: {}", itineraryId, e.getMessage());
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
-                    "itinerary-service unavailable — cannot validate itinerary");
-        }
-    }
+    // ===== S5-F12: Refund / Cancellation Tier =====
 
     @Transactional
     public Map<String, Object> processRefundCancellationTier(Long bookingId, RefundCancellationRequest request) {
 
-        // ===== a) Validate reason is not blank =====
         if (request != null && request.getReason() != null && request.getReason().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "reason must not be blank");
         }
 
-        // ===== b) Find booking =====
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Booking not found: " + bookingId
-                ));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found: " + bookingId));
 
-        // ===== c) Fetch itinerary info via Feign (S5-F12: replaces findItineraryRefundInfoRaw) =====
-        String itineraryStatus = null;
         Long itineraryId = booking.getItineraryId();
+        ItineraryDTO itineraryDto = null;
         if (itineraryId != null) {
             try {
-                ItineraryDTO itin = itineraryServiceClient.getItinerary(itineraryId);
-                if (itin != null && itin.status() != null) {
-                    itineraryStatus = itin.status();
-                }
-            } catch (FeignException e) {
-                log.warn("itinerary-service unavailable for itineraryId={}, falling back to booking status: {}",
-                        itineraryId, e.getMessage());
+                itineraryDto = itineraryServiceClient.getItinerary(itineraryId);
+            } catch (FeignException.NotFound ex) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found");
+            } catch (FeignException ex) {
+                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Itinerary service unavailable");
             }
         }
 
-        // ===== d) Build refund info using BOOKING's startDate =====
-        // The booking's startDate (set by test helper) determines days until departure
-        LocalDate bookingStartDate = booking.getStartDate();
-        if (bookingStartDate == null) {
-            // fallback: use booking's createdAt date
-            bookingStartDate = booking.getCreatedAt() != null
+        String itineraryStatus = itineraryDto != null ? itineraryDto.status() : null;
+
+        LocalDate startDate = itineraryDto != null ? itineraryDto.startDate() : null;
+        if (startDate == null) startDate = booking.getStartDate();
+        if (startDate == null) {
+            startDate = booking.getCreatedAt() != null
                     ? booking.getCreatedAt().toLocalDate()
                     : LocalDate.now();
         }
 
-        // Use itinerary status; if not available, use booking status string
         String effectiveStatus = itineraryStatus != null
                 ? itineraryStatus
                 : (booking.getStatus() != null ? booking.getStatus().name() : "UNKNOWN");
 
-        ItineraryRefundInfo itinerary = new ItineraryRefundInfo(
-                itineraryId,
-                effectiveStatus,
-                bookingStartDate
-        );
+        ItineraryRefundInfo itinerary = new ItineraryRefundInfo(itineraryId, effectiveStatus, startDate);
 
-        // ===== e) Select strategy =====
         RefundStrategySelector selector = new RefundStrategySelector();
         RefundStrategy strategy = selector.select(itinerary);
         long daysBeforeDeparture = selector.calculateDaysBeforeDeparture(itinerary);
 
         RefundResult result = strategy.calculateRefund(booking, itinerary, request);
 
-        // ===== f) Build response =====
         Map<String, Object> response = new HashMap<>();
         response.put("bookingId", booking.getId());
         response.put("userId", booking.getUserId());
@@ -896,7 +812,6 @@ public class BookingService {
         response.put("reason", request != null ? request.getReason() : null);
         response.put("status", booking.getStatus() != null ? booking.getStatus().name() : null);
 
-        // ===== g) NoRefundStrategy: log but return 2xx with refundedAmount=0 =====
         if (strategy instanceof NoRefundStrategy) {
             Map<String, Object> payload = new HashMap<>();
             payload.put("bookingId", booking.getId());
@@ -909,10 +824,18 @@ public class BookingService {
             deleteWildcard("booking-service::S5-F10::*");
             deleteWildcard("booking-service::S5-F11::" + bookingId + "::*");
             deleteWildcard("booking-service::booking::" + bookingId);
-            return response;
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Refund denied by policy");
         }
 
-        // ===== h) Apply refund - update booking =====
+        int updated = bookingRepository.updateStatusByIdAndStatus(
+                bookingId,
+                Booking.BookingStatus.CANCELLED.name(),
+                Booking.BookingStatus.CONFIRMED.name()
+        );
+        if (updated == 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Refund already in progress");
+        }
+
         booking.setStatus(Booking.BookingStatus.CANCELLED);
 
         Map<String, Object> details = booking.getBookingDetails();
@@ -928,7 +851,6 @@ public class BookingService {
         Booking saved = bookingRepository.save(booking);
         response.put("status", saved.getStatus().name());
 
-        // ===== i) Mongo log =====
         Map<String, Object> payload = new HashMap<>();
         payload.put("bookingId", saved.getId());
         payload.put("userId", saved.getUserId());
@@ -941,11 +863,62 @@ public class BookingService {
         payload.put("refundReason", request != null ? request.getReason() : null);
         notifyObservers("REFUND_PROCESSED", payload);
 
-        // ===== j) Cache invalidation =====
         deleteWildcard("booking-service::S5-F10::*");
         deleteWildcard("booking-service::S5-F11::" + bookingId + "::*");
         deleteWildcard("booking-service::booking::" + bookingId);
 
+        Long settlementId = settlementRepository.findByItineraryId(booking.getItineraryId())
+                .map(s -> s.getId())
+                .orElse(null);
+        paymentEventPublisher.publishPaymentRefunded(
+                new PaymentRefundedEvent(settlementId, booking.getItineraryId(),
+                        BigDecimal.valueOf(result.getRefundAmount()))
+        );
+
         return response;
+    }
+
+    // ===== Private helpers =====
+
+    private ItineraryDTO validateItineraryAllowsBooking(Long itineraryId) {
+        ItineraryDTO itinerary;
+        try {
+            itinerary = itineraryServiceClient.getItinerary(itineraryId);
+        } catch (FeignException.NotFound ex) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found");
+        } catch (FeignException ex) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Itinerary service unavailable");
+        }
+
+        String normalized = itinerary.status() != null ? itinerary.status().trim().toUpperCase() : "";
+        if (!normalized.equals("PLANNED") && !normalized.equals("IN_PROGRESS")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Booking is allowed only for PLANNED or IN_PROGRESS itineraries");
+        }
+        return itinerary;
+    }
+
+    private double calculateSeasonalSurcharge(double amount, int activeCount) {
+        double multiplier = 0.0;
+        if (activeCount >= 5) {
+            multiplier = 0.20;
+        } else if (activeCount >= 3) {
+            multiplier = 0.10;
+        }
+        return amount * multiplier;
+    }
+
+    private double extractSeasonalSurcharge(Map<String, Object> details) {
+        if (details == null) return 0.0;
+        Object value = details.get("seasonalSurcharge");
+        if (value instanceof Number number) return number.doubleValue();
+        if (value instanceof String text) {
+            try {
+                return Double.parseDouble(text);
+            } catch (NumberFormatException ex) {
+                return 0.0;
+            }
+        }
+        return 0.0;
     }
 }

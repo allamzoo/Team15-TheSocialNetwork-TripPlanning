@@ -19,9 +19,6 @@ metadata:
     grafana_dashboard: "1"
 data:
   # ── MONITORING-INFRA OWNED — do not edit in feature slice PRs ────────────────
-  # This ConfigMap tells Grafana where to load dashboard JSON files from.
-  # Dashboard JSON files are embedded in the grafana-dashboard-files ConfigMap
-  # and mounted at /etc/grafana/provisioning/dashboards/tripplanning/.
   dashboards.yaml: |
     apiVersion: 1
     providers:
@@ -156,82 +153,82 @@ data:
           "title": "HTTP Requests Per Second",
           "type": "graph",
           "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "targets": [
             {
               "expr": "rate(http_requests_total{job=\"destination-service\"}[1m])",
               "refId": "A",
               "legendFormat": "{{method}} {{path}}"
             }
-          ],
-          "datasource": { "type": "prometheus", "uid": "prometheus" }
+          ]
         },
         {
           "id": 2,
           "title": "Error Rate",
           "type": "graph",
           "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "targets": [
             {
               "expr": "rate(http_requests_total{job=\"destination-service\",status=~\"5..\"}[1m]) / rate(http_requests_total{job=\"destination-service\"}[1m])",
               "refId": "A",
               "legendFormat": "Error Rate"
             }
-          ],
-          "datasource": { "type": "prometheus", "uid": "prometheus" }
+          ]
         },
         {
           "id": 3,
           "title": "p99 Latency",
           "type": "graph",
           "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "targets": [
             {
               "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{job=\"destination-service\"}[5m]))",
               "refId": "A",
               "legendFormat": "p99"
             }
-          ],
-          "datasource": { "type": "prometheus", "uid": "prometheus" }
+          ]
         },
         {
           "id": 4,
           "title": "Log Volume",
           "type": "graph",
           "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+          "datasource": { "type": "loki", "uid": "loki" },
           "targets": [
             {
               "expr": "{job=\"destination-service\"} |= \"\"",
               "refId": "A",
               "legendFormat": "Log Volume"
             }
-          ],
-          "datasource": { "type": "loki", "uid": "loki" }
+          ]
         },
         {
           "id": 5,
           "title": "Error Logs",
           "type": "logs",
           "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+          "datasource": { "type": "loki", "uid": "loki" },
           "targets": [
             {
               "expr": "{job=\"destination-service\"} |= \"ERROR\"",
               "refId": "A"
             }
-          ],
-          "datasource": { "type": "loki", "uid": "loki" }
+          ]
         },
         {
           "id": 6,
           "title": "Slow Query Logs (>1s)",
           "type": "logs",
           "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+          "datasource": { "type": "loki", "uid": "loki" },
           "targets": [
             {
               "expr": "{job=\"destination-service\"} |= \"duration\" | duration > 1000ms",
               "refId": "A"
             }
-          ],
-          "datasource": { "type": "loki", "uid": "loki" }
+          ]
         }
       ]
     }
@@ -483,26 +480,81 @@ data:
       "panels": [
         {
           "id": 1,
-          "title": "Error Rate (errors/min)",
-          "description": "Count of ERROR-level log lines from booking-service per minute. Spike = saga failure or bad payment event.",
+          "title": "HTTP Request Rate (req/s)",
+          "description": "Requests per second per booking endpoint.",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
-          "datasource": { "type": "loki", "uid": "loki" },
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "targets": [
-            {
-              "expr": "sum(count_over_time({app=\"tripplanning\", service=\"booking-service\", level=\"ERROR\"} [1m]))",
-              "legendFormat": "errors/min",
-              "refId": "A"
-            }
-          ],
-          "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "red" }, "custom": { "lineWidth": 2 } } }
+            { "expr": "sum by (uri) (rate(http_server_requests_seconds_count{job=\"booking-service\"}[5m]))", "legendFormat": "{{uri}}", "refId": "A" }
+          ]
         },
         {
           "id": 2,
+          "title": "HTTP Error Rate (5xx req/s)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "sum(rate(http_server_requests_seconds_count{job=\"booking-service\",status=~\"5..\"}[5m]))",
+              "legendFormat": "5xx req/s",
+              "refId": "A"
+            }
+          ],
+          "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "red" } } }
+        },
+        {
+          "id": 3,
+          "title": "HTTP P95 Latency (s)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{job=\"booking-service\"}[5m])) by (le))",
+              "legendFormat": "p95",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "title": "HikariCP Connection Pool",
+          "description": "Active DB connections vs pool size.",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            { "expr": "hikaricp_connections_active{job=\"booking-service\"}", "legendFormat": "active connections", "refId": "A" },
+            { "expr": "hikaricp_connections_max{job=\"booking-service\"}", "legendFormat": "pool max size", "refId": "B" },
+            { "expr": "hikaricp_connections_pending{job=\"booking-service\"}", "legendFormat": "threads waiting", "refId": "C" }
+          ],
+          "fieldConfig": {
+            "defaults": { "custom": { "lineWidth": 2 } },
+            "overrides": [
+              { "matcher": { "id": "byName", "options": "pool max size" }, "properties": [ { "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } } ] }
+            ]
+          }
+        },
+        {
+          "id": 5,
+          "title": "RabbitMQ Consumer Throughput",
+          "description": "Messages published vs consumed on payment queues.",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            { "expr": "sum(rate(rabbitmq_channel_messages_published_total{job=\"booking-service\"}[5m]))", "legendFormat": "published/s", "refId": "A" },
+            { "expr": "sum(rate(rabbitmq_channel_messages_consumed_total{job=\"booking-service\"}[5m]))", "legendFormat": "consumed/s", "refId": "B" }
+          ]
+        },
+        {
+          "id": 6,
           "title": "RabbitMQ Event Audit",
           "description": "Log lines emitted by event publishers and consumers filtered by routing key.",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
           "datasource": { "type": "loki", "uid": "loki" },
           "targets": [
             {
@@ -518,11 +570,11 @@ data:
           ]
         },
         {
-          "id": 3,
+          "id": 7,
           "title": "Saga State Transitions",
           "description": "Visualizes SETTLEMENT_PENDING → SETTLED / PAYMENT_FAILED flow over time.",
           "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
           "datasource": { "type": "loki", "uid": "loki" },
           "targets": [
             { "expr": "sum(count_over_time({app=\"tripplanning\", service=\"booking-service\"} |= \"SETTLEMENT_PENDING\" [1m]))", "legendFormat": "SETTLEMENT_PENDING", "refId": "A" },
@@ -532,45 +584,29 @@ data:
           ]
         },
         {
-          "id": 4,
-          "title": "HTTP Request Rate (req/s)",
-          "description": "Requests per second per booking endpoint.",
-          "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "id": 8,
+          "title": "Error Logs",
+          "type": "logs",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+          "datasource": { "type": "loki", "uid": "loki" },
           "targets": [
-            { "expr": "sum by (uri) (rate(http_server_requests_seconds_count{job=\"booking-service\"}[5m]))", "legendFormat": "{{uri}}", "refId": "A" }
+            {
+              "expr": "{app=\"booking-service\"} |= \"ERROR\"",
+              "refId": "A"
+            }
           ]
         },
         {
-          "id": 5,
-          "title": "HikariCP Connection Pool",
-          "description": "Active DB connections vs pool size.",
-          "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "id": 9,
+          "title": "Settlement Processing Logs",
+          "type": "logs",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+          "datasource": { "type": "loki", "uid": "loki" },
           "targets": [
-            { "expr": "hikaricp_connections_active{job=\"booking-service\"}", "legendFormat": "active connections", "refId": "A" },
-            { "expr": "hikaricp_connections_max{job=\"booking-service\"}", "legendFormat": "pool max size", "refId": "B" },
-            { "expr": "hikaricp_connections_pending{job=\"booking-service\"}", "legendFormat": "threads waiting", "refId": "C" }
-          ],
-          "fieldConfig": {
-            "defaults": { "custom": { "lineWidth": 2 } },
-            "overrides": [
-              { "matcher": { "id": "byName", "options": "pool max size" }, "properties": [ { "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } } ] }
-            ]
-          }
-        },
-        {
-          "id": 6,
-          "title": "RabbitMQ Consumer Throughput",
-          "description": "Messages published vs consumed on payment queues.",
-          "type": "timeseries",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "targets": [
-            { "expr": "sum(rate(rabbitmq_channel_messages_published_total{job=\"booking-service\"}[5m]))", "legendFormat": "published/s", "refId": "A" },
-            { "expr": "sum(rate(rabbitmq_channel_messages_consumed_total{job=\"booking-service\"}[5m]))", "legendFormat": "consumed/s", "refId": "B" }
+            {
+              "expr": "{app=\"booking-service\"} |= \"SETTLEMENT\"",
+              "refId": "A"
+            }
           ]
         }
       ]

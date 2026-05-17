@@ -14,7 +14,24 @@ public class SettlementResultDTO {
     private LocalDateTime settledAt;
     private String failureReason;
 
-    public SettlementResultDTO() {}
+    public static SettlementResultDTO from(
+            Long settlementId,
+            Long itineraryId,
+            Long userId,
+            BigDecimal amount,
+            String status,
+            LocalDateTime settledAt,
+            String failureReason) {
+        SettlementResultDTO dto = new SettlementResultDTO();
+        dto.setSettlementId(settlementId);
+        dto.setItineraryId(itineraryId);
+        dto.setUserId(userId);
+        dto.setAmount(amount);
+        dto.setStatus(status);
+        dto.setSettledAt(settledAt);
+        dto.setFailureReason(failureReason);
+        return dto;
+    }
 
     public Long getSettlementId() { return settlementId; }
     public void setSettlementId(Long settlementId) { this.settlementId = settlementId; }
