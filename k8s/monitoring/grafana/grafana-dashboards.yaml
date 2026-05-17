@@ -133,104 +133,102 @@ data:
       ]
     }
 
-    # ┌─ S2 OWNED BLOCK ─ PR: feature/m3-s2-infra-destination ──────────────────┐
+  # ┌─ S2 OWNED BLOCK ─ PR: feature/m3-s2-infra-destination ──────────────────┐
   destination-dashboard.json: |
     {
-      "dashboard": {
-        "title": "Destination Service Dashboard",
-        "schemaVersion": 36,
-        "version": 1,
-        "uid": "destination-service",
-        "refresh": "30s",
-        "time": {
-          "from": "now-1h",
-          "to": "now"
+      "title": "Destination Service Dashboard",
+      "schemaVersion": 36,
+      "version": 1,
+      "uid": "destination-service",
+      "refresh": "30s",
+      "time": {
+        "from": "now-1h",
+        "to": "now"
+      },
+      "panels": [
+        {
+          "id": 1,
+          "title": "HTTP Requests Per Second",
+          "type": "graph",
+          "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0},
+          "targets": [
+            {
+              "expr": "rate(http_requests_total{job=\"destination-service\"}[1m])",
+              "refId": "A",
+              "legendFormat": "{{method}} {{path}}"
+            }
+          ],
+          "datasource": {"type": "prometheus", "uid": "prometheus"}
         },
-        "panels": [
-          {
-            "id": 1,
-            "title": "HTTP Requests Per Second",
-            "type": "graph",
-            "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0},
-            "targets": [
-              {
-                "expr": "rate(http_requests_total{job=\"destination-service\"}[1m])",
-                "refId": "A",
-                "legendFormat": "{{method}} {{path}}"
-              }
-            ],
-            "datasource": {"type": "prometheus", "uid": "prometheus"}
-          },
-          {
-            "id": 2,
-            "title": "Error Rate",
-            "type": "graph",
-            "gridPos": {"h": 8, "w": 8, "x": 8, "y": 0},
-            "targets": [
-              {
-                "expr": "rate(http_requests_total{job=\"destination-service\",status=~\"5..\"}[1m]) / rate(http_requests_total{job=\"destination-service\"}[1m])",
-                "refId": "A",
-                "legendFormat": "Error Rate"
-              }
-            ],
-            "datasource": {"type": "prometheus", "uid": "prometheus"}
-          },
-          {
-            "id": 3,
-            "title": "p99 Latency",
-            "type": "graph",
-            "gridPos": {"h": 8, "w": 8, "x": 16, "y": 0},
-            "targets": [
-              {
-                "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{job=\"destination-service\"}[5m]))",
-                "refId": "A",
-                "legendFormat": "p99"
-              }
-            ],
-            "datasource": {"type": "prometheus", "uid": "prometheus"}
-          },
-          {
-            "id": 4,
-            "title": "Log Volume",
-            "type": "graph",
-            "gridPos": {"h": 8, "w": 8, "x": 0, "y": 8},
-            "targets": [
-              {
-                "expr": "{job=\"destination-service\"} |= \"\"",
-                "refId": "A",
-                "legendFormat": "Log Volume"
-              }
-            ],
-            "datasource": {"type": "loki", "uid": "loki"}
-          },
-          {
-            "id": 5,
-            "title": "Error Logs",
-            "type": "logs",
-            "gridPos": {"h": 8, "w": 8, "x": 8, "y": 8},
-            "targets": [
-              {
-                "expr": "{job=\"destination-service\"} |= \"ERROR\"",
-                "refId": "A"
-              }
-            ],
-            "datasource": {"type": "loki", "uid": "loki"}
-          },
-          {
-            "id": 6,
-            "title": "Slow Query Logs (>1s)",
-            "type": "logs",
-            "gridPos": {"h": 8, "w": 8, "x": 16, "y": 8},
-            "targets": [
-              {
-                "expr": "{job=\"destination-service\"} |= \"duration\" | duration > 1000ms",
-                "refId": "A"
-              }
-            ],
-            "datasource": {"type": "loki", "uid": "loki"}
-          }
-        ]
-      }
+        {
+          "id": 2,
+          "title": "Error Rate",
+          "type": "graph",
+          "gridPos": {"h": 8, "w": 8, "x": 8, "y": 0},
+          "targets": [
+            {
+              "expr": "rate(http_requests_total{job=\"destination-service\",status=~\"5..\"}[1m]) / rate(http_requests_total{job=\"destination-service\"}[1m])",
+              "refId": "A",
+              "legendFormat": "Error Rate"
+            }
+          ],
+          "datasource": {"type": "prometheus", "uid": "prometheus"}
+        },
+        {
+          "id": 3,
+          "title": "p99 Latency",
+          "type": "graph",
+          "gridPos": {"h": 8, "w": 8, "x": 16, "y": 0},
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{job=\"destination-service\"}[5m]))",
+              "refId": "A",
+              "legendFormat": "p99"
+            }
+          ],
+          "datasource": {"type": "prometheus", "uid": "prometheus"}
+        },
+        {
+          "id": 4,
+          "title": "Log Volume",
+          "type": "graph",
+          "gridPos": {"h": 8, "w": 8, "x": 0, "y": 8},
+          "targets": [
+            {
+              "expr": "{job=\"destination-service\"} |= \"\"",
+              "refId": "A",
+              "legendFormat": "Log Volume"
+            }
+          ],
+          "datasource": {"type": "loki", "uid": "loki"}
+        },
+        {
+          "id": 5,
+          "title": "Error Logs",
+          "type": "logs",
+          "gridPos": {"h": 8, "w": 8, "x": 8, "y": 8},
+          "targets": [
+            {
+              "expr": "{job=\"destination-service\"} |= \"ERROR\"",
+              "refId": "A"
+            }
+          ],
+          "datasource": {"type": "loki", "uid": "loki"}
+        },
+        {
+          "id": 6,
+          "title": "Slow Query Logs (>1s)",
+          "type": "logs",
+          "gridPos": {"h": 8, "w": 8, "x": 16, "y": 8},
+          "targets": [
+            {
+              "expr": "{job=\"destination-service\"} |= \"duration\" | duration > 1000ms",
+              "refId": "A"
+            }
+          ],
+          "datasource": {"type": "loki", "uid": "loki"}
+        }
+      ]
     }
 
   # ┌─ S3 OWNED BLOCK ─ PR: feat/M3/itinerary/S3-READ-DB/55-4895 ────────────┐

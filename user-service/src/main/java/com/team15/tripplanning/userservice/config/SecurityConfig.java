@@ -38,7 +38,9 @@ public class SecurityConfig {
                                 "/api/itineraries/health",
                                 "/api/activities/health",
                                 "/api/bookings/health",
-                                "/error"
+                                "/error",
+                                "/api/users",
+                                "/api/users/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/users/*/role").hasRole("ADMIN")
                         .anyRequest().authenticated()

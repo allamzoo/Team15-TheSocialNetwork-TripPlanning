@@ -78,12 +78,12 @@ public class ItineraryController {
     ) {
         return ResponseEntity.ok(itineraryService.searchByStatusAndDateRange(status, startDate, endDate));
     }
+
     // S3-F8
     @PostMapping("/{itineraryId}/days")
     public ResponseEntity<?> addDays(
             @PathVariable Long itineraryId,
             @RequestBody List<ItineraryDayRequestDTO> days) {
-
         try {
             Itinerary updated = itineraryService.addDays(itineraryId, days);
             return ResponseEntity.ok(updated);
@@ -100,7 +100,6 @@ public class ItineraryController {
     public ResponseEntity<Itinerary> assignDestination(
             @PathVariable Long id,
             @RequestParam Long destinationId) {
-
         Itinerary result = itineraryService.assignDestination(id, destinationId);
         return ResponseEntity.ok(result);
     }
@@ -126,29 +125,30 @@ public class ItineraryController {
     public ResponseEntity<Itinerary> cancelItinerary(@PathVariable Long id) {
         return ResponseEntity.ok(itineraryService.cancelItinerary(id));
     }
+
     @GetMapping("/{itineraryId}/days")
     public ResponseEntity<List<ItineraryDay>> getDays(@PathVariable Long itineraryId) {
         Itinerary itinerary = itineraryService.findById(itineraryId);
-
         List<ItineraryDay> days = itinerary.getItineraryDays();
         if (days == null) {
             days = new java.util.ArrayList<>();
         }
-
         return ResponseEntity.ok(days);
     }
+
     @PutMapping("/{id}/complete")
     public ResponseEntity<Itinerary> completeItinerary(@PathVariable Long id) {
         return ResponseEntity.ok(itineraryService.completeItinerary(id));
     }
+
     // S3-F9
     @GetMapping("/{itineraryId}/details")
     public ResponseEntity<ItineraryDetailsDTO> getItineraryDetails(
             @PathVariable Long itineraryId) {
-
         ItineraryDetailsDTO details = itineraryService.getItineraryDetails(itineraryId);
         return ResponseEntity.ok(details);
     }
+
     @GetMapping("/analytics")
     public ResponseEntity<ItineraryAnalyticsDTO> getAnalytics(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
@@ -166,11 +166,9 @@ public class ItineraryController {
     public ResponseEntity<ItineraryAnalyticsDashboardDTO> getAnalyticsDashboard(
             @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam("endDate")   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-
         if (startDate.isAfter(endDate)) {
             return ResponseEntity.badRequest().build();
         }
-
         ItineraryAnalyticsDashboardDTO dashboard = itineraryService.getItineraryAnalyticsDashboard(startDate, endDate);
         return ResponseEntity.ok(dashboard);
     }
@@ -243,23 +241,5 @@ public class ItineraryController {
 
         List<DestinationRecommendationDTO> recommendations = itineraryService.getRecommendations(userId, limit);
         return ResponseEntity.ok(recommendations);
-    }
-
-    /** Internal: S1-F4 — count active itineraries for a user (no auth, service-to-service). */
-    @GetMapping("/user/{userId}/active-count")
-    public ResponseEntity<Integer> getActiveCountForUser(@PathVariable Long userId) {
-        return ResponseEntity.ok(itineraryService.getActiveCountForUser(userId));
-    }
-
-    /** Internal: S1-F9 — count completed itineraries for a user (no auth, service-to-service). */
-    @GetMapping("/user/{userId}/completed-count")
-    public ResponseEntity<Long> getCompletedCountForUser(@PathVariable Long userId) {
-        return ResponseEntity.ok(itineraryService.getCompletedCountForUser(userId));
-    }
-
-    /** Internal: S1-F9 — trip summary for a user (no auth, service-to-service). */
-    @GetMapping("/user/{userId}/summary")
-    public ResponseEntity<Map<String, Object>> getSummaryForUser(@PathVariable Long userId) {
-        return ResponseEntity.ok(itineraryService.getSummaryForUser(userId));
     }
 }

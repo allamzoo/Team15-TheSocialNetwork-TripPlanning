@@ -45,14 +45,11 @@ public interface ItineraryRepository extends JpaRepository<Itinerary, Long> {
             @Param("endDate") java.time.LocalDate endDate
     );
 
-    // In ItineraryRepository.java
-
     @Query(value = "SELECT COUNT(*) FROM destinations WHERE id = :id", nativeQuery = true)
     int countDestinationById(@Param("id") Long id);
 
     @Query(value = "SELECT COUNT(*) FROM destinations WHERE id = :id AND status = 'ACTIVE'", nativeQuery = true)
     int countActiveDestinationById(@Param("id") Long id);
-
 
     // S3-F3
     @Query(value = """
@@ -61,7 +58,6 @@ public interface ItineraryRepository extends JpaRepository<Itinerary, Long> {
             AND status IN ('DRAFT', 'PLANNED', 'IN_PROGRESS', 'COMPLETING', 'PAYMENT_PENDING')
             """, nativeQuery = true)
     int countActiveItinerariesForDestination(@Param("destinationId") Long destinationId);
-
 
     @Query(
             value = "SELECT COALESCE(SUM(b.amount), 0) FROM bookings b WHERE b.itinerary_id = :itineraryId AND b.status = 'CONFIRMED'",
@@ -191,7 +187,32 @@ public interface ItineraryRepository extends JpaRepository<Itinerary, Long> {
     @Transactional
     @Query(value = "UPDATE itineraries SET status = :newStatus WHERE id = :id AND status = :expectedStatus",
             nativeQuery = true)
-    int conditionalUpdateStatus(@Param("id") Long id,
-                                @Param("newStatus") String newStatus,
-                                @Param("expectedStatus") String expectedStatus);
+    int transitionStatus(@Param("id") Long id,
+                         @Param("newStatus") String newStatus,
+                         @Param("expectedStatus") String expectedStatus);
+
+    // S2-F12 dashboard aggregate
+    @Query(value = "SELECT COUNT(*) FROM itineraries WHERE destination_id = :destinationId", nativeQuery = true)
+    long countAllByDestinationId(@Param("destinationId") Long destinationId);
+
+    @Query(value = "SELECT COUNT(*) FROM itineraries WHERE destination_id = :destinationId AND status IN ('COMPLETED', 'PAID')", nativeQuery = true)
+    long countCompletedByDestinationId(@Param("destinationId") Long destinationId);
+
+    @Query(value = "SELECT COUNT(DISTINCT user_id) FROM itineraries WHERE destination_id = :destinationId AND status IN ('COMPLETED', 'PAID')", nativeQuery = true)
+    long countDistinctVisitorsByDestinationId(@Param("destinationId") Long destinationId);
+
+    // S2-F3 booking revenue (uses itinerary estimated_budget as proxy for revenue)
+    @Query(value = """
+        SELECT COUNT(*), COALESCE(SUM(estimated_budget), 0)
+        FROM itineraries
+        WHERE destination_id = :destinationId
+        AND start_date >= :startDate
+        AND start_date <= :endDate
+        AND status IN ('COMPLETED', 'PAID')
+        """, nativeQuery = true)
+    List<Object[]> getRevenueForDestination(
+            @Param("destinationId") Long destinationId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
 }

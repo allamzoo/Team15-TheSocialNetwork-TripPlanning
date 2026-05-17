@@ -1,0 +1,473 @@
+{
+  "info": {
+    "_postman_id": "s2-f7-rate-v2",
+    "name": "S2-F7 Rate a Destination After Visit",
+    "description": "Spec: Destination ID=1 (rating=0, totalRatings=0). Itinerary ID=10 COMPLETED. Rate 5 \u2192 rating=5.0 totalRatings=1. Rate again (ID=11) 3 \u2192 rating=4.0 totalRatings=2. ID=99 \u2192 404. PLANNED \u2192 400. rating=6 \u2192 400. Wrong destinationId \u2192 400.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "SETUP 1 \u2014 Create Destination (rating=0, totalRatings=0)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Dahab\",\n  \"country\": \"Egypt\",\n  \"category\": \"ADVENTURE\",\n  \"status\": \"ACTIVE\",\n  \"rating\": 0.0,\n  \"totalRatings\": 0,\n  \"description\": \"A beautiful destination\"\n}"
+        },
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Destination created', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
+              "});",
+              "pm.environment.set('destId', pm.response.json().id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "SETUP 2 \u2014 Create Itinerary 10 (COMPLETED, destinationId=destId, userId=42)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Test Trip\",\n  \"userId\": 42,\n  \"destinationId\": {{destId}},\n  \"status\": \"COMPLETED\",\n  \"startDate\": \"2026-01-01\",\n  \"endDate\": \"2026-01-10\",\n  \"estimatedBudget\": 1000\n}"
+        },
+        "url": {
+          "raw": "{{itineraryBaseUrl}}/api/itineraries",
+          "host": [
+            "{{itineraryBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "itineraries"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Itinerary created (COMPLETED)', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
+              "});",
+              "pm.environment.set('itinerary10Id', pm.response.json().id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "SETUP 3 \u2014 Create Itinerary 11 (COMPLETED, destinationId=destId, userId=43)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Test Trip\",\n  \"userId\": 43,\n  \"destinationId\": {{destId}},\n  \"status\": \"COMPLETED\",\n  \"startDate\": \"2026-02-01\",\n  \"endDate\": \"2026-02-07\",\n  \"estimatedBudget\": 800\n}"
+        },
+        "url": {
+          "raw": "{{itineraryBaseUrl}}/api/itineraries",
+          "host": [
+            "{{itineraryBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "itineraries"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Itinerary 2 created (COMPLETED)', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
+              "});",
+              "pm.environment.set('itinerary11Id', pm.response.json().id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "SETUP 4 \u2014 Create Itinerary (PLANNED, destinationId=destId) \u2014 for status=400 test",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Test Trip\",\n  \"userId\": 44,\n  \"destinationId\": {{destId}},\n  \"status\": \"PLANNED\",\n  \"startDate\": \"2026-09-01\",\n  \"endDate\": \"2026-09-10\",\n  \"estimatedBudget\": 600\n}"
+        },
+        "url": {
+          "raw": "{{itineraryBaseUrl}}/api/itineraries",
+          "host": [
+            "{{itineraryBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "itineraries"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('PLANNED itinerary created', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
+              "});",
+              "pm.environment.set('plannedItineraryId', pm.response.json().id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 1 \u2014 400 rating below 1 (validated before Feign)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"itineraryId\": {{itinerary10Id}},\n  \"rating\": 0\n}"
+        },
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations/{{destId}}/rate",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations",
+            "{{destId}}",
+            "rate"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 400 \u2014 rating=0 out of range', function () {",
+              "  pm.response.to.have.status(400);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 2 \u2014 400 rating above 5 (spec: rating=6 \u2192 400)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"itineraryId\": {{itinerary10Id}},\n  \"rating\": 6\n}"
+        },
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations/{{destId}}/rate",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations",
+            "{{destId}}",
+            "rate"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 400 \u2014 rating=6 out of range (spec step)', function () {",
+              "  pm.response.to.have.status(400);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 3 \u2014 404 Non-Existent Itinerary (spec: itineraryId=99 \u2192 404)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"itineraryId\": 999999,\n  \"rating\": 4\n}"
+        },
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations/{{destId}}/rate",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations",
+            "{{destId}}",
+            "rate"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 404 \u2014 itinerary not found (Feign 404)', function () {",
+              "  pm.response.to.have.status(404);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 4 \u2014 400 Itinerary status=PLANNED (spec: wrong status \u2192 400)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"itineraryId\": {{plannedItineraryId}},\n  \"rating\": 4\n}"
+        },
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations/{{destId}}/rate",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations",
+            "{{destId}}",
+            "rate"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 400 \u2014 itinerary status=PLANNED not accepted', function () {",
+              "  pm.response.to.have.status(400);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 5 \u2014 400 Itinerary references different destination (spec step)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"itineraryId\": {{itinerary10Id}},\n  \"rating\": 4\n}"
+        },
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations/999998/rate",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations",
+            "999998",
+            "rate"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// 404 (destination 999998 not found) OR 400 (if destination exists but itinerary references wrong one)",
+              "pm.test('4xx \u2014 itinerary references different destinationId', function () {",
+              "  pm.expect(pm.response.code).to.be.within(400, 499);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 6 \u2014 200 First Rating (spec: rating=5 \u2192 rating=5.0, totalRatings=1)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"itineraryId\": {{itinerary10Id}},\n  \"rating\": 5\n}"
+        },
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations/{{destId}}/rate",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations",
+            "{{destId}}",
+            "rate"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200 \u2014 first rating accepted', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "var body = pm.response.json();",
+              "pm.test('rating is 5.0 (spec step: first rating=5)', function () {",
+              "  pm.expect(body.rating).to.eql(5.0);",
+              "});",
+              "pm.test('totalRatings is 1', function () {",
+              "  pm.expect(body.totalRatings).to.eql(1);",
+              "});",
+              "console.log('destination.rated event should be published to RabbitMQ');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 7 \u2014 200 Second Rating (spec: rating=3 \u2192 running avg=4.0, totalRatings=2)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"itineraryId\": {{itinerary11Id}},\n  \"rating\": 3\n}"
+        },
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations/{{destId}}/rate",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations",
+            "{{destId}}",
+            "rate"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200 \u2014 second rating accepted', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "var body = pm.response.json();",
+              "pm.test('rating is 4.0 \u2014 running average of (5+3)/2 (spec step)', function () {",
+              "  pm.expect(body.rating).to.eql(4.0);",
+              "});",
+              "pm.test('totalRatings is 2', function () {",
+              "  pm.expect(body.totalRatings).to.eql(2);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
