@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: prometheus
   namespace: monitoring
+  labels:
+    app: prometheus
 spec:
   replicas: 1
   selector:
@@ -35,14 +37,18 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 10
           volumeMounts:
+            - name: prometheus-config
             - name: config
               mountPath: /etc/prometheus
+            - name: prometheus-data
             - name: storage
               mountPath: /prometheus
       volumes:
+        - name: prometheus-config
         - name: config
           configMap:
             name: prometheus-config
+        - name: prometheus-data
         - name: storage
           persistentVolumeClaim:
             claimName: prometheus-pvc

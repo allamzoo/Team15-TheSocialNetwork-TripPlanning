@@ -1,18 +1,18 @@
 # ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║  prometheus-pvc.yaml — S3-INFRA OWNED (feature/m3-s3-infra-itinerary)       ║
-# ║  Persistent storage for Prometheus TSDB.                                    ║
-# ║  Mounted at /prometheus in prometheus.yaml Deployment.                      ║
+# ║  grafana-pvc.yaml — S4-INFRA OWNED (feature/m3-s4-infra-activity)           ║
+# ║  Persistent storage for Grafana state: sqlite DB, sessions, plugins.        ║
+# ║  Mounted at /var/lib/grafana in grafana-deployment.yaml.                    ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: prometheus-pvc
+  name: grafana-pvc
   namespace: monitoring
   labels:
-    app: prometheus
+    app: grafana
 spec:
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 5Gi
+      storage: 1Gi

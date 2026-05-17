@@ -1,18 +1,22 @@
 # ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║  prometheus-pvc.yaml — S3-INFRA OWNED (feature/m3-s3-infra-itinerary)       ║
-# ║  Persistent storage for Prometheus TSDB.                                    ║
-# ║  Mounted at /prometheus in prometheus.yaml Deployment.                      ║
+# ║  grafana-service.yaml — S4-INFRA OWNED (feature/m3-s4-infra-activity)       ║
+# ║  NodePort 30030 exposes Grafana to the host browser:                        ║
+# ║    http://$(minikube ip):30030                                               ║
+# ║  Default credentials: admin / admin  (change on first login).               ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 apiVersion: v1
-kind: PersistentVolumeClaim
+kind: Service
 metadata:
-  name: prometheus-pvc
+  name: grafana
   namespace: monitoring
   labels:
-    app: prometheus
+    app: grafana
 spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 5Gi
+  type: NodePort
+  selector:
+    app: grafana
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      nodePort: 30030

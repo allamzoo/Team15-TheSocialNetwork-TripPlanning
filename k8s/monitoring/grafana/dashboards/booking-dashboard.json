@@ -1,10 +1,12 @@
 {
-  "title": "Booking Service Dashboard",
   "uid": "booking-service",
+  "title": "Booking Service Dashboard",
+  "description": "S5-INFRA OWNED — replace panels in feature/m3-s5-infra-booking PR",
   "schemaVersion": 36,
   "version": 1,
   "refresh": "30s",
   "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
   "templating": { "list": [] },
   "annotations": { "list": [] },
   "panels": [

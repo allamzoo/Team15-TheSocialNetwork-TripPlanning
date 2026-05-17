@@ -1,67 +1,213 @@
 {
-  "title": "Activity Service — Mario Sameh (55-0677)",
-  "uid": "activity-service-mario-55-0677",
-  "description": "S4-READ-DB observability dashboard — 3 LogQL panels for activity-service",
+  "uid": "activity-service",
+  "title": "Activity Service Dashboard",
+  "description": "HTTP metrics + Cassandra write latency (PromQL) and log streams (LogQL)",
   "tags": ["tripplanning", "activity-service", "team15"],
   "schemaVersion": 38,
   "version": 1,
   "refresh": "30s",
   "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "templating": { "list": [] },
+  "annotations": { "list": [] },
   "panels": [
     {
       "id": 1,
-      "title": "Panel 1 — Error Rate (activity-service)",
-      "description": "Count of ERROR-level log lines per minute. A spike means something is broken — check Feign calls to itinerary-service first.",
       "type": "timeseries",
+      "title": "HTTP Request Rate (req/s)",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "datasource": { "type": "loki", "uid": "loki" },
-          "expr": "sum(count_over_time({app=\"tripplanning\", service=\"activity-service\", level=\"ERROR\"}[1m]))",
-          "legendFormat": "errors / min"
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"activity-service\"}[1m])) by (uri, method)",
+          "legendFormat": "{{method}} {{uri}}",
+          "refId": "A"
         }
-      ]
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "lineWidth": 1, "fillOpacity": 10 }
+        }
+      },
+      "options": { "tooltip": { "mode": "multi" } }
     },
     {
       "id": 2,
-      "title": "Panel 2 — Feign Call Outcomes (activity-service → itinerary-service)",
-      "description": "Successful Feign responses vs FeignException catches over 5 minutes. Detects when itinerary-service is degraded so S4-F2 and S4-F4 start failing.",
       "type": "timeseries",
+      "title": "HTTP Error Rate — 5xx (req/s)",
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"activity-service\",status=~\"5..\"}[1m])) by (uri, status)",
+          "legendFormat": "{{status}} {{uri}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "color": { "mode": "fixed", "fixedColor": "red" },
+          "custom": { "lineWidth": 1, "fillOpacity": 10 }
+        }
+      },
+      "options": { "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "HTTP P99 Latency (s)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{job=\"activity-service\"}[5m])) by (le, uri))",
+          "legendFormat": "p99 {{uri}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "lineWidth": 1, "fillOpacity": 10 }
+        }
+      },
+      "options": { "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Cassandra Write Latency P99 (s)",
+      "description": "P99 write latency via Spring Data Cassandra Micrometer db.client.calls metrics",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.99, sum(rate(db_client_calls_seconds_bucket{job=\"activity-service\",db_system=\"cassandra\"}[5m])) by (le, db_operation))",
+          "legendFormat": "p99 Cassandra {{db_operation}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 1, "fillOpacity": 10 }
+        }
+      },
+      "options": { "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Feign Call Outcomes (activity-service → itinerary-service)",
+      "description": "Successful Feign responses vs FeignException catches over 5 minutes. Detects when itinerary-service is degraded so S4-F2 and S4-F4 start failing.",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "datasource": { "type": "loki", "uid": "loki" },
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "loki" },
           "expr": "sum(count_over_time({app=\"tripplanning\", service=\"activity-service\"} | json | message =~ \"itinerary-service.getItinerary returned successfully\" [5m]))",
-          "legendFormat": "feign-success"
+          "legendFormat": "feign-success",
+          "refId": "A"
         },
         {
           "datasource": { "type": "loki", "uid": "loki" },
           "expr": "sum(count_over_time({app=\"tripplanning\", service=\"activity-service\"} | json | message =~ \"Feign call to itinerary-service failed\" [5m]))",
-          "legendFormat": "feign-error"
+          "legendFormat": "feign-error",
+          "refId": "B"
         }
       ]
     },
     {
-      "id": 3,
-      "title": "Panel 3 — Activity Created Log Stream",
-      "description": "Live log lines where an activity was persisted. Filter by itineraryId to trace which itinerary triggered the creation. Verifies S4-F2 and S4-F4 call Feign before inserting rows.",
+      "id": 6,
+      "type": "timeseries",
+      "title": "Log Volume by Level",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 24 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "sum by (level) (count_over_time({app=\"tripplanning\", service=\"activity-service\"}[1m]))",
+          "legendFormat": "{{level}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "lineWidth": 1, "fillOpacity": 10 }
+        }
+      },
+      "options": { "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 7,
       "type": "logs",
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 8 },
+      "title": "Activity Created Log Stream",
+      "description": "Live log lines where an activity was persisted. Verifies S4-F2 and S4-F4 call Feign before inserting rows.",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 32 },
+      "datasource": { "type": "loki", "uid": "loki" },
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "loki" },
           "expr": "{app=\"tripplanning\", service=\"activity-service\"} | json | message =~ \"saved with status=CREATED\"",
-          "legendFormat": ""
+          "refId": "A"
         }
       ],
       "options": {
         "showTime": true,
         "showLabels": true,
         "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none"
+      }
+    },
+    {
+      "id": 8,
+      "type": "logs",
+      "title": "Error Logs",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 42 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "{app=\"tripplanning\", service=\"activity-service\"} |~ \"(?i)(error|exception|failed)\"",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "dedupStrategy": "none",
+        "wrapLogMessage": true,
+        "showTime": true,
+        "showLabels": false,
+        "sortOrder": "Descending"
+      }
+    },
+    {
+      "id": 9,
+      "type": "logs",
+      "title": "Slow / Timeout Warning Logs",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 52 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "expr": "{app=\"tripplanning\", service=\"activity-service\"} |~ \"(?i)(slow|timeout|warn|cassandra)\"",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "dedupStrategy": "none",
+        "wrapLogMessage": true,
+        "showTime": true,
+        "showLabels": false,
         "sortOrder": "Descending"
       }
     }
-  ],
-  "templating": { "list": [] },
-  "annotations": { "list": [] }
+  ]
 }
