@@ -28,7 +28,8 @@ public class Itinerary {
         PLANNED,
         IN_PROGRESS,
         COMPLETED,
-        CANCELLED
+        CANCELLED,
+        PAID
     }
 
     @Id

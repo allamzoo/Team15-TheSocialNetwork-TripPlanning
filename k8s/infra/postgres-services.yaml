@@ -104,6 +104,7 @@ spec:
 ---
 # ┌─ S2: destination-postgres ─────────────────────────────────────────────────┐
 # │ DNS: destination-postgres.tripplanning.svc.cluster.local:5432             │
+# │ Selects dedicated StatefulSet (destination-postgres.yaml) — M3 isolation  │
 # └────────────────────────────────────────────────────────────────────────────┘
 apiVersion: v1
 kind: Service
@@ -114,7 +115,7 @@ metadata:
     slice: s2
 spec:
   selector:
-    app: postgres
+    app: destination-postgres
   ports:
     - port: 5432
       targetPort: 5432

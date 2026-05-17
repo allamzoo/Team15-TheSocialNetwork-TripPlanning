@@ -1,5 +1,7 @@
 package com.team15.tripplanning.itineraryservice.controller;
 
+import com.team15.tripplanning.contracts.dto.DestinationBookingRevenueAggregateDTO;
+import com.team15.tripplanning.contracts.dto.DestinationDashboardAggregateDTO;
 import com.team15.tripplanning.itineraryservice.dto.DestinationRecommendationDTO;
 import com.team15.tripplanning.itineraryservice.dto.EstimateRequest;
 import com.team15.tripplanning.itineraryservice.dto.ItineraryAnalyticsDTO;
@@ -9,6 +11,7 @@ import com.team15.tripplanning.itineraryservice.model.ItineraryDay;
 import com.team15.tripplanning.itineraryservice.security.JwtService;
 import com.team15.tripplanning.itineraryservice.service.ItineraryService;
 import jakarta.servlet.http.HttpServletRequest;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -168,6 +171,46 @@ public class ItineraryController {
 
         ItineraryAnalyticsDashboardDTO dashboard = itineraryService.getItineraryAnalyticsDashboard(startDate, endDate);
         return ResponseEntity.ok(dashboard);
+    }
+
+    // S2-F4: count of active itineraries for a destination (DRAFT, PLANNED, IN_PROGRESS)
+    @GetMapping("/destination/{destinationId}/active-count")
+    public ResponseEntity<Integer> getDestinationActiveCount(@PathVariable Long destinationId) {
+        return ResponseEntity.ok(itineraryService.getDestinationActiveCount(destinationId));
+    }
+
+    // S2-F12: dashboard aggregate — totalItineraries, completedItineraries, totalVisitors
+    @GetMapping("/destination/{destinationId}/dashboard-aggregate")
+    public ResponseEntity<DestinationDashboardAggregateDTO> getDestinationDashboardAggregate(
+            @PathVariable Long destinationId) {
+        return ResponseEntity.ok(itineraryService.getDestinationDashboardAggregate(destinationId));
+    }
+
+    // S2-F3: booking revenue aggregate for a destination in a date range
+    @GetMapping("/destination/{destinationId}/booking-revenue")
+    public ResponseEntity<DestinationBookingRevenueAggregateDTO> getDestinationBookingRevenue(
+            @PathVariable Long destinationId,
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+        LocalDate start = LocalDate.parse(startDate);
+        LocalDate end = LocalDate.parse(endDate);
+        return ResponseEntity.ok(itineraryService.getDestinationBookingRevenue(destinationId, start, end));
+    }
+
+    // S2-F4: update itinerary status by body (used by Postman test to cancel)
+    @PutMapping("/{id}/status")
+    public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        String status = body.get("status");
+        if (status == null) {
+            return ResponseEntity.badRequest().body("status is required");
+        }
+        try {
+            Itinerary.ItineraryStatus newStatus = Itinerary.ItineraryStatus.valueOf(status);
+            Itinerary updated = itineraryService.updateStatus(id, newStatus);
+            return ResponseEntity.ok(updated);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Invalid status: " + status);
+        }
     }
 
     // S3-F12

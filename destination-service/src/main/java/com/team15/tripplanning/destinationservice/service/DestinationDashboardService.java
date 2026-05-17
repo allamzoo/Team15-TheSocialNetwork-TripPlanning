@@ -1,9 +1,14 @@
 package com.team15.tripplanning.destinationservice.service;
 
+import com.team15.tripplanning.contracts.dto.DestinationDashboardAggregateDTO;
+import com.team15.tripplanning.contracts.feign.ItineraryServiceClient;
 import com.team15.tripplanning.destinationservice.dto.DestinationDashboardDTO;
 import com.team15.tripplanning.destinationservice.model.Destination;
-import com.team15.tripplanning.destinationservice.repository.DestinationDashboardRepository;
 import com.team15.tripplanning.destinationservice.repository.DestinationRepository;
+import feign.FeignException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -14,38 +19,39 @@ import java.util.Map;
 @Service
 public class DestinationDashboardService {
 
+    private static final Logger log = LoggerFactory.getLogger(DestinationDashboardService.class);
+
     private final DestinationRepository destinationRepository;
-    private final DestinationDashboardRepository dashboardRepository;
-    private final MongoEventLogger mongoEventLogger; // already exists in your project
+    private final ItineraryServiceClient itineraryServiceClient;
+    private final MongoEventLogger mongoEventLogger;
 
     public DestinationDashboardService(DestinationRepository destinationRepository,
-                                       DestinationDashboardRepository dashboardRepository,
+                                       ItineraryServiceClient itineraryServiceClient,
                                        MongoEventLogger mongoEventLogger) {
         this.destinationRepository = destinationRepository;
-        this.dashboardRepository = dashboardRepository;
+        this.itineraryServiceClient = itineraryServiceClient;
         this.mongoEventLogger = mongoEventLogger;
     }
 
     /**
-     * MongoDB logging happens BEFORE cached method — fires on every request (hit or miss)
+     * MongoDB logging happens BEFORE cached method — fires on every request (hit or miss).
      */
     public DestinationDashboardDTO getDashboard(Long destinationId) {
-        // 1. Validate destination exists → 404 if not found
         Destination destination = destinationRepository.findById(destinationId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Destination not found with id: " + destinationId));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Destination not found with id: " + destinationId));
 
-        // 2. Log DASHBOARD_VIEWED on EVERY call (outside cache layer)
         mongoEventLogger.onEvent("DASHBOARD_VIEWED", Map.of(
                 "destinationId", destinationId,
                 "destinationName", destination.getName()
         ));
 
-        // 3. Return cached result
         return getCachedDashboard(destinationId, destination);
     }
 
     /**
      * Cached for 10 minutes. MongoDB logging is NOT here.
+     * S2-F12: itinerary aggregate fetched via Feign — no cross-DB SQL.
      */
     @Cacheable(
             value = "destination-service",
@@ -53,34 +59,44 @@ public class DestinationDashboardService {
             unless = "#result == null"
     )
     public DestinationDashboardDTO getCachedDashboard(Long destinationId, Destination destination) {
-        // 4. Run aggregate query
-        Object[] raw = dashboardRepository.getDashboardAggregates(destinationId);
-        // Hibernate 6 may wrap the single row in an outer array
-        Object[] agg = (raw.length > 0 && raw[0] instanceof Object[])
-                ? (Object[]) raw[0]
-                : raw;
+        long totalItineraries = 0L;
+        long completedItineraries = 0L;
+        long totalVisitors = 0L;
 
-        long totalItineraries     = agg[0] != null ? ((Number) agg[0]).longValue() : 0L;
-        long completedItineraries = agg[1] != null ? ((Number) agg[1]).longValue() : 0L;
-        long totalVisitors        = agg[2] != null ? ((Number) agg[2]).longValue() : 0L;
-        long cancelledItineraries = agg.length > 3 && agg[3] != null ? ((Number) agg[3]).longValue() : 0L;
-        double totalRevenue       = agg.length > 4 && agg[4] != null ? ((Number) agg[4]).doubleValue() : 0.0;
-        long totalBookings        = agg.length > 5 && agg[5] != null ? ((Number) agg[5]).longValue() : 0L;
-        double completionRate     = totalItineraries > 0
+        MDC.put("destinationId", destinationId.toString());
+        long start = System.currentTimeMillis();
+        try {
+            log.info("Calling itineraryServiceClient.getDestinationDashboardAggregate with args=[{}]", destinationId);
+            DestinationDashboardAggregateDTO aggregate =
+                    itineraryServiceClient.getDestinationDashboardAggregate(destinationId);
+            log.info("itineraryServiceClient.getDestinationDashboardAggregate returned successfully");
+            totalItineraries = aggregate.totalItineraries();
+            completedItineraries = aggregate.completedItineraries();
+            totalVisitors = aggregate.totalVisitors();
+        } catch (FeignException e) {
+            log.warn("Feign call to itinerary-service failed: {}", e.getMessage());
+        } finally {
+            long elapsed = System.currentTimeMillis() - start;
+            if (elapsed > 1000) {
+                log.warn("Slow getDestinationDashboardAggregate took {}ms", elapsed);
+            }
+            MDC.remove("destinationId");
+        }
+
+        double completionRate = totalItineraries > 0
                 ? (double) completedItineraries / totalItineraries * 100.0 : 0.0;
 
-        // 5. Build DTO using Builder pattern
         return DestinationDashboardDTO.builder()
                 .destinationId(destination.getId())
                 .name(destination.getName())
                 .totalItineraries(totalItineraries)
                 .completedItineraries(completedItineraries)
-                .cancelledItineraries(cancelledItineraries)
+                .cancelledItineraries(0L)
                 .totalVisitors(totalVisitors)
                 .totalRatings(destination.getTotalRatings())
                 .averageRating(destination.getRating())
-                .totalRevenue(totalRevenue)
-                .totalBookings(totalBookings)
+                .totalRevenue(0.0)
+                .totalBookings(0L)
                 .completionRate(completionRate)
                 .build();
     }

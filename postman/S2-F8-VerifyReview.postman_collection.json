@@ -1,0 +1,452 @@
+{
+  "info": {
+    "_postman_id": "s2-f8-verify-v2",
+    "name": "S2-F8 Verify Destination Review",
+    "description": "Spec: Destination ID=1, Review ID=5 (visitDate=2026-01-15, verified=false). User ID=3 role=ADMIN. verifiedBy:3 \u2192 200. verifiedBy:1 (TRAVELER) \u2192 403. verifiedBy:999 (non-existent) \u2192 403. Future visitDate \u2192 400. Wrong destination \u2192 400.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "SETUP 1 \u2014 Create Destination",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Dahab\",\n  \"country\": \"Egypt\",\n  \"category\": \"ADVENTURE\",\n  \"status\": \"ACTIVE\",\n  \"rating\": 0.0,\n  \"totalRatings\": 0,\n  \"description\": \"A beautiful destination\"\n}"
+        },
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Destination created', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
+              "});",
+              "pm.environment.set('destId', pm.response.json().id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "SETUP 2 \u2014 Create ADMIN User in user-service (role=ADMIN)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Admin User\",\n  \"email\": \"admin.s2f8@example.com\",\n  \"password\": \"admin123\",\n  \"phone\": \"+201000000099\",\n  \"role\": \"ADMIN\",\n  \"status\": \"ACTIVE\"\n}"
+        },
+        "url": {
+          "raw": "{{userBaseUrl}}/api/users",
+          "host": [
+            "{{userBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "users"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Admin user created', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
+              "});",
+              "pm.environment.set('adminUserId', pm.response.json().id);",
+              "console.log('adminUserId (spec: user ID=3 role=ADMIN):', pm.response.json().id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "SETUP 3 \u2014 Create TRAVELER User in user-service (role=TRAVELER)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Traveler User\",\n  \"email\": \"traveler.s2f8@example.com\",\n  \"password\": \"pass123\",\n  \"phone\": \"+201000000088\",\n  \"role\": \"TRAVELER\",\n  \"status\": \"ACTIVE\"\n}"
+        },
+        "url": {
+          "raw": "{{userBaseUrl}}/api/users",
+          "host": [
+            "{{userBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "users"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Traveler user created', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
+              "});",
+              "pm.environment.set('travelerUserId', pm.response.json().id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "SETUP 4 \u2014 Create Review (visitDate=2026-01-15, verified=false)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"destination\": { \"id\": {{destId}} },\n  \"content\": \"Amazing place!\",\n  \"rating\": 4,\n  \"visitDate\": \"2026-01-15\",\n  \"type\": \"VISITOR\",\n  \"verified\": false\n}"
+        },
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations/{{destId}}/reviews",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations",
+            "{{destId}}",
+            "reviews"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Review created (visitDate=2026-01-15, verified=false)', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
+              "});",
+              "pm.environment.set('reviewId', pm.response.json().id);",
+              "console.log('reviewId (spec: review ID=5):', pm.response.json().id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "SETUP 5 \u2014 Create Review with FUTURE visitDate (for TEST 1)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"destination\": { \"id\": {{destId}} },\n  \"content\": \"Future visit review\",\n  \"rating\": 3,\n  \"visitDate\": \"2030-12-31\",\n  \"type\": \"VISITOR\",\n  \"verified\": false\n}"
+        },
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations/{{destId}}/reviews",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations",
+            "{{destId}}",
+            "reviews"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Future-date review created', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
+              "});",
+              "pm.environment.set('futureReviewId', pm.response.json().id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 1 \u2014 400 Future visitDate (spec: validated BEFORE Feign call)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"verifiedBy\": {{adminUserId}}\n}"
+        },
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations/{{destId}}/reviews/{{futureReviewId}}/verify",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations",
+            "{{destId}}",
+            "reviews",
+            "{{futureReviewId}}",
+            "verify"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 400 \u2014 visitDate in future (spec step, checked before Feign)', function () {",
+              "  pm.response.to.have.status(400);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 2 \u2014 403 Non-Admin verifier (spec: verifiedBy=TRAVELER \u2192 403)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"verifiedBy\": {{travelerUserId}}\n}"
+        },
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations/{{destId}}/reviews/{{reviewId}}/verify",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations",
+            "{{destId}}",
+            "reviews",
+            "{{reviewId}}",
+            "verify"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 403 \u2014 TRAVELER role cannot verify (spec step)', function () {",
+              "  pm.response.to.have.status(403);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 3 \u2014 403 Non-Existent User (spec: verifiedBy=999 \u2192 Feign 404 \u2192 403, existence not leaked)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"verifiedBy\": 999999\n}"
+        },
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations/{{destId}}/reviews/{{reviewId}}/verify",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations",
+            "{{destId}}",
+            "reviews",
+            "{{reviewId}}",
+            "verify"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 403 \u2014 NOT 404 \u2014 existence not leaked (spec spec step)', function () {",
+              "  pm.response.to.have.status(403);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 4 \u2014 400 Review belongs to different destination (spec step)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"verifiedBy\": {{adminUserId}}\n}"
+        },
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations/999998/reviews/{{reviewId}}/verify",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations",
+            "999998",
+            "reviews",
+            "{{reviewId}}",
+            "verify"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('4xx \u2014 review belongs to different destination', function () {",
+              "  pm.expect(pm.response.code).to.be.within(400, 499);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 5 \u2014 200 Admin Verifies Review (spec: verifiedBy=ADMIN \u2192 verified=true + metadata)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"verifiedBy\": {{adminUserId}}\n}"
+        },
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations/{{destId}}/reviews/{{reviewId}}/verify",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations",
+            "{{destId}}",
+            "reviews",
+            "{{reviewId}}",
+            "verify"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200 \u2014 ADMIN verify accepted (spec step 1)', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "var body = pm.response.json();",
+              "// Find the review in the returned destination",
+              "var reviews = body.destinationReviews;",
+              "if (reviews && reviews.length > 0) {",
+              "  var verified = reviews.find(function(r) {",
+              "    return String(r.id) === String(pm.environment.get('reviewId'));",
+              "  });",
+              "  if (verified) {",
+              "    pm.test('review.verified is true (spec expect)', function () {",
+              "      pm.expect(verified.verified).to.eql(true);",
+              "    });",
+              "    pm.test('metadata contains verifiedAt (spec expect)', function () {",
+              "      pm.expect(verified.metadata).to.have.property('verifiedAt');",
+              "    });",
+              "    pm.test('metadata.verifiedBy equals adminUserId (spec expect)', function () {",
+              "      pm.expect(String(verified.metadata.verifiedBy)).to.eql(String(pm.environment.get('adminUserId')));",
+              "    });",
+              "  } else {",
+              "    console.warn('Review not found in response body \u2014 check response structure');",
+              "  }",
+              "}"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

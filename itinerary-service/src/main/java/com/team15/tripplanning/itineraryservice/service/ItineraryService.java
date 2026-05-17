@@ -1,5 +1,7 @@
 package com.team15.tripplanning.itineraryservice.service;
 
+import com.team15.tripplanning.contracts.dto.DestinationBookingRevenueAggregateDTO;
+import com.team15.tripplanning.contracts.dto.DestinationDashboardAggregateDTO;
 import com.team15.tripplanning.itineraryservice.dto.DestinationRecommendationDTO;
 import com.team15.tripplanning.itineraryservice.dto.ItineraryAnalyticsDTO;
 import com.team15.tripplanning.itineraryservice.dto.TripCostEstimateDTO;
@@ -10,6 +12,7 @@ import com.team15.tripplanning.itineraryservice.repository.VisitGraphRepository;
 import com.team15.tripplanning.shared.observer.EntityObserver;
 import com.team15.tripplanning.itineraryservice.dto.ItineraryAnalyticsDashboardDTO;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -453,6 +456,38 @@ public class ItineraryService {
     }
 
     @Transactional
+    public int getDestinationActiveCount(Long destinationId) {
+        return itineraryRepository.countActiveItinerariesForDestination(destinationId);
+    }
+
+    public DestinationDashboardAggregateDTO getDestinationDashboardAggregate(Long destinationId) {
+        long total = itineraryRepository.countAllByDestinationId(destinationId);
+        long completed = itineraryRepository.countCompletedByDestinationId(destinationId);
+        long visitors = itineraryRepository.countDistinctVisitorsByDestinationId(destinationId);
+        return new DestinationDashboardAggregateDTO(total, completed, visitors);
+    }
+
+    public DestinationBookingRevenueAggregateDTO getDestinationBookingRevenue(
+            Long destinationId, LocalDate startDate, LocalDate endDate) {
+        List<Object[]> rows = itineraryRepository.getRevenueForDestination(destinationId, startDate, endDate);
+        if (rows.isEmpty()) {
+            return new DestinationBookingRevenueAggregateDTO(0, BigDecimal.ZERO, BigDecimal.ZERO);
+        }
+        Object[] row = rows.get(0);
+        long count = ((Number) row[0]).longValue();
+        BigDecimal total = new BigDecimal(row[1].toString());
+        BigDecimal avg = count == 0 ? BigDecimal.ZERO : total.divide(BigDecimal.valueOf(count), 2, java.math.RoundingMode.HALF_UP);
+        return new DestinationBookingRevenueAggregateDTO(count, total, avg);
+    }
+
+    @Transactional
+    public Itinerary updateStatus(Long id, Itinerary.ItineraryStatus newStatus) {
+        Itinerary itinerary = itineraryRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found"));
+        itinerary.setStatus(newStatus);
+        return itineraryRepository.save(itinerary);
+    }
+
     public Itinerary cancelItinerary(Long id) {
         Itinerary itinerary = itineraryRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Itinerary not found"));

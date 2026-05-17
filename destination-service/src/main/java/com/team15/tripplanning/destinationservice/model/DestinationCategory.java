@@ -5,6 +5,7 @@ public enum DestinationCategory {
     MOUNTAIN,
     CITY,
     HISTORICAL,
-    ADVENTURE
+    ADVENTURE,
+    NATURE
 }
 

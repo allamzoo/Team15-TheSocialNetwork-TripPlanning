@@ -58,7 +58,91 @@ data:
 
   # ┌─ S2 OWNED BLOCK ─ PR: feature/m3-s2-infra-destination ──────────────────┐
   destination-dashboard.json: |
-    { "title": "Destination Service Dashboard", "panels": [], "schemaVersion": 36, "version": 1 }
+    {
+      "title": "Destination Service Dashboard",
+      "uid": "destination-service",
+      "schemaVersion": 36,
+      "version": 1,
+      "refresh": "30s",
+      "time": { "from": "now-1h", "to": "now" },
+      "panels": [
+        {
+          "id": 1,
+          "type": "timeseries",
+          "title": "Error Rate — destination-service (errors/min)",
+          "description": "Count of ERROR-level log lines per minute. Spike detection: if destination-service logs many ERRORs in one minute something is wrong.",
+          "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+          "datasource": { "type": "loki", "uid": "loki" },
+          "targets": [
+            {
+              "expr": "sum(count_over_time({app=\"tripplanning\", service=\"destination-service\", level=\"ERROR\"}[1m]))",
+              "legendFormat": "errors/min",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "type": "timeseries",
+          "title": "Feign Call Outcomes — destination-service",
+          "description": "Successful Feign responses vs FeignException catches. Detects when itinerary-service or user-service is degraded.",
+          "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+          "datasource": { "type": "loki", "uid": "loki" },
+          "targets": [
+            {
+              "expr": "sum(count_over_time({app=\"tripplanning\", service=\"destination-service\"} |= \"returned successfully\" [5m]))",
+              "legendFormat": "feign success",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(count_over_time({app=\"tripplanning\", service=\"destination-service\"} |= \"Feign call to\" |= \"failed\" [5m]))",
+              "legendFormat": "feign failures",
+              "refId": "B"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "type": "timeseries",
+          "title": "RabbitMQ Event Audit — destination-service",
+          "description": "Published destination.status-changed and destination.rated events vs consumed itinerary events. Verifies the full event flow.",
+          "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+          "datasource": { "type": "loki", "uid": "loki" },
+          "targets": [
+            {
+              "expr": "sum(count_over_time({app=\"tripplanning\", service=\"destination-service\"} |= \"Published destination.status-changed\" [5m]))",
+              "legendFormat": "published status-changed",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(count_over_time({app=\"tripplanning\", service=\"destination-service\"} |= \"Published destination.rated\" [5m]))",
+              "legendFormat": "published rated",
+              "refId": "B"
+            },
+            {
+              "expr": "sum(count_over_time({app=\"tripplanning\", service=\"destination-service\"} |= \"Consuming itinerary\" [5m]))",
+              "legendFormat": "itinerary events consumed",
+              "refId": "C"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "type": "timeseries",
+          "title": "Slow Operations — destination-service",
+          "description": "Log lines where an operation exceeded 1000 ms threshold. Alert when dashboard aggregation or revenue Feign chain is slow.",
+          "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+          "datasource": { "type": "loki", "uid": "loki" },
+          "targets": [
+            {
+              "expr": "sum(count_over_time({app=\"tripplanning\", service=\"destination-service\"} |= \"Slow\" [5m]))",
+              "legendFormat": "slow ops",
+              "refId": "A"
+            }
+          ]
+        }
+      ]
+    }
 
   # ┌─ S3 OWNED BLOCK ─ PR: feature/m3-s3-infra-itinerary ────────────────────┐
   # │ Include saga state-machine panels: COMPLETING/PAYMENT_PENDING/PAID/      │
