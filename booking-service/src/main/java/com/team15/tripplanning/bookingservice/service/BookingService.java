@@ -871,9 +871,9 @@ public class BookingService {
                 .map(s -> s.getId())
                 .orElse(null);
         paymentEventPublisher.publishPaymentRefunded(
-                settlementId, booking.getItineraryId(),
-                BigDecimal.valueOf(result.getRefundAmount())
-        );
+                new PaymentRefundedEvent(
+                        settlementId, booking.getItineraryId(),
+                        BigDecimal.valueOf(result.getRefundAmount())));
 
         return response;
     }

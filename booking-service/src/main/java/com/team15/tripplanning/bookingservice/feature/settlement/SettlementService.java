@@ -5,6 +5,8 @@ import com.team15.tripplanning.bookingservice.dto.SettlementResultDTO;
 import com.team15.tripplanning.bookingservice.messaging.publisher.PaymentEventPublisher;
 import com.team15.tripplanning.bookingservice.model.Settlement;
 import com.team15.tripplanning.bookingservice.model.mongo.PaymentAuditEvent;
+import com.team15.tripplanning.contracts.events.PaymentCompletedEvent;
+import com.team15.tripplanning.contracts.events.PaymentFailedEvent;
 import com.team15.tripplanning.bookingservice.repository.PaymentAuditEventRepository;
 import com.team15.tripplanning.bookingservice.repository.SettlementRepository;
 import com.team15.tripplanning.bookingservice.security.JwtService;
@@ -106,8 +108,8 @@ public class SettlementService {
             paymentAuditEventRepository.save(PaymentAuditEvent.from(auditDetails));
 
             paymentEventPublisher.publishPaymentCompleted(
-                    settlement.getId(), settlement.getItineraryId(), settlement.getAmount()
-            );
+                    new PaymentCompletedEvent(
+                            settlement.getId(), settlement.getItineraryId(), settlement.getAmount()));
 
             return SettlementResultDTO.from(
                     settlement.getId(),
@@ -135,8 +137,8 @@ public class SettlementService {
         paymentAuditEventRepository.save(PaymentAuditEvent.from(auditDetails));
 
         paymentEventPublisher.publishPaymentFailed(
-                settlement.getId(), settlement.getItineraryId(), settlement.getFailureReason()
-        );
+                new PaymentFailedEvent(
+                        settlement.getId(), settlement.getItineraryId(), settlement.getFailureReason()));
 
         return SettlementResultDTO.from(
                 settlement.getId(),

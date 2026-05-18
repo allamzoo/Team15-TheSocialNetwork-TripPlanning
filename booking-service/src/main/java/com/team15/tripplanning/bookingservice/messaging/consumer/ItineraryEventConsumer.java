@@ -81,8 +81,7 @@ public class ItineraryEventConsumer {
         }
 
         paymentEventPublisher.publishPaymentInitiated(
-                settlement.getId(), event.itineraryId(), totalAmount
-        );
+                new PaymentInitiatedEvent(settlement.getId(), event.itineraryId(), totalAmount));
         log.info("SETTLEMENT_PENDING created: settlementId={} itineraryId={} amount={}",
                 settlement.getId(), event.itineraryId(), totalAmount);
     }
@@ -129,8 +128,7 @@ public class ItineraryEventConsumer {
 
                     if (settlementId != null) {
                         paymentEventPublisher.publishPaymentRefunded(
-                                settlementId, booking.getItineraryId(), refundAmount
-                        );
+                                new PaymentRefundedEvent(settlementId, booking.getItineraryId(), refundAmount));
                     } else {
                         log.warn("No settlement found for itineraryId={} — skipping payment.refunded publish",
                                 booking.getItineraryId());
