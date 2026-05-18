@@ -41,10 +41,13 @@ public class BookingAggregateService {
     }
 
     public ConfirmedSummaryDTO getConfirmedSummary(Long itineraryId) {
-        Object[] row = bookingRepository.getConfirmedSummaryByItinerary(itineraryId);
+        // Use JPQL List<Object[]> variant — avoids Spring Boot 4.x native-query
+        // Object[] wrapping where a single-row result comes back as Object[]{Object[]{col1,col2}}.
+        List<Object[]> rows = bookingRepository.countAndSumConfirmed(itineraryId);
         long count = 0L;
         BigDecimal revenue = BigDecimal.ZERO;
-        if (row != null && row.length >= 2) {
+        if (rows != null && !rows.isEmpty()) {
+            Object[] row = rows.get(0);
             count = row[0] instanceof Number n ? n.longValue() : 0L;
             revenue = row[1] instanceof Number n ? BigDecimal.valueOf(n.doubleValue()) : BigDecimal.ZERO;
         }
@@ -67,12 +70,16 @@ public class BookingAggregateService {
             status = Booking.BookingStatus.valueOf(request.status().trim().toUpperCase());
         }
 
-        Object[] row = bookingRepository.aggregateByItineraryIds(
+        Object[] raw = bookingRepository.aggregateByItineraryIds(
                 request.itineraryIds(),
                 startDate.atStartOfDay(),
                 endDate.atTime(23, 59, 59),
                 status
         );
+
+        // Defensive unwrap: Spring Boot 4.x / Hibernate 6 may return Object[]{Object[]{col1,col2}}
+        // for a single-row scalar result — peel that extra wrapper if present.
+        Object[] row = unwrapRow(raw);
 
         long count = 0L;
         BigDecimal total = BigDecimal.ZERO;
@@ -82,6 +89,19 @@ public class BookingAggregateService {
         }
 
         return new ItineraryAggregateDTO(count, total);
+    }
+
+    /**
+     * Unwraps the extra Object[] layer that Spring Boot 4.x / Hibernate 6 sometimes
+     * adds around a single-row native / JPQL scalar result.
+     * Input: Object[]{Object[]{a, b}}  → returns Object[]{a, b}
+     * Input: Object[]{a, b}            → returns as-is
+     */
+    private static Object[] unwrapRow(Object[] row) {
+        if (row != null && row.length == 1 && row[0] instanceof Object[] inner) {
+            return inner;
+        }
+        return row;
     }
 }
 

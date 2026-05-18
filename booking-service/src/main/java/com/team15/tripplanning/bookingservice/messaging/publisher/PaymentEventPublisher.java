@@ -49,7 +49,7 @@ public class PaymentEventPublisher {
 
     public void publishPaymentRefunded(PaymentRefundedEvent event) {
         log.info("Publishing payment.refunded: settlementId={} itineraryId={} refundAmount={}",
-                event.settlementId(), event.itineraryId(), event.amount());
+                event.settlementId(), event.itineraryId(), event.refundAmount());
         rabbitTemplate.convertAndSend(AmqpConfig.PAYMENT_EXCHANGE, AmqpConfig.ROUTING_PAYMENT_REFUNDED, event);
     }
 }

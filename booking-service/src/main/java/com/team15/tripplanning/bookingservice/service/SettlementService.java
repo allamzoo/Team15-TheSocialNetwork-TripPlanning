@@ -4,8 +4,9 @@ import com.team15.tripplanning.bookingservice.dto.SettlementProcessRequest;
 import com.team15.tripplanning.bookingservice.dto.SettlementResultDTO;
 import com.team15.tripplanning.bookingservice.messaging.publisher.PaymentEventPublisher;
 import com.team15.tripplanning.bookingservice.model.Settlement;
-import com.team15.tripplanning.bookingservice.model.SettlementStatus;
+import com.team15.tripplanning.bookingservice.model.Settlement.SettlementStatus;
 import com.team15.tripplanning.bookingservice.repository.SettlementRepository;
+import com.team15.tripplanning.contracts.events.PaymentCompletedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -18,7 +19,12 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
-@Service
+/**
+ * Legacy settlement service — wired into BookingController.
+ * Bean name is "legacySettlementService" to avoid conflict with
+ * feature.settlement.SettlementService which is wired into SettlementController.
+ */
+@Service("legacySettlementService")
 public class SettlementService {
 
     private static final Logger log = LoggerFactory.getLogger(SettlementService.class);
@@ -96,9 +102,12 @@ public class SettlementService {
         auditPayload.put("amount", settlement.getAmount().toPlainString());
         mongoEventLogger.onEvent("SETTLEMENT_COMPLETED", auditPayload);
 
-        // Publish payment.completed (no-op until S5-EVENTS wires RabbitMQ)
+        // Publish payment.completed
         paymentEventPublisher.publishPaymentCompleted(
-                settlement.getId(), settlement.getItineraryId(), settlement.getAmount());
+                new PaymentCompletedEvent(
+                        settlement.getId(),
+                        settlement.getItineraryId(),
+                        settlement.getAmount()));
 
         log.info("Settlement {} COMPLETED — itineraryId={} amount={}",
                 settlement.getId(), settlement.getItineraryId(), settlement.getAmount());

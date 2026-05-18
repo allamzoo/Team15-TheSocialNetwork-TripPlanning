@@ -65,6 +65,16 @@ public class UserController {
         return ResponseEntity.ok(userService.findById(id));
     }
 
+    /**
+     * Internal service-to-service endpoint — no ownership check.
+     * Called by itinerary-service, destination-service, booking-service via Feign.
+     * Security: /api/users/** is already permitAll in SecurityConfig.
+     */
+    @GetMapping("/{id}/internal")
+    public ResponseEntity<User> findByIdInternal(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.findById(id));
+    }
+
     @GetMapping("/{id}/profile")
     public ResponseEntity<UserProfileDTO> getProfile(@PathVariable Long id) {
         return ResponseEntity.ok(userService.getProfile(id));

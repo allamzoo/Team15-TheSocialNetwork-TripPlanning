@@ -128,15 +128,17 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     Object[] getConfirmedSummaryForItinerary(@Param("itineraryId") Long itineraryId);
 
     /**
-     * S5-F4 aggregate query — returns [count, totalRevenue] for CONFIRMED bookings
-     * without loading the full entity (avoids the JSON bookingDetails column).
+     * S5-F4 aggregate query — returns [count, totalRevenue] for CONFIRMED bookings.
+     * Native query avoids Hibernate 6's enum→PostgreSQL-type cast ('CONFIRMED'::BookingStatus)
+     * which fails when the DB column is plain VARCHAR/TEXT rather than a PG enum type.
+     * Returning List<Object[]> (not bare Object[]) sidesteps Spring Boot 4.x single-row wrapping.
      */
-    @Query("""
-            SELECT COUNT(b), COALESCE(SUM(b.amount), 0.0)
-            FROM Booking b
-            WHERE b.itineraryId = :itineraryId
-              AND b.status = com.team15.tripplanning.bookingservice.model.Booking.BookingStatus.CONFIRMED
-            """)
+    @Query(value = """
+            SELECT COUNT(*), COALESCE(SUM(b.amount), 0)
+            FROM bookings b
+            WHERE b.itin_id = :itineraryId
+              AND b.status = 'CONFIRMED'
+            """, nativeQuery = true)
     List<Object[]> countAndSumConfirmed(@Param("itineraryId") Long itineraryId);
 
     // ─── Per-user aggregates ──────────────────────────────────────────────────

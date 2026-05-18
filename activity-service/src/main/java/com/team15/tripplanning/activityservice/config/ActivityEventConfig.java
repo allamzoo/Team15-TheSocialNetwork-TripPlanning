@@ -1,14 +1,19 @@
 package com.team15.tripplanning.activityservice.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.core.TopicExchange;
-import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 
 @Configuration
 public class ActivityEventConfig {
@@ -123,8 +128,22 @@ public class ActivityEventConfig {
     // JSON message converter — all services use Jackson for AMQP payloads
     // ─────────────────────────────────────────────────────────────────────────
 
+    /**
+     * Primary ObjectMapper — guaranteed to be an autowire candidate even when
+     * DataCassandraAutoConfiguration registers a non-candidate ObjectMapper internally.
+     */
+    @Bean
+    @Primary
+    @ConditionalOnMissingBean(ObjectMapper.class)
+    public ObjectMapper objectMapper() {
+        return new ObjectMapper()
+                .registerModule(new JavaTimeModule())
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    }
+
     @Bean
     public MessageConverter jacksonMessageConverter() {
-        return new JacksonJsonMessageConverter();
+        // Use Jackson2JsonMessageConverter (the non-deprecated form)
+        return new Jackson2JsonMessageConverter();
     }
 }
