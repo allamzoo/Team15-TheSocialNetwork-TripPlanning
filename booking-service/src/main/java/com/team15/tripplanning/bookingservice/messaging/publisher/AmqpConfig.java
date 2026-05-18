@@ -89,7 +89,11 @@ public class AmqpConfig {
 
     @Bean
     public MessageConverter jacksonMessageConverter() {
-        return new Jackson2JsonMessageConverter();
+        Jackson2JsonMessageConverter converter = new Jackson2JsonMessageConverter();
+        // Use method-signature type rather than __TypeId__ header — allows cross-service
+        // deserialization even when the publisher doesn't add type headers.
+        converter.setTypePrecedence(org.springframework.amqp.support.converter.Jackson2JavaTypeMapper.TypePrecedence.INFERRED);
+        return converter;
     }
 
     @Bean
