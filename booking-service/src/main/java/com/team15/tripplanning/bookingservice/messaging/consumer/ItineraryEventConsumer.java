@@ -13,6 +13,8 @@ import com.team15.tripplanning.contracts.events.ItineraryCancelledEvent;
 import com.team15.tripplanning.contracts.events.ItineraryCompletedEvent;
 import com.team15.tripplanning.contracts.events.PaymentInitiatedEvent;
 import com.team15.tripplanning.contracts.events.PaymentRefundedEvent;
+import com.team15.tripplanning.shared.event.EventFactory;
+import com.team15.tripplanning.shared.event.EventType;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -73,10 +75,10 @@ public class ItineraryEventConsumer {
         auditDetails.put("settlementId", settlement.getId());
         auditDetails.put("userId", event.userId());
         auditDetails.put("amount", totalAmount.doubleValue());
-        paymentAuditEventRepository.save(new PaymentAuditEvent(auditDetails));
+        paymentAuditEventRepository.save((PaymentAuditEvent) EventFactory.createEvent(EventType.PAYMENT_AUDIT, auditDetails));
 
         paymentEventPublisher.publishPaymentInitiated(
-                new PaymentInitiatedEvent(settlement.getId(), event.itineraryId(), totalAmount)
+                settlement.getId(), event.itineraryId(), totalAmount
         );
         log.info("SETTLEMENT_PENDING created: settlementId={} itineraryId={} amount={}",
                 settlement.getId(), event.itineraryId(), totalAmount);
@@ -115,11 +117,16 @@ public class ItineraryEventConsumer {
                     auditDetails.put("bookingId", booking.getId());
                     auditDetails.put("userId", booking.getUserId());
                     auditDetails.put("amount", refundAmount.doubleValue());
-                    paymentAuditEventRepository.save(new PaymentAuditEvent(auditDetails));
+                    paymentAuditEventRepository.save((PaymentAuditEvent) EventFactory.createEvent(EventType.PAYMENT_AUDIT, auditDetails));
 
-                    paymentEventPublisher.publishPaymentRefunded(
-                            new PaymentRefundedEvent(settlementId, booking.getItineraryId(), refundAmount)
-                    );
+                    if (settlementId != null) {
+                        paymentEventPublisher.publishPaymentRefunded(
+                                settlementId, booking.getItineraryId(), refundAmount
+                        );
+                    } else {
+                        log.warn("No settlement found for itineraryId={} — skipping payment.refunded publish",
+                                booking.getItineraryId());
+                    }
                     log.info("Refunded bookingId={} amount={} for itineraryId={}",
                             booking.getId(), refundAmount, event.itineraryId());
                 }

@@ -78,13 +78,13 @@ public class SettlementService {
         }
 
         // Step 4 — Atomic transition PENDING → PROCESSING
-        settlement.setStatus(SettlementStatus.PROCESSING);
+        settlement.setStatus(Settlement.SettlementStatus.PROCESSING);
         settlementRepository.saveAndFlush(settlement); // flush so concurrent callers see PROCESSING
         log.info("Settlement {} transitioned PENDING → PROCESSING", settlement.getId());
 
         // Step 5 — Run settlement logic (Trip Planning: always succeeds when pre-checks pass)
         // Step 6a — Success path
-        settlement.setStatus(SettlementStatus.COMPLETED);
+        settlement.setStatus(Settlement.SettlementStatus.COMPLETED);
         settlement.setSettledAt(LocalDateTime.now());
         settlementRepository.save(settlement);
 

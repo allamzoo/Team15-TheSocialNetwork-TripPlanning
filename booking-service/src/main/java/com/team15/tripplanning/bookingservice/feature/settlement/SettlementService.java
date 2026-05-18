@@ -6,10 +6,10 @@ import com.team15.tripplanning.bookingservice.messaging.publisher.PaymentEventPu
 import com.team15.tripplanning.bookingservice.model.Settlement;
 import com.team15.tripplanning.bookingservice.model.mongo.PaymentAuditEvent;
 import com.team15.tripplanning.bookingservice.repository.PaymentAuditEventRepository;
+import com.team15.tripplanning.shared.event.EventFactory;
+import com.team15.tripplanning.shared.event.EventType;
 import com.team15.tripplanning.bookingservice.repository.SettlementRepository;
 import com.team15.tripplanning.bookingservice.security.JwtService;
-import com.team15.tripplanning.contracts.events.PaymentCompletedEvent;
-import com.team15.tripplanning.contracts.events.PaymentFailedEvent;
 import jakarta.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -105,10 +105,10 @@ public class SettlementService {
             auditDetails.put("itineraryId", settlement.getItineraryId());
             auditDetails.put("userId", settlement.getUserId());
             auditDetails.put("amount", settlement.getAmount().doubleValue());
-            paymentAuditEventRepository.save(new PaymentAuditEvent(auditDetails));
+            paymentAuditEventRepository.save((PaymentAuditEvent) EventFactory.createEvent(EventType.PAYMENT_AUDIT, auditDetails));
 
             paymentEventPublisher.publishPaymentCompleted(
-                    new PaymentCompletedEvent(settlement.getId(), settlement.getItineraryId(), settlement.getAmount())
+                    settlement.getId(), settlement.getItineraryId(), settlement.getAmount()
             );
 
             return SettlementResultDTO.from(
@@ -134,10 +134,10 @@ public class SettlementService {
         auditDetails.put("userId", settlement.getUserId());
         auditDetails.put("amount", settlement.getAmount().doubleValue());
         auditDetails.put("reason", settlement.getFailureReason());
-        paymentAuditEventRepository.save(new PaymentAuditEvent(auditDetails));
+        paymentAuditEventRepository.save((PaymentAuditEvent) EventFactory.createEvent(EventType.PAYMENT_AUDIT, auditDetails));
 
         paymentEventPublisher.publishPaymentFailed(
-                new PaymentFailedEvent(settlement.getId(), settlement.getItineraryId(), settlement.getFailureReason())
+                settlement.getId(), settlement.getItineraryId(), settlement.getFailureReason()
         );
 
         return SettlementResultDTO.from(

@@ -41,7 +41,7 @@ jobs:
           cache: maven
 
       - name: Build all modules and run tests
-        run: mvn clean install -DskipTests=false --batch-mode --no-transfer-progress -pl '!booking-service'
+        run: mvn clean install -DskipTests=false --batch-mode --no-transfer-progress
 
   # ─────────────────────────────────────────────────────────────────
   # JOB 2: Build Docker images — feature branches (no push)
@@ -60,6 +60,7 @@ jobs:
           - destination-service
           - itinerary-service
           - activity-service
+          - booking-service
           - api-gateway
 
     steps:
@@ -94,6 +95,7 @@ jobs:
           - destination-service
           - itinerary-service
           - activity-service
+          - booking-service
           - api-gateway
 
     steps:

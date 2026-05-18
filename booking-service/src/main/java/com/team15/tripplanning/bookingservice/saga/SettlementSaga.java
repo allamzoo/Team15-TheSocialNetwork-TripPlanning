@@ -63,7 +63,7 @@ public class SettlementSaga {
         log.info("SETTLEMENT_PENDING created: id={} itineraryId={} amount={}",
                 s.getId(), itineraryId, amount);
 
-        publisher.publishInitiated(s.getId(), itineraryId, amount);
+        publisher.publishPaymentInitiated(s.getId(), itineraryId, amount);
         return s;
     }
 
@@ -82,7 +82,7 @@ public class SettlementSaga {
                         HttpStatus.NOT_FOUND,
                         "No settlement found for itineraryId=" + itineraryId));
 
-        if (s.getStatus() != SettlementStatus.SETTLEMENT_PENDING) {
+        if (s.getStatus() != SettlementStatus.PENDING) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Settlement is already in state " + s.getStatus());
         }
@@ -94,21 +94,21 @@ public class SettlementSaga {
                 && userId.equals(s.getUserId());
 
         if (valid) {
-            s.setStatus(SettlementStatus.SETTLED);
+            s.setStatus(SettlementStatus.COMPLETED);
             s.setSettledAt(LocalDateTime.now());
             s = settlementRepository.save(s);
-            log.info("Settlement SETTLED: id={} itineraryId={}", s.getId(), itineraryId);
-            publisher.publishCompleted(s.getId(), itineraryId, s.getAmount());
+            log.info("Settlement COMPLETED: id={} itineraryId={}", s.getId(), itineraryId);
+            publisher.publishPaymentCompleted(s.getId(), itineraryId, s.getAmount());
         } else {
             String reason = amount == null || amount.compareTo(BigDecimal.ZERO) <= 0
                     ? "Invalid amount: " + amount
                     : "userId mismatch: expected=" + s.getUserId() + " got=" + userId;
-            s.setStatus(SettlementStatus.PAYMENT_FAILED);
+            s.setStatus(SettlementStatus.FAILED);
             s.setFailureReason(reason);
             s = settlementRepository.save(s);
-            log.warn("Settlement PAYMENT_FAILED: id={} itineraryId={} reason={}",
+            log.warn("Settlement FAILED: id={} itineraryId={} reason={}",
                     s.getId(), itineraryId, reason);
-            publisher.publishFailed(s.getId(), itineraryId, reason);
+            publisher.publishPaymentFailed(s.getId(), itineraryId, reason);
         }
 
         return s;
@@ -126,7 +126,7 @@ public class SettlementSaga {
             s.setStatus(SettlementStatus.REFUNDED);
             settlementRepository.save(s);
             log.info("Settlement REFUNDED: id={} itineraryId={}", s.getId(), itineraryId);
-            publisher.publishRefunded(s.getId(), itineraryId, s.getAmount());
+            publisher.publishPaymentRefunded(s.getId(), itineraryId, s.getAmount());
         });
     }
 }

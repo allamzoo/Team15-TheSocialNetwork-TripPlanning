@@ -41,7 +41,7 @@ public class BookingAggregateService {
     }
 
     public ConfirmedSummaryDTO getConfirmedSummary(Long itineraryId) {
-        Object[] row = bookingRepository.getConfirmedSummaryByItinerary(itineraryId);
+        Object[] row = bookingRepository.getConfirmedSummaryForItinerary(itineraryId);
         long count = 0L;
         BigDecimal revenue = BigDecimal.ZERO;
         if (row != null && row.length >= 2) {
