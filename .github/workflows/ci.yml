@@ -59,7 +59,7 @@ jobs:
           - user-service
           - destination-service
           - itinerary-service
-          - booking-service
+          - activity-service
           - api-gateway
 
     steps:
@@ -93,7 +93,7 @@ jobs:
           - user-service
           - destination-service
           - itinerary-service
-          - booking-service
+          - activity-service
           - api-gateway
 
     steps:
