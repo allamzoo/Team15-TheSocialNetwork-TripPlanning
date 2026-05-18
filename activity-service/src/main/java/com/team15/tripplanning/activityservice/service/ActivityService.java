@@ -7,6 +7,7 @@ import com.team15.tripplanning.activityservice.model.Activity;
 import com.team15.tripplanning.activityservice.model.cassandra.ActivityLifecycleEvent;
 import com.team15.tripplanning.activityservice.model.cassandra.ActivityLifecycleEventKey;
 import com.team15.tripplanning.activityservice.repository.ActivityLifecycleEventRepository;
+import com.team15.tripplanning.activityservice.repository.ActivityLifecycleEventStore;
 import com.team15.tripplanning.activityservice.repository.ActivityRepository;
 import com.team15.tripplanning.shared.observer.EntityObserver;
 import feign.FeignException;
@@ -39,7 +40,7 @@ public class ActivityService {
             Set.of("BOOKED", "STARTED", "COMPLETED", "CANCELLED");
 
     private final ActivityRepository activityRepository;
-    private final ActivityLifecycleEventRepository lifecycleEventRepository;
+    private final ActivityLifecycleEventStore lifecycleEventRepository;
     private final CassandraOperations cassandraOperations;
     private final ItineraryServiceClient itineraryServiceClient;
     private final ActivityEventPublisher activityEventPublisher;
@@ -47,7 +48,7 @@ public class ActivityService {
     private final RedisTemplate<String, Object> redisTemplate;
 
     public ActivityService(ActivityRepository activityRepository,
-                           ActivityLifecycleEventRepository lifecycleEventRepository,
+                           ActivityLifecycleEventStore  lifecycleEventRepository,
                            CassandraOperations cassandraOperations,
                            MongoEventLogger mongoEventLogger,
                            ItineraryServiceClient itineraryServiceClient,

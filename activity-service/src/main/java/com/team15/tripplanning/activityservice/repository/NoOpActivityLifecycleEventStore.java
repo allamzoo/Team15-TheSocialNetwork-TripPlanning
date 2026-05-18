@@ -31,4 +31,10 @@ public class NoOpActivityLifecycleEventStore implements ActivityLifecycleEventSt
         log.warn("Cassandra disabled — returning empty timeline for activityId={}", activityId);
         return List.of();
     }
+    @Override
+    public List<ActivityLifecycleEvent> findByActivityIdAndStatus(Long activityId, String status) {
+        log.warn("Cassandra disabled — returning empty status filter for activityId={}, status={}",
+                activityId, status);
+        return List.of();
+    }
 }

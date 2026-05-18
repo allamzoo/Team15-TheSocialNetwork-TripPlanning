@@ -1,0 +1,118 @@
+# CI/CD Pipeline — Trip Planning Microservices
+#
+# TRIGGER 1 (feat/**): Builds all Maven modules and verifies Docker images
+#   build successfully. Images are NOT pushed — this is a pure validation step
+#   for feature branches before they reach main.
+#
+# TRIGGER 2 (main): Builds all Maven modules, builds Docker images, then logs
+#   in to GitHub Container Registry (ghcr.io) and pushes each image tagged
+#   with both :latest and the short commit SHA for traceability.
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - 'feat/**'
+
+env:
+  JAVA_VERSION: '21'
+  REGISTRY: ghcr.io
+
+jobs:
+
+  # ─────────────────────────────────────────────
+  # JOB 1: Build & Test (runs on every trigger)
+  # ─────────────────────────────────────────────
+  build-and-test:
+    name: Build & Test (Maven)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up Java ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: maven
+
+      - name: Build all modules and run tests
+        run: mvn clean install -DskipTests=false --batch-mode --no-transfer-progress -pl '!booking-service'
+
+  # ─────────────────────────────────────────────────────────────────
+  # JOB 2: Build Docker images — feature branches (no push)
+  # Runs only on feat/** pushes to verify every image compiles cleanly
+  # ─────────────────────────────────────────────────────────────────
+  docker-build-verify:
+    name: Verify Docker Builds (feat/**)
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.ref != 'refs/heads/main'
+
+    strategy:
+      matrix:
+        service:
+          - user-service
+          - destination-service
+          - itinerary-service
+          - activity-service
+          - api-gateway
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image — ${{ matrix.service }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./${{ matrix.service }}/Dockerfile
+          push: false
+          tags: ${{ matrix.service }}:verify
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # JOB 3: Build, tag, and push Docker images to ghcr.io — main branch only
+  # ──────────────────────────────────────────────────────────────────────────
+  docker-build-and-push:
+    name: Build & Push to ghcr.io (main)
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main'
+
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      matrix:
+        service:
+          - user-service
+          - destination-service
+          - itinerary-service
+          - activity-service
+          - api-gateway
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image — ${{ matrix.service }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./${{ matrix.service }}/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.service }}:latest
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.service }}:${{ github.sha }}

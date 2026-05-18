@@ -110,6 +110,28 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Testcontainers for integration tests -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <version>1.19.8</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>rabbitmq</artifactId>
+            <version>1.19.8</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>1.19.8</version>
+            <scope>test</scope>
+        </dependency>
+
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
@@ -163,17 +185,23 @@
             <artifactId>spring-cloud-starter-openfeign</artifactId>
         </dependency>
 
-        <!-- M3: Actuator — version managed by Spring Boot BOM -->
+        <!-- M3: RabbitMQ for async event messaging -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator</artifactId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
         </dependency>
 
-        <!-- M3: Prometheus metrics — version managed by Spring Boot BOM -->
+        <!-- M3: Shared contracts module for Feign clients and event records -->
         <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-registry-prometheus</artifactId>
-            <scope>runtime</scope>
+            <groupId>com.team15.tripplanning</groupId>
+            <artifactId>contracts</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+
+        <!-- M3: Jackson Java Time Module for LocalDateTime serialization -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
 
         <!-- M3: Loki4J for structured log shipping to Loki -->
