@@ -13,8 +13,6 @@ import com.team15.tripplanning.contracts.events.ItineraryCancelledEvent;
 import com.team15.tripplanning.contracts.events.ItineraryCompletedEvent;
 import com.team15.tripplanning.contracts.events.PaymentInitiatedEvent;
 import com.team15.tripplanning.contracts.events.PaymentRefundedEvent;
-import com.team15.tripplanning.shared.event.EventFactory;
-import com.team15.tripplanning.shared.event.EventType;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -75,7 +73,7 @@ public class ItineraryEventConsumer {
         auditDetails.put("settlementId", settlement.getId());
         auditDetails.put("userId", event.userId());
         auditDetails.put("amount", totalAmount.doubleValue());
-        paymentAuditEventRepository.save((PaymentAuditEvent) EventFactory.createEvent(EventType.PAYMENT_AUDIT, auditDetails));
+        paymentAuditEventRepository.save(PaymentAuditEvent.from(auditDetails));
 
         paymentEventPublisher.publishPaymentInitiated(
                 settlement.getId(), event.itineraryId(), totalAmount
@@ -117,7 +115,7 @@ public class ItineraryEventConsumer {
                     auditDetails.put("bookingId", booking.getId());
                     auditDetails.put("userId", booking.getUserId());
                     auditDetails.put("amount", refundAmount.doubleValue());
-                    paymentAuditEventRepository.save((PaymentAuditEvent) EventFactory.createEvent(EventType.PAYMENT_AUDIT, auditDetails));
+                    paymentAuditEventRepository.save(PaymentAuditEvent.from(auditDetails));
 
                     if (settlementId != null) {
                         paymentEventPublisher.publishPaymentRefunded(

@@ -6,8 +6,6 @@ import com.team15.tripplanning.bookingservice.messaging.publisher.PaymentEventPu
 import com.team15.tripplanning.bookingservice.model.Settlement;
 import com.team15.tripplanning.bookingservice.model.mongo.PaymentAuditEvent;
 import com.team15.tripplanning.bookingservice.repository.PaymentAuditEventRepository;
-import com.team15.tripplanning.shared.event.EventFactory;
-import com.team15.tripplanning.shared.event.EventType;
 import com.team15.tripplanning.bookingservice.repository.SettlementRepository;
 import com.team15.tripplanning.bookingservice.security.JwtService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -105,7 +103,7 @@ public class SettlementService {
             auditDetails.put("itineraryId", settlement.getItineraryId());
             auditDetails.put("userId", settlement.getUserId());
             auditDetails.put("amount", settlement.getAmount().doubleValue());
-            paymentAuditEventRepository.save((PaymentAuditEvent) EventFactory.createEvent(EventType.PAYMENT_AUDIT, auditDetails));
+            paymentAuditEventRepository.save(PaymentAuditEvent.from(auditDetails));
 
             paymentEventPublisher.publishPaymentCompleted(
                     settlement.getId(), settlement.getItineraryId(), settlement.getAmount()
@@ -134,7 +132,7 @@ public class SettlementService {
         auditDetails.put("userId", settlement.getUserId());
         auditDetails.put("amount", settlement.getAmount().doubleValue());
         auditDetails.put("reason", settlement.getFailureReason());
-        paymentAuditEventRepository.save((PaymentAuditEvent) EventFactory.createEvent(EventType.PAYMENT_AUDIT, auditDetails));
+        paymentAuditEventRepository.save(PaymentAuditEvent.from(auditDetails));
 
         paymentEventPublisher.publishPaymentFailed(
                 settlement.getId(), settlement.getItineraryId(), settlement.getFailureReason()
