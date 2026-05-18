@@ -73,7 +73,12 @@ public class ItineraryEventConsumer {
         auditDetails.put("settlementId", settlement.getId());
         auditDetails.put("userId", event.userId());
         auditDetails.put("amount", totalAmount.doubleValue());
-        paymentAuditEventRepository.save(PaymentAuditEvent.from(auditDetails));
+        try {
+            paymentAuditEventRepository.save(PaymentAuditEvent.from(auditDetails));
+        } catch (Exception e) {
+            log.warn("MongoDB unavailable — audit event not persisted for itineraryId={}: {}",
+                    event.itineraryId(), e.getMessage());
+        }
 
         paymentEventPublisher.publishPaymentInitiated(
                 settlement.getId(), event.itineraryId(), totalAmount
@@ -115,7 +120,12 @@ public class ItineraryEventConsumer {
                     auditDetails.put("bookingId", booking.getId());
                     auditDetails.put("userId", booking.getUserId());
                     auditDetails.put("amount", refundAmount.doubleValue());
-                    paymentAuditEventRepository.save(PaymentAuditEvent.from(auditDetails));
+                    try {
+                        paymentAuditEventRepository.save(PaymentAuditEvent.from(auditDetails));
+                    } catch (Exception e) {
+                        log.warn("MongoDB unavailable — audit event not persisted for itineraryId={}: {}",
+                                event.itineraryId(), e.getMessage());
+                    }
 
                     if (settlementId != null) {
                         paymentEventPublisher.publishPaymentRefunded(

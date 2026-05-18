@@ -52,8 +52,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  *   - Database : H2 in-memory (no external Postgres)
  *   - Feign    : @MockitoBean (no external services)
  */
+@org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable(
+        named = "CI",
+        matches = "true",
+        disabledReason = "Testcontainers requires Docker — skipped in CI environment"
+)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 @TestPropertySource(properties = {
         "spring.rabbitmq.listener.simple.auto-startup=true",
         "spring.datasource.url=jdbc:h2:mem:sagatest;DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
