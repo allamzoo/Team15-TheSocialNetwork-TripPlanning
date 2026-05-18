@@ -95,14 +95,23 @@ public class DestinationService {
     public Destination create(Destination destination) {
         Destination saved = destinationRepository.save(destination);
 
-        Map<String, Object> indexResult = searchService.indexDestination(saved, "auto_crud_create");
+        Map<String, Object> indexResult = new HashMap<>();
+        try {
+            indexResult = searchService.indexDestination(saved, "auto_crud_create");
+        } catch (Exception e) {
+            log.warn("Elasticsearch indexing failed for destination {} — continuing: {}", saved.getId(), e.getMessage());
+        }
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("destinationId", saved.getId());
         payload.put("name", saved.getName());
         payload.put("indexedFields", indexResult.get("indexedFields"));
         payload.put("source", "auto_crud_create");
-        notifyObservers("INDEXED", payload);
+        try {
+            notifyObservers("INDEXED", payload);
+        } catch (Exception e) {
+            log.warn("Observer notification failed for destination {} — continuing: {}", saved.getId(), e.getMessage());
+        }
 
         deleteWildcard("s2-destinations::*");
         deleteWildcard("s2-top-rated::*");

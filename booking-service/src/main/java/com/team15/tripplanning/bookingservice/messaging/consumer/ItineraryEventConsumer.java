@@ -73,10 +73,15 @@ public class ItineraryEventConsumer {
         auditDetails.put("settlementId", settlement.getId());
         auditDetails.put("userId", event.userId());
         auditDetails.put("amount", totalAmount.doubleValue());
-        paymentAuditEventRepository.save(new PaymentAuditEvent(auditDetails));
+        try {
+            paymentAuditEventRepository.save(PaymentAuditEvent.from(auditDetails));
+        } catch (Exception e) {
+            log.warn("MongoDB unavailable — audit event not persisted for itineraryId={}: {}",
+                    event.itineraryId(), e.getMessage());
+        }
 
         paymentEventPublisher.publishPaymentInitiated(
-                new PaymentInitiatedEvent(settlement.getId(), event.itineraryId(), totalAmount)
+                settlement.getId(), event.itineraryId(), totalAmount
         );
         log.info("SETTLEMENT_PENDING created: settlementId={} itineraryId={} amount={}",
                 settlement.getId(), event.itineraryId(), totalAmount);
@@ -115,11 +120,21 @@ public class ItineraryEventConsumer {
                     auditDetails.put("bookingId", booking.getId());
                     auditDetails.put("userId", booking.getUserId());
                     auditDetails.put("amount", refundAmount.doubleValue());
-                    paymentAuditEventRepository.save(new PaymentAuditEvent(auditDetails));
+                    try {
+                        paymentAuditEventRepository.save(PaymentAuditEvent.from(auditDetails));
+                    } catch (Exception e) {
+                        log.warn("MongoDB unavailable — audit event not persisted for itineraryId={}: {}",
+                                event.itineraryId(), e.getMessage());
+                    }
 
-                    paymentEventPublisher.publishPaymentRefunded(
-                            new PaymentRefundedEvent(settlementId, booking.getItineraryId(), refundAmount)
-                    );
+                    if (settlementId != null) {
+                        paymentEventPublisher.publishPaymentRefunded(
+                                settlementId, booking.getItineraryId(), refundAmount
+                        );
+                    } else {
+                        log.warn("No settlement found for itineraryId={} — skipping payment.refunded publish",
+                                booking.getItineraryId());
+                    }
                     log.info("Refunded bookingId={} amount={} for itineraryId={}",
                             booking.getId(), refundAmount, event.itineraryId());
                 }
