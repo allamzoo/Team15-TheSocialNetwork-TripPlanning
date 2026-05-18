@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: itinerary-load-generator
+  namespace: tripplanning
+spec:
+  parallelism: 5
+  completions: 5
+  template:
+    metadata:
+      labels:
+        app: load-generator
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: load-generator
+          image: busybox:1.35
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Starting load against itinerary-service..."
+              END=$((SECONDS + 180))
+              while [ $SECONDS -lt $END ]; do
+                wget -q -O /dev/null http://itinerary-service:8080/actuator/health 2>/dev/null || true
+                wget -q -O /dev/null http://itinerary-service:8080/api/itineraries 2>/dev/null || true
+              done
+              echo "Load generation complete."
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+            limits:
+              cpu: "100m"
+              memory: "64Mi"
