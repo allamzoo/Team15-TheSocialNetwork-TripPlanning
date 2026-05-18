@@ -1,0 +1,91 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  grafana-deployment.yaml — S4-INFRA OWNED (feature/m3-s4-infra-activity)    ║
+# ║  Grafana v10.4.2 — dashboard UI for LogQL (Loki) + PromQL (Prometheus).     ║
+# ║                                                                              ║
+# ║  Volume mounts:                                                              ║
+# ║    /var/lib/grafana                         ← grafana-pvc (state / sqlite)  ║
+# ║    /etc/grafana/provisioning/datasources    ← grafana-datasources ConfigMap  ║
+# ║    /etc/grafana/provisioning/dashboards     ← grafana-dashboards-config CM  ║
+# ║    /etc/grafana/provisioning/dashboards/    ←                               ║
+# ║      tripplanning                           ← grafana-dashboard-files CM    ║
+# ║                                                                              ║
+# ║  Access: NodePort 30030 (grafana-service.yaml)                              ║
+# ║    http://$(minikube ip):30030  →  admin / admin  (change on first login)   ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: monitoring
+  labels:
+    app: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      # grafana runs as UID 472
+      securityContext:
+        fsGroup: 472
+        runAsUser: 472
+      containers:
+        - name: grafana
+          image: grafana/grafana:10.4.2
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              value: admin
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              value: admin
+            - name: GF_PATHS_PROVISIONING
+              value: /etc/grafana/provisioning
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          volumeMounts:
+            - name: grafana-storage
+              mountPath: /var/lib/grafana
+            - name: grafana-datasources
+              mountPath: /etc/grafana/provisioning/datasources
+              readOnly: true
+            - name: grafana-dashboards-config
+              mountPath: /etc/grafana/provisioning/dashboards
+              readOnly: true
+            - name: grafana-dashboard-files
+              mountPath: /etc/grafana/provisioning/dashboards/tripplanning
+              readOnly: true
+      volumes:
+        - name: grafana-storage
+          persistentVolumeClaim:
+            claimName: grafana-pvc
+        - name: grafana-datasources
+          configMap:
+            name: grafana-datasources          # grafana-datasources.yaml
+        - name: grafana-dashboards-config
+          configMap:
+            name: grafana-dashboards-config    # grafana-dashboards.yaml (provider stanza)
+        - name: grafana-dashboard-files
+          configMap:
+            name: grafana-dashboard-files      # grafana-dashboards.yaml (5 JSON keys)

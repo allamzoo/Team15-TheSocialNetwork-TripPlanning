@@ -3,13 +3,13 @@ spring:
     name: booking-service
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/tripplanningdb}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://booking-postgres:5432/tripdb-bookings}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:postgres}
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     show-sql: true
     properties:
       hibernate:
@@ -23,10 +23,30 @@ spring:
 
   data:
     mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI:mongodb://root:rootpass@mongo:27017/tripplanningmongo?authSource=admin}
+      host: ${SPRING_MONGODB_HOST:tripplanning-mongo}
+      port: ${SPRING_MONGODB_PORT:27017}
+      database: ${SPRING_MONGODB_DATABASE:tripplanningdb}
     redis:
-      host: ${SPRING_REDIS_HOST:localhost}
-      port: ${SPRING_REDIS_PORT:6379}
+      host: ${SPRING_DATA_REDIS_HOST:tripplanning-redis}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+
+  # M3: RabbitMQ connection
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
+    virtual-host: /
+    listener:
+      simple:
+        auto-startup: ${M3_MESSAGING_ENABLED:false}
+        missing-queues-fatal: false
+        acknowledge-mode: auto
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          initial-interval: 1000
+          max-attempts: 3
 
 server:
   port: 8080
@@ -34,3 +54,31 @@ server:
 jwt:
   secret: ${JWT_SECRET:tripplanning-secret-key-for-jwt-token-signing}
   expiration: ${JWT_EXPIRATION:86400000}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: always
+
+loki:
+  url: ${LOKI_URL:http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push}
+
+# ─── S5 OWNED BLOCK ─────────────────────────────────────────────────────────
+# Pull request: feature/m3-s5-feign-amqp-booking
+# Edit ONLY this block in your S5 PR.
+feign:
+  user-service:
+    url: ${FEIGN_USER_SERVICE_URL:http://localhost:8081}
+  itinerary-service:
+    url: ${FEIGN_ITINERARY_SERVICE_URL:http://localhost:8083}
+  destination-service:
+    url: ${FEIGN_DESTINATION_SERVICE_URL:http://localhost:8082}
+
+m3:
+  messaging:
+    enabled: ${M3_MESSAGING_ENABLED:false}
+# ─── END S5 OWNED BLOCK ─────────────────────────────────────────────────────

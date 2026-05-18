@@ -4,14 +4,13 @@ spring:
 
   autoconfigure:
     exclude:
-      - org.springframework.boot.cassandra.autoconfigure.CassandraAutoConfiguration
-      - org.springframework.boot.data.cassandra.autoconfigure.DataCassandraAutoConfiguration
+      # Reactive Cassandra not used — keep excluded to avoid classpath conflicts
       - org.springframework.boot.data.cassandra.autoconfigure.DataCassandraReactiveAutoConfiguration
-      - org.springframework.boot.data.cassandra.autoconfigure.CassandraRepositoriesAutoConfiguration
+      - org.springframework.boot.data.cassandra.autoconfigure.DataCassandraReactiveRepositoriesAutoConfiguration
       - org.springframework.boot.data.rest.autoconfigure.RepositoryRestMvcAutoConfiguration
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/tripplanningdb}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://activity-postgres:5432/tripdb-activities}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:postgres}
 
@@ -31,10 +30,34 @@ spring:
 
   data:
     mongodb:
-      uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/tripplanningdb}
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://root:rootpass@mongo:27017/tripplanningmongo?authSource=admin}
     redis:
       host: ${SPRING_REDIS_HOST:localhost}
       port: ${SPRING_REDIS_PORT:6379}
+      password: ${SPRING_REDIS_PASSWORD:redispass}
+    cassandra:
+      keyspace-name: ${CASSANDRA_KEYSPACE:tripplanning}
+      contact-points: ${CASSANDRA_CONTACT_POINTS:localhost}
+      port: ${CASSANDRA_PORT:9042}
+      local-datacenter: ${CASSANDRA_DATACENTER:datacenter1}
+      schema-action: create-if-not-exists
+      entity-base-packages: com.team15.tripplanning.activityservice.model.cassandra
+
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
+    virtual-host: /
+    listener:
+      simple:
+        acknowledge-mode: auto
+        default-requeue-rejected: false
+        missing-queues-fatal: false
+        retry:
+          enabled: true
+          initial-interval: 1000
+          max-attempts: 3
 
 server:
   port: 8080
@@ -43,8 +66,23 @@ jwt:
   secret: ${JWT_SECRET:tripplanning-secret-key-for-jwt-token-signing}
   expiration: ${JWT_EXPIRATION:86400000}
 
-# Cassandra is intentionally disabled.
-# ActivityLogRow is a plain POJO used only in CassandraRowAdapter (GoF Adapter pattern).
-# CassandraConfig is also guarded by @ConditionalOnProperty(cassandra.enabled=true).
 cassandra:
-  enabled: false
+  enabled: true
+
+feign:
+  itinerary-service:
+    url: ${FEIGN_ITINERARY_SERVICE_URL:http://itinerary-service:8080}
+
+m3:
+  messaging:
+    enabled: ${M3_MESSAGING_ENABLED:false}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "prometheus,health,info"
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true

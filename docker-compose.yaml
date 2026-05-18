@@ -29,6 +29,12 @@ services:
       - "27017:27017"
     volumes:
       - mongodata:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
     deploy:
       resources:
         limits:
@@ -41,6 +47,11 @@ services:
       - "6379:6379"
     volumes:
       - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     deploy:
       resources:
         limits:
@@ -53,10 +64,18 @@ services:
       - discovery.type=single-node
       - xpack.security.enabled=false
       - ES_JAVA_OPTS=-Xms256m -Xmx256m
+      - node.store.allow_mmap=false
+      - xpack.ml.enabled=false
     ports:
       - "9200:9200"
     volumes:
       - esdata:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
     deploy:
       resources:
         limits:
@@ -75,6 +94,12 @@ services:
       - "7687:7687"
     volumes:
       - neo4jdata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
     deploy:
       resources:
         limits:
@@ -85,17 +110,48 @@ services:
     container_name: tripplanning-cassandra
     environment:
       CASSANDRA_CLUSTER_NAME: tripplanning-cluster
-      JVM_OPTS: -Xms512m -Xmx512m
-      MAX_HEAP_SIZE: 512m
-      HEAP_NEWSIZE: 128m
+      MAX_HEAP_SIZE: 256m
+      HEAP_NEWSIZE: 64m
     ports:
       - "9042:9042"
     volumes:
       - cassandradata:/var/lib/cassandra
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'DESCRIBE KEYSPACES' || exit 1"]
+      interval: 15s
+      timeout: 15s
+      retries: 20
+      start_period: 90s
     deploy:
       resources:
         limits:
-          memory: 1g
+          memory: 2g
+
+  # ── M3: RabbitMQ ─────────────────────────────────────────────────────────────
+  # Added at Day-0 kickoff so all 5 services can connect from their first M3 PR.
+  # Exchanges and queues are NOT declared at startup unless M3_MESSAGING_ENABLED=true
+  # (controlled per-service via spring.rabbitmq.listener.simple.auto-startup).
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: tripplanning-rabbitmq
+    ports:
+      - "5672:5672"    # AMQP
+      - "15672:15672"  # Management UI (guest/guest)
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmqdata:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
 
   pgadmin:
     image: dpage/pgadmin4
@@ -118,14 +174,26 @@ services:
       - "8081:8080"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tripplanningdb
-      SPRING_DATA_MONGODB_URI: mongodb://tripplanning-mongo:27017/tripplanningdb
+      SPRING_MONGODB_HOST: tripplanning-mongo
+      SPRING_MONGODB_PORT: 27017
+      SPRING_MONGODB_DATABASE: tripplanningdb
       SPRING_REDIS_HOST: tripplanning-redis
       SPRING_REDIS_PORT: 6379
+      # M3 — S1 OWNED: enabled for testing
+      SPRING_RABBITMQ_HOST: tripplanning-rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      M3_MESSAGING_ENABLED: "true"
+      FEIGN_ITINERARY_SERVICE_URL: http://itinerary-service:8080
+      FEIGN_BOOKING_SERVICE_URL: http://booking-service:8080
     depends_on:
       postgres:
         condition: service_healthy
       mongodb:
-        condition: service_started
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
   destination-service:
     build:
@@ -136,17 +204,30 @@ services:
       - "8082:8080"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tripplanningdb
-      SPRING_DATA_MONGODB_URI: mongodb://tripplanning-mongo:27017/tripplanningdb
+      SPRING_MONGODB_HOST: tripplanning-mongo
+      SPRING_MONGODB_PORT: 27017
+      SPRING_MONGODB_DATABASE: tripplanningdb
       SPRING_REDIS_HOST: tripplanning-redis
       SPRING_REDIS_PORT: 6379
       SPRING_ELASTICSEARCH_URIS: http://tripplanning-elasticsearch:9200
+      # M3 — S2 OWNED
+      SPRING_RABBITMQ_HOST: tripplanning-rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      M3_MESSAGING_ENABLED: "false"
+      FEIGN_ITINERARY_SERVICE_URL: http://itinerary-service:8080
+      FEIGN_USER_SERVICE_URL: http://user-service:8080
+      FEIGN_BOOKING_SERVICE_URL: http://booking-service:8080
     depends_on:
       postgres:
         condition: service_healthy
       mongodb:
-        condition: service_started
+        condition: service_healthy
+      redis:
+        condition: service_healthy
       elasticsearch:
-        condition: service_started
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
   itinerary-service:
     build:
@@ -157,19 +238,32 @@ services:
       - "8083:8080"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tripplanningdb
-      SPRING_DATA_MONGODB_URI: mongodb://tripplanning-mongo:27017/tripplanningdb
+      SPRING_MONGODB_HOST: tripplanning-mongo
+      SPRING_MONGODB_PORT: 27017
+      SPRING_MONGODB_DATABASE: tripplanningdb
       SPRING_REDIS_HOST: tripplanning-redis
       SPRING_REDIS_PORT: 6379
       SPRING_NEO4J_URI: bolt://tripplanning-neo4j:7687
       SPRING_NEO4J_AUTHENTICATION_USERNAME: neo4j
       NEO4J_AUTH: neo4j/neo4jpass
+      # M3 — S3 OWNED
+      SPRING_RABBITMQ_HOST: tripplanning-rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      M3_MESSAGING_ENABLED: "false"
+      FEIGN_USER_SERVICE_URL: http://user-service:8080
+      FEIGN_DESTINATION_SERVICE_URL: http://destination-service:8080
+      FEIGN_BOOKING_SERVICE_URL: http://booking-service:8080
     depends_on:
       postgres:
         condition: service_healthy
       mongodb:
-        condition: service_started
+        condition: service_healthy
+      redis:
+        condition: service_healthy
       neo4j:
-        condition: service_started
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
   activity-service:
     build:
@@ -180,13 +274,20 @@ services:
       - "8084:8080"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tripplanningdb
-      SPRING_DATA_MONGODB_URI: mongodb://tripplanning-mongo:27017/tripplanningdb
+      SPRING_MONGODB_HOST: tripplanning-mongo
+      SPRING_MONGODB_PORT: 27017
+      SPRING_MONGODB_DATABASE: tripplanningdb
       SPRING_REDIS_HOST: tripplanning-redis
       SPRING_REDIS_PORT: 6379
       CASSANDRA_CONTACT_POINTS: tripplanning-cassandra
       CASSANDRA_KEYSPACE: tripplanning
       CASSANDRA_PORT: 9042
       CASSANDRA_DATACENTER: datacenter1
+      # M3 — S4 OWNED
+      SPRING_RABBITMQ_HOST: tripplanning-rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      M3_MESSAGING_ENABLED: "false"
+      FEIGN_ITINERARY_SERVICE_URL: http://itinerary-service:8080
     depends_on:
       postgres:
         condition: service_healthy
@@ -194,6 +295,29 @@ services:
         condition: service_started
       cassandra:
         condition: service_started
+      rabbitmq:
+        condition: service_healthy
+
+  booking-postgres:
+    image: postgres:17
+    container_name: booking-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: tripdb-bookings
+    ports:
+      - "5436:5432"
+    volumes:
+      - booking-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d tripdb-bookings"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    deploy:
+      resources:
+        limits:
+          memory: 512m
 
   booking-service:
     build:
@@ -203,15 +327,44 @@ services:
     ports:
       - "8085:8080"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/tripplanningdb
-      SPRING_DATA_MONGODB_URI: mongodb://tripplanning-mongo:27017/tripplanningdb
-      SPRING_REDIS_HOST: tripplanning-redis
-      SPRING_REDIS_PORT: 6379
+      SPRING_DATASOURCE_URL: jdbc:postgresql://booking-postgres:5432/tripdb-bookings
+      SPRING_MONGODB_HOST: tripplanning-mongo
+      SPRING_MONGODB_PORT: 27017
+      SPRING_MONGODB_DATABASE: tripplanningdb
+      SPRING_DATA_REDIS_HOST: tripplanning-redis
+      SPRING_DATA_REDIS_PORT: 6379
+      # M3 — S5 OWNED
+      SPRING_RABBITMQ_HOST: tripplanning-rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      M3_MESSAGING_ENABLED: "false"
+      FEIGN_USER_SERVICE_URL: http://user-service:8080
+      FEIGN_ITINERARY_SERVICE_URL: http://itinerary-service:8080
+      FEIGN_DESTINATION_SERVICE_URL: http://destination-service:8080
     depends_on:
-      postgres:
+      booking-postgres:
         condition: service_healthy
       mongodb:
         condition: service_started
+      rabbitmq:
+        condition: service_healthy
+
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      JWT_SECRET: dGhpcyBpcyBhIHZlcnkgbG9uZyBzZWNyZXQga2V5IGZvciBqd3Q=
+    depends_on:
+      - user-service
+      - destination-service
+      - itinerary-service
+      - activity-service
+      - booking-service
+
 
 volumes:
   pgdata:
@@ -220,3 +373,5 @@ volumes:
   esdata:
   neo4jdata:
   cassandradata:
+  rabbitmqdata:
+  booking-pgdata:

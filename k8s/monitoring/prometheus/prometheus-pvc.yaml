@@ -1,0 +1,18 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  prometheus-pvc.yaml — S3-INFRA OWNED (feature/m3-s3-infra-itinerary)       ║
+# ║  Persistent storage for Prometheus TSDB.                                    ║
+# ║  Mounted at /prometheus in prometheus.yaml Deployment.                      ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-pvc
+  namespace: monitoring
+  labels:
+    app: prometheus
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi

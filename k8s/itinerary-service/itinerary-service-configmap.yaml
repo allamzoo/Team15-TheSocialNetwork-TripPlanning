@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: itinerary-service-configmap
+  namespace: tripplanning
+data:
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://itinerary-postgres:5432/tripdb-itineraries"
+  SPRING_DATASOURCE_USERNAME: "postgres"
+  SPRING_MONGODB_HOST: "tripplanning-mongo"
+  SPRING_MONGODB_PORT: "27017"
+  SPRING_MONGODB_DATABASE: "tripplanningdb"
+  SPRING_REDIS_HOST: "tripplanning-redis"
+  SPRING_REDIS_PORT: "6379"
+  SPRING_NEO4J_URI: "bolt://tripplanning-neo4j:7687"
+  SPRING_NEO4J_AUTHENTICATION_USERNAME: "neo4j"
+  SPRING_NEO4J_AUTHENTICATION_PASSWORD: "neo4jpass"
+  SPRING_RABBITMQ_HOST: "rabbitmq"
+  SPRING_RABBITMQ_PORT: "5672"
+  SPRING_RABBITMQ_USERNAME: "guest"
+  SPRING_RABBITMQ_PASSWORD: "guest"
+  FEIGN_ITINERARY_SERVICE_URL: "http://itinerary-service:8080"
+  FEIGN_USER_SERVICE_URL: "http://user-service:8080"
+  FEIGN_DESTINATION_SERVICE_URL: "http://destination-service:8080"
+  FEIGN_BOOKING_SERVICE_URL: "http://booking-service:8080"
+  FEIGN_ACTIVITY_SERVICE_URL: "http://activity-service:8080"

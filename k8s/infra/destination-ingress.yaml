@@ -1,0 +1,34 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  destination-ingress.yaml — S2-INFRA OWNED (destination-service slice)        ║
+# ║  Kubernetes Ingress for external routing to destination-service.             ║
+# ║  Routes HTTP traffic on /destination/* to destination-service:8080           ║
+# ║  Requires Ingress Controller (e.g., nginx-ingress, istio) in cluster.        ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: destination-service-ingress
+  namespace: tripplanning
+  labels:
+    app: destination-service
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: tripplanning.local
+      http:
+        paths:
+          - path: /destination
+            pathType: Prefix
+            backend:
+              service:
+                name: destination-service
+                port:
+                  number: 8080
+          - path: /api/destinations
+            pathType: Prefix
+            backend:
+              service:
+                name: destination-service
+                port:
+                  number: 8080

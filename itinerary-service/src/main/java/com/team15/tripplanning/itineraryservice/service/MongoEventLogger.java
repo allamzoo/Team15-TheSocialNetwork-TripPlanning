@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @Component
 public class MongoEventLogger implements EntityObserver {
@@ -27,24 +28,22 @@ public class MongoEventLogger implements EntityObserver {
 
     @Override
     public void onEvent(String eventType, Object payload) {
-        try {
-            Map<String, Object> params = new HashMap<>();
-            params.put("action", eventType);
-
-            if (payload instanceof Map<?, ?> map) {
-                map.forEach((k, v) -> params.put(k.toString(), v));
-            }
-
-            // Use Factory to create the event (GoF Factory pattern)
-            MongoEvent event = EventFactory.createEvent(boundEventType, params);
-
-            // Build the @Document entity from the factory event's details and save
-            ItineraryEvent doc = new ItineraryEvent(event.getDetails());
-            eventRepository.save(doc);
-
-        } catch (Exception e) {
-            // Soft dependency — never rethrow; logging must not break business logic
-            log.warn("MongoDB event logging failed: {}", e.getMessage());
+        Map<String, Object> params = new HashMap<>();
+        params.put("action", eventType);
+        if (payload instanceof Map<?, ?> map) {
+            map.forEach((k, v) -> params.put(k.toString(), v));
         }
+        CompletableFuture.runAsync(() -> {
+            try {
+                // Use Factory to create the event (GoF Factory pattern)
+                MongoEvent event = EventFactory.createEvent(boundEventType, params);
+                // Build the @Document entity from the factory event's details and save
+                ItineraryEvent doc = new ItineraryEvent(event.getDetails());
+                eventRepository.save(doc);
+            } catch (Exception e) {
+                // Soft dependency — never rethrow; logging must not break business logic
+                log.warn("MongoDB event logging failed: {}", e.getMessage());
+            }
+        });
     }
 }

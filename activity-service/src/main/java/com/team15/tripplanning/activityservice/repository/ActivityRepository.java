@@ -5,41 +5,46 @@ import com.team15.tripplanning.activityservice.model.Activity;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.time.LocalDateTime;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * M3: Three cross-service SQL queries removed from this interface:
+ *
+ * 1. findActivitiesWithItineraryTitle — JOINed the itineraries table:
+ *      SELECT a.id, a.name, a.category, i.title FROM activities a
+ *      LEFT JOIN itineraries i ON i.id = a.itinerary_id WHERE a.itinerary_id = ?
+ *    REMOVED: itineraries is now in itinerary-postgres (separate DB).
+ *
+ * 2. itineraryExists — queried the itineraries table:
+ *      SELECT COUNT(*) > 0 FROM itineraries WHERE id = ?
+ *    REMOVED: replaced by Feign call in ActivityService.validateItineraryExists().
+ *
+ * 3. countItineraryById — queried the itineraries table:
+ *      SELECT COUNT(*) FROM itineraries WHERE id = ?
+ *    REMOVED: S4-F8 simplified per spec (zero-row result returns 200 with totalActivities=0).
+ *
+ * Everything else is unchanged from M2.
+ */
 public interface ActivityRepository extends JpaRepository<Activity, Long> {
+
     List<Activity> findByItineraryId(Long itineraryId);
 
     List<Activity> findByCategory(Activity.ActivityCategory category);
-
-    @Query(value = """
-            SELECT a.id, a.name, a.category, i.title AS itinerary_title
-            FROM activities a
-            LEFT JOIN itineraries i ON i.id = a.itinerary_id
-            WHERE a.itinerary_id = :itineraryId
-            """, nativeQuery = true)
-    List<Object[]> findActivitiesWithItineraryTitle(@Param("itineraryId") Long itineraryId);
 
     @Modifying
     @Transactional
     @Query(value = "DELETE FROM activities WHERE itinerary_id = :itineraryId", nativeQuery = true)
     int deleteAllByItineraryId(@Param("itineraryId") Long itineraryId);
 
-    @Query(value = "SELECT COUNT(*) > 0 FROM itineraries WHERE id = :itineraryId", nativeQuery = true)
-    boolean itineraryExists(@Param("itineraryId") Long itineraryId);
-
-
-
     Optional<Activity> findFirstByItineraryIdOrderByScheduledTimeDesc(Long itineraryId);
 
     // -------------------- S4-F8 --------------------
     @Query(value = """
-    SELECT 
+    SELECT
         COUNT(*) AS totalActivities,
         AVG(CAST(metadata->>'cost' AS numeric)) AS averageCost,
         MAX(CAST(metadata->>'cost' AS numeric)) AS maxCost,
@@ -55,9 +60,7 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
             @Param("endDate") LocalDateTime endDate
     );
 
-    @Query(value = "SELECT COUNT(*) FROM itineraries WHERE id = :id", nativeQuery = true)
-    int countItineraryById(@Param("id") Long id);
-
+    // -------------------- S4-F3 --------------------
     @Query(value = """
         SELECT a.id, a.name, a.category, a.latitude, a.longitude,
                (SQRT(POW(a.latitude - :lat, 2) + POW(a.longitude - :lon, 2)) * 111) AS distanceKm
@@ -69,15 +72,15 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     List<Object[]> findNearbyActivitiesRaw(@Param("lat") Double lat,
                                            @Param("lon") Double lon,
                                            @Param("radiusKm") Double radiusKm);
+
     // -------------------- S4-F7 --------------------
-    // Count activities older than cutoff
     @Query(value = "SELECT COUNT(*) FROM activities WHERE scheduled_time < :cutoff", nativeQuery = true)
     int countByScheduledTimeBefore(@Param("cutoff") LocalDateTime cutoff);
 
-    // Delete activities older than cutoff
     @Modifying
     @Query(value = "DELETE FROM activities WHERE scheduled_time < :cutoff", nativeQuery = true)
     int deleteByScheduledTimeBefore(@Param("cutoff") LocalDateTime cutoff);
+
     // -------------------- S4-F9 --------------------
     @Query(value = """
     SELECT id, name, category, latitude, longitude,
@@ -94,7 +97,6 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     );
 
     // -------------------- S4-F5 --------------------
-
     @Query(value = """
          SELECT * FROM activities
          WHERE metadata ->> :key = :value
@@ -116,48 +118,46 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     // -------------------- S4-F6 --------------------
     @Query(value = """
     SELECT * FROM activities a
-    WHERE a.scheduled_time >= :startDate 
+    WHERE a.scheduled_time >= :startDate
       AND a.scheduled_time <= :endDate
     ORDER BY a.scheduled_time ASC
-""", nativeQuery = true)
+    """, nativeQuery = true)
     List<Activity> findActivitiesInDateRange(
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
 
     @Query(value = """
     SELECT * FROM activities a
-    WHERE a.scheduled_time >= :startDate 
+    WHERE a.scheduled_time >= :startDate
       AND a.scheduled_time <= :endDate
       AND a.category = :category
     ORDER BY a.scheduled_time ASC
-""", nativeQuery = true)
+    """, nativeQuery = true)
     List<Activity> findActivitiesByDateRangeAndCategory(
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,
             @Param("category") String category);
-
-    // -------------------- S4-F10 --------------------
     @Query(value = """
-            SELECT
-                COUNT(*)                                            AS totalActivities,
-                COALESCE(AVG((metadata->>'cost')::numeric), 0)     AS averageCost,
-                COALESCE(AVG((metadata->>'duration')::numeric), 0) AS averageDurationHours
-            FROM activities
-            WHERE scheduled_time >= :startDate
-              AND scheduled_time <= :endDate
-            """, nativeQuery = true)
-    Object[] getAnalyticsSummary(
+    SELECT
+        COUNT(*) AS totalActivities,
+        AVG(CAST(metadata->>'cost' AS numeric)) AS averageCost,
+        SUM(CAST(metadata->>'cost' AS numeric)) AS totalCost
+    FROM activities
+    WHERE scheduled_time BETWEEN :startDate AND :endDate
+    """, nativeQuery = true)
+    List<Object[]> getAnalyticsSummary(
             @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate);
+            @Param("endDate") LocalDateTime endDate
+    );
 
     @Query(value = """
-            SELECT category, COUNT(*) AS cnt
-            FROM activities
-            WHERE scheduled_time >= :startDate
-              AND scheduled_time <= :endDate
-            GROUP BY category
-            """, nativeQuery = true)
+    SELECT category, COUNT(*) AS count
+    FROM activities
+    WHERE scheduled_time BETWEEN :startDate AND :endDate
+    GROUP BY category
+    """, nativeQuery = true)
     List<Object[]> getCountByCategory(
             @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate);
+            @Param("endDate") LocalDateTime endDate
+    );
 }

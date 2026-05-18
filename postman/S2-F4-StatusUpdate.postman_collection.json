@@ -1,0 +1,345 @@
+{
+  "info": {
+    "_postman_id": "s2-f4-status-v2",
+    "name": "S2-F4 Destination Status Update",
+    "description": "Spec scenario: Destination ID=1 ACTIVE. Itinerary referencing it PLANNED. INACTIVE \u2192 400. Cancel itinerary \u2192 INACTIVE again \u2192 200. ACTIVE \u2192 200. Event published each time.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "SETUP 1 \u2014 Create Destination (ACTIVE)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Siwa Oasis\",\n  \"country\": \"Egypt\",\n  \"category\": \"NATURE\",\n  \"status\": \"ACTIVE\",\n  \"rating\": 0.0,\n  \"totalRatings\": 0,\n  \"description\": \"A beautiful destination\"\n}"
+        },
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Destination created', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
+              "});",
+              "pm.environment.set('destId', pm.response.json().id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "SETUP 2 \u2014 Create Itinerary in itinerary-service (status=PLANNED, destinationId=destId)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Test Trip\",\n  \"userId\": 1,\n  \"destinationId\": {{destId}},\n  \"status\": \"PLANNED\",\n  \"startDate\": \"2026-08-01\",\n  \"endDate\": \"2026-08-10\",\n  \"estimatedBudget\": 500\n}"
+        },
+        "url": {
+          "raw": "{{itineraryBaseUrl}}/api/itineraries",
+          "host": [
+            "{{itineraryBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "itineraries"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Itinerary created (PLANNED)', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
+              "});",
+              "pm.environment.set('itineraryId', pm.response.json().id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 1 \u2014 PUT INACTIVE \u2192 400 (active itinerary exists, Feign active-count=1)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"status\": \"INACTIVE\"}"
+        },
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations/{{destId}}/status",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations",
+            "{{destId}}",
+            "status"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 400 \u2014 cannot mark INACTIVE with active itinerary (spec step 1)', function () {",
+              "  pm.response.to.have.status(400);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "SETUP 3 \u2014 Cancel the Itinerary in itinerary-service (S3-F7)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"status\": \"CANCELLED\"}"
+        },
+        "url": {
+          "raw": "{{itineraryBaseUrl}}/api/itineraries/{{itineraryId}}/status",
+          "host": [
+            "{{itineraryBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "itineraries",
+            "{{itineraryId}}",
+            "status"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Itinerary cancelled (200 or 204)', function () {",
+              "  pm.expect([200, 204]).to.include(pm.response.code);",
+              "});",
+              "console.log('Itinerary cancelled \u2014 active-count should now be 0');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 2 \u2014 PUT INACTIVE \u2192 200 (no active itineraries, Feign active-count=0)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"status\": \"INACTIVE\"}"
+        },
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations/{{destId}}/status",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations",
+            "{{destId}}",
+            "status"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200 \u2014 INACTIVE allowed when active-count=0 (spec step 2)', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "pm.test('status field is INACTIVE', function () {",
+              "  pm.expect(pm.response.json().status).to.eql('INACTIVE');",
+              "});",
+              "console.log('destination.status-changed event should be published to RabbitMQ');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 3 \u2014 PUT ACTIVE \u2192 200 (no Feign call needed, event published)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"status\": \"ACTIVE\"}"
+        },
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations/{{destId}}/status",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations",
+            "{{destId}}",
+            "status"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200 \u2014 ACTIVE transition (spec step 3)', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "pm.test('status field is ACTIVE', function () {",
+              "  pm.expect(pm.response.json().status).to.eql('ACTIVE');",
+              "});",
+              "console.log('destination.status-changed event should be published to RabbitMQ');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 4 \u2014 400 Invalid Status Value",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"status\": \"UNKNOWN\"}"
+        },
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations/{{destId}}/status",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations",
+            "{{destId}}",
+            "status"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 400 for unrecognised status value', function () {",
+              "  pm.response.to.have.status(400);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 5 \u2014 404 Destination Not Found",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"status\": \"INACTIVE\"}"
+        },
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations/999999/status",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations",
+            "999999",
+            "status"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 404 for non-existent destination', function () {",
+              "  pm.response.to.have.status(404);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

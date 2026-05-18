@@ -1,0 +1,92 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  destination-postgres.yaml — S2 OWNED                                       ║
+# ║  Dedicated PostgreSQL instance for destination-service (DB isolation M3).   ║
+# ║  DNS: destination-postgres.tripplanning.svc.cluster.local:5432              ║
+# ║  Database: tripdb-destinations                                               ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+# ── Secret ────────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Secret
+metadata:
+  name: destination-postgres-secret
+  namespace: tripplanning
+type: Opaque
+stringData:
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: postgres
+  POSTGRES_DB: tripdb-destinations
+---
+# ── StatefulSet ───────────────────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: destination-postgres
+  namespace: tripplanning
+spec:
+  serviceName: destination-postgres-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: destination-postgres
+  template:
+    metadata:
+      labels:
+        app: destination-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: destination-postgres-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: destination-postgres-secret
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: destination-postgres-secret
+                  key: POSTGRES_DB
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              memory: 256Mi
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-d", "tripdb-destinations"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 20
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+---
+# ── Headless Service (StatefulSet DNS) ────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: destination-postgres-headless
+  namespace: tripplanning
+spec:
+  clusterIP: None
+  selector:
+    app: destination-postgres
+  ports:
+    - port: 5432

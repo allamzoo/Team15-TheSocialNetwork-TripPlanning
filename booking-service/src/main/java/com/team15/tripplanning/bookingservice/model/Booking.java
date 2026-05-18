@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,7 +29,11 @@ public class Booking {
         PENDING,
         CONFIRMED,
         FAILED,
-        CANCELLED
+        CANCELLED,
+        PLANNED,
+        COMPLETED,
+        IN_PROGRESS,
+        REFUNDED
     }
 
     @Id
@@ -39,10 +44,6 @@ public class Booking {
     @Column(name = "itin_id", nullable = false)
     private Long itineraryId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "itin_id", referencedColumnName = "id", insertable = false, updatable = false,
-            foreignKey = @ForeignKey(name = "fk_bookings_itineraries"))
-    private ItineraryRef itinerary;
 
     @JsonAlias({"user_id"})
     @Column(nullable = false)
@@ -55,13 +56,12 @@ public class Booking {
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @JsonAlias({"booking_type"})
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "bookingtype default 'ACCOMMODATION'")
     private BookingType type;
 
     @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @JsonAlias({"booking_status"})
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "VARCHAR(50) default 'PENDING'")
     private BookingStatus status = BookingStatus.PENDING;
 
     @JdbcTypeCode(SqlTypes.JSON)
@@ -71,6 +71,12 @@ public class Booking {
 
     @Column(nullable = false, updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;
+
+    @Column(name = "start_date")
+    private LocalDate startDate;
+
+    @Column(name = "end_date")
+    private LocalDate endDate;
 
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<BookingCoupon> bookingCoupons = new ArrayList<>();
@@ -113,6 +119,10 @@ public class Booking {
     }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public LocalDate getStartDate() { return startDate; }
+    public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
+    public LocalDate getEndDate() { return endDate; }
+    public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
     public List<BookingCoupon> getBookingCoupons() { return bookingCoupons; }
     public void setBookingCoupons(List<BookingCoupon> bookingCoupons) {
         this.bookingCoupons = bookingCoupons != null ? bookingCoupons : new ArrayList<>();

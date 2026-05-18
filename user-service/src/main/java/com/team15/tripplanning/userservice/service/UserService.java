@@ -1,5 +1,9 @@
 package com.team15.tripplanning.userservice.service;
 
+import com.team15.tripplanning.contracts.dto.UserBookingTotalDTO;
+import com.team15.tripplanning.contracts.dto.UserTripSummaryAggregateDTO;
+import com.team15.tripplanning.contracts.feign.BookingServiceClient;
+import com.team15.tripplanning.contracts.feign.ItineraryServiceClient;
 import com.team15.tripplanning.userservice.adapter.ObjectArrayDtoAdapter;
 import com.team15.tripplanning.userservice.document.AuthEvent;
 import com.team15.tripplanning.userservice.dto.ActivityFeedDTO;
@@ -7,6 +11,7 @@ import com.team15.tripplanning.userservice.dto.SavedDestinationProfileDTO;
 import com.team15.tripplanning.userservice.dto.TopTravelerDTO;
 import com.team15.tripplanning.userservice.dto.UserProfileDTO;
 import com.team15.tripplanning.userservice.dto.UserTripSummaryDTO;
+import com.team15.tripplanning.userservice.messaging.publisher.UserEventPublisher;
 import com.team15.tripplanning.userservice.model.Role;
 import com.team15.tripplanning.userservice.model.SavedDestination;
 import com.team15.tripplanning.userservice.model.Status;
@@ -15,6 +20,8 @@ import com.team15.tripplanning.userservice.observer.EntityObserver;
 import com.team15.tripplanning.userservice.observer.MongoEventLogger;
 import com.team15.tripplanning.userservice.repository.AuthEventRepository;
 import com.team15.tripplanning.userservice.repository.UserRepository;
+import feign.FeignException;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -22,6 +29,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -35,20 +44,32 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class UserService {
+
+    private static final Logger log = LoggerFactory.getLogger(UserService.class);
+
     private final UserRepository userRepository;
     private final List<EntityObserver> observers = new ArrayList<>();
     private final PasswordEncoder passwordEncoder;
     private final ObjectArrayDtoAdapter adapter = new ObjectArrayDtoAdapter();
     private final RedisTemplate<String, Object> redisTemplate;
     private final AuthEventRepository authEventRepository;
+    private final ItineraryServiceClient itineraryServiceClient;
+    private final BookingServiceClient bookingServiceClient;
+    private final UserEventPublisher userEventPublisher;
 
     public UserService(UserRepository userRepository, MongoEventLogger mongoEventLogger,
                        PasswordEncoder passwordEncoder, RedisTemplate<String, Object> redisTemplate,
-                       AuthEventRepository authEventRepository) {
+                       AuthEventRepository authEventRepository,
+                       ItineraryServiceClient itineraryServiceClient,
+                       BookingServiceClient bookingServiceClient,
+                       UserEventPublisher userEventPublisher) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.redisTemplate = redisTemplate;
         this.authEventRepository = authEventRepository;
+        this.itineraryServiceClient = itineraryServiceClient;
+        this.bookingServiceClient = bookingServiceClient;
+        this.userEventPublisher = userEventPublisher;
         register(mongoEventLogger);
     }
 
@@ -184,19 +205,20 @@ public class UserService {
 
     @Cacheable(value = "s1-f3-trip-summary", key = "'S1::S1-F3::' + #id")
     public UserTripSummaryDTO getTripSummary(Long id) {
-        findById(id);
-        var result = userRepository.getUserTripSummary(id);
-        if (result.isEmpty()) {
-            return UserTripSummaryDTO.builder()
-                    .userId(id)
-                    .totalTrips(0L)
-                    .completedTrips(0L)
-                    .cancelledTrips(0L)
-                    .totalSpent(0.0)
-                    .averageBudget(0.0)
-                    .build();
+        User user = findById(id);
+        log.info("Calling itinerary-service.getUserItinerarySummary with args={}", id);
+        try {
+            UserTripSummaryAggregateDTO summary = itineraryServiceClient.getUserItinerarySummary(id);
+            log.info("itinerary-service.getUserItinerarySummary returned successfully");
+            return adapter.adapt(user, summary);
+        } catch (FeignException.NotFound e) {
+            log.info("itinerary-service.getUserItinerarySummary returned successfully");
+            return adapter.adapt(user, UserTripSummaryAggregateDTO.empty());
+        } catch (FeignException e) {
+            log.warn("Feign call to itinerary-service failed: {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "Itinerary service temporarily unavailable");
         }
-        return adapter.adapt(result.get(0));
     }
 
     public void delete(Long id) {
@@ -223,9 +245,37 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "limit must be greater than 0");
         }
 
-        return userRepository.findTopTravelersBySpending(startDate, endDate, limit)
-                .stream()
-                .map(this::mapTopTravelerRow)
+        List<User> users = userRepository.findByStatus(Status.ACTIVE);
+        String start = startDate.toString();
+        String end = endDate.toString();
+
+        List<TopTravelerDTO> result = new ArrayList<>();
+        for (User user : users) {
+            log.info("Calling booking-service.getUserBookingTotal with args={}", user.getId());
+            try {
+                UserBookingTotalDTO total = bookingServiceClient.getUserBookingTotal(
+                        user.getId(), start, end);
+                log.info("booking-service.getUserBookingTotal returned successfully");
+                if (total.totalAmount() != null && total.totalAmount().compareTo(BigDecimal.ZERO) > 0) {
+                    result.add(TopTravelerDTO.builder()
+                            .userId(user.getId())
+                            .name(user.getName())
+                            .totalSpent(total.totalAmount().doubleValue())
+                            .tripCount(total.tripCount())
+                            .build());
+                }
+            } catch (FeignException.NotFound e) {
+                log.info("booking-service.getUserBookingTotal returned successfully");
+            } catch (FeignException e) {
+                log.warn("Feign call to booking-service failed: {}", e.getMessage());
+                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                        "Booking service temporarily unavailable");
+            }
+        }
+
+        return result.stream()
+                .sorted(Comparator.comparingDouble(TopTravelerDTO::getTotalSpent).reversed())
+                .limit(limit)
                 .toList();
     }
 
@@ -249,18 +299,45 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "minTrips cannot be negative");
         }
 
-        return userRepository.findByTravelStyleWithMinimumCompletedTrips(style, minTrips);
+        List<User> candidates = userRepository.searchByPreference("travelStyle", style);
+        List<User> result = new ArrayList<>();
+        for (User user : candidates) {
+            log.info("Calling itinerary-service.getCompletedItineraryCount with args={}", user.getId());
+            try {
+                long completedCount = itineraryServiceClient.getCompletedItineraryCount(user.getId());
+                log.info("itinerary-service.getCompletedItineraryCount returned successfully");
+                if (completedCount >= minTrips) {
+                    result.add(user);
+                }
+            } catch (FeignException e) {
+                log.warn("Feign call to itinerary-service failed: {}", e.getMessage());
+                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                        "Itinerary service temporarily unavailable");
+            }
+        }
+        return result;
     }
 
     @Transactional
     public User deactivate(Long id) {
         User user = findById(id);
-        long activeItinerariesCount = userRepository.countActiveItinerariesForUser(id);
-        if (activeItinerariesCount > 0) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Cannot deactivate user with active itineraries"
-            );
+
+        log.info("Calling itinerary-service.getActiveItineraryCount with args={}", id);
+        try {
+            int activeCount = itineraryServiceClient.getActiveItineraryCount(id);
+            log.info("itinerary-service.getActiveItineraryCount returned successfully");
+            if (activeCount > 0) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Cannot deactivate user with active itineraries"
+                );
+            }
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (FeignException e) {
+            log.warn("Feign call to itinerary-service failed: {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "Itinerary service temporarily unavailable");
         }
 
         user.setStatus(Status.DEACTIVATED);
@@ -270,6 +347,8 @@ public class UserService {
         notifyObservers("USER_DEACTIVATED", payload);
         deleteWildcard("s1-f1-users::*");
         deleteWildcard("s1-f6-profile::S1::S1-F6::" + id);
+
+        userEventPublisher.publishUserDeactivated(saved.getId());
         return saved;
     }
 

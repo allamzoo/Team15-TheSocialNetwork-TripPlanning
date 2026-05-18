@@ -24,4 +24,6 @@ public interface ActivityLifecycleEventStore {
     default List<ActivityLifecycleEvent> findByKeyActivityId(Long activityId) {
         return findByActivityId(activityId);
     }
+
+    List<ActivityLifecycleEvent> findByActivityIdAndStatus(Long activityId, String status);
 }

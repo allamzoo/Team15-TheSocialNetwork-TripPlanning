@@ -1,0 +1,362 @@
+{
+  "info": {
+    "_postman_id": "s2-f12-dashboard-v2",
+    "name": "S2-F12 Destination Analytics Dashboard",
+    "description": "Spec: Destination ID=5 (Luxor, rating=4.9, totalRatings=2). 5 itineraries \u2014 3 PAID by distinct users, 1 PLANNED, 1 CANCELLED. Expect totalItineraries=5, completedItineraries=3, totalVisitors=3, totalRatings=2, averageRating=4.9. DASHBOARD_VIEWED logged in MongoDB. GET /destinations/999/dashboard \u2192 404.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "SETUP 1 \u2014 Create Destination (Luxor, rating=4.9, totalRatings=2)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Luxor\",\n  \"country\": \"Egypt\",\n  \"category\": \"HISTORICAL\",\n  \"status\": \"ACTIVE\",\n  \"rating\": 4.9,\n  \"totalRatings\": 2,\n  \"description\": \"A beautiful destination\"\n}"
+        },
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Destination created', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
+              "});",
+              "pm.environment.set('destId', pm.response.json().id);",
+              "console.log('destId (spec: ID=5):', pm.response.json().id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "SETUP 2 \u2014 Create Itinerary 1 (PAID, userId=101, destinationId=destId)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Test Trip\",\n  \"userId\": 101,\n  \"destinationId\": {{destId}},\n  \"status\": \"PAID\",\n  \"startDate\": \"2026-01-01\",\n  \"endDate\": \"2026-01-10\",\n  \"estimatedBudget\": 1000\n}"
+        },
+        "url": {
+          "raw": "{{itineraryBaseUrl}}/api/itineraries",
+          "host": [
+            "{{itineraryBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "itineraries"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Itinerary 1 PAID created', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "SETUP 3 \u2014 Create Itinerary 2 (PAID, userId=102, destinationId=destId)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Test Trip\",\n  \"userId\": 102,\n  \"destinationId\": {{destId}},\n  \"status\": \"PAID\",\n  \"startDate\": \"2026-02-01\",\n  \"endDate\": \"2026-02-07\",\n  \"estimatedBudget\": 900\n}"
+        },
+        "url": {
+          "raw": "{{itineraryBaseUrl}}/api/itineraries",
+          "host": [
+            "{{itineraryBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "itineraries"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Itinerary 2 PAID created', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "SETUP 4 \u2014 Create Itinerary 3 (PAID, userId=103, destinationId=destId)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Test Trip\",\n  \"userId\": 103,\n  \"destinationId\": {{destId}},\n  \"status\": \"PAID\",\n  \"startDate\": \"2026-03-01\",\n  \"endDate\": \"2026-03-10\",\n  \"estimatedBudget\": 1100\n}"
+        },
+        "url": {
+          "raw": "{{itineraryBaseUrl}}/api/itineraries",
+          "host": [
+            "{{itineraryBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "itineraries"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Itinerary 3 PAID created', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "SETUP 5 \u2014 Create Itinerary 4 (PLANNED, userId=104, destinationId=destId)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Test Trip\",\n  \"userId\": 104,\n  \"destinationId\": {{destId}},\n  \"status\": \"PLANNED\",\n  \"startDate\": \"2026-08-01\",\n  \"endDate\": \"2026-08-10\",\n  \"estimatedBudget\": 700\n}"
+        },
+        "url": {
+          "raw": "{{itineraryBaseUrl}}/api/itineraries",
+          "host": [
+            "{{itineraryBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "itineraries"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Itinerary 4 PLANNED created', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "SETUP 6 \u2014 Create Itinerary 5 (CANCELLED, userId=105, destinationId=destId)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Test Trip\",\n  \"userId\": 105,\n  \"destinationId\": {{destId}},\n  \"status\": \"CANCELLED\",\n  \"startDate\": \"2026-05-01\",\n  \"endDate\": \"2026-05-07\",\n  \"estimatedBudget\": 500\n}"
+        },
+        "url": {
+          "raw": "{{itineraryBaseUrl}}/api/itineraries",
+          "host": [
+            "{{itineraryBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "itineraries"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Itinerary 5 CANCELLED created', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 1 \u2014 200 Dashboard (spec: totalItineraries=5, completedItineraries=3, totalVisitors=3, avg=4.9)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations/{{destId}}/dashboard",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations",
+            "{{destId}}",
+            "dashboard"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "var body = pm.response.json();",
+              "console.log('Dashboard response:', JSON.stringify(body));",
+              "pm.test('totalItineraries = 5 (3 PAID + 1 PLANNED + 1 CANCELLED)', function () {",
+              "  pm.expect(body.totalItineraries).to.eql(5);",
+              "});",
+              "pm.test('completedItineraries = 3 (3 PAID \u2014 STATUS_COMPLETED_FAMILY)', function () {",
+              "  pm.expect(body.completedItineraries).to.eql(3);",
+              "});",
+              "pm.test('totalVisitors = 3 (distinct userId across PAID itineraries)', function () {",
+              "  pm.expect(body.totalVisitors).to.eql(3);",
+              "});",
+              "pm.test('totalRatings = 2 (from local Destination row)', function () {",
+              "  pm.expect(body.totalRatings).to.eql(2);",
+              "});",
+              "pm.test('averageRating = 4.9 (from local Destination row)', function () {",
+              "  pm.expect(body.averageRating).to.eql(4.9);",
+              "});",
+              "pm.test('completionRate present', function () {",
+              "  pm.expect(body).to.have.property('completionRate');",
+              "});",
+              "console.log('VERIFY: DASHBOARD_VIEWED document logged in MongoDB destination_events');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 2 \u2014 200 Dashboard Again (M2: DASHBOARD_VIEWED logged on cache hit too)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations/{{destId}}/dashboard",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations",
+            "{{destId}}",
+            "dashboard"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200 on second call (cache hit)', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "console.log('VERIFY: a second DASHBOARD_VIEWED document should appear in MongoDB (M2 behavior preserved even on cache hit)');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST 3 \u2014 404 Destination Not Found (spec: GET /destinations/999/dashboard \u2192 404)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations/999999/dashboard",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations",
+            "999999",
+            "dashboard"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 404 for non-existent destination (spec step)', function () {",
+              "  pm.response.to.have.status(404);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

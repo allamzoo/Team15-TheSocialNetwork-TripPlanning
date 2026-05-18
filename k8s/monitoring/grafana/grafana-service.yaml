@@ -1,0 +1,22 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  grafana-service.yaml — S4-INFRA OWNED (feature/m3-s4-infra-activity)       ║
+# ║  NodePort 30030 exposes Grafana to the host browser:                        ║
+# ║    http://$(minikube ip):30030                                               ║
+# ║  Default credentials: admin / admin  (change on first login).               ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: monitoring
+  labels:
+    app: grafana
+spec:
+  type: NodePort
+  selector:
+    app: grafana
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      nodePort: 30030

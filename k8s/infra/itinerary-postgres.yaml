@@ -1,0 +1,57 @@
+# S3-READ-DB: Dedicated PostgreSQL instance for itinerary-service
+# DB isolation: itinerary-postgres → tripdb-itineraries
+# DNS: itinerary-postgres.tripplanning.svc.cluster.local:5432
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: itinerary-postgres
+  namespace: tripplanning
+spec:
+  serviceName: itinerary-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: itinerary-postgres
+  template:
+    metadata:
+      labels:
+        app: itinerary-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17
+          ports:
+            - containerPort: 5432
+              name: postgres
+          env:
+            - name: POSTGRES_DB
+              value: tripdb-itineraries
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: password
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              memory: 256Mi
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-d", "tripdb-itineraries"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 20
+          volumeMounts:
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: pgdata
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi

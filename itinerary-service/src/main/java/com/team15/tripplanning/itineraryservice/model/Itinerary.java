@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -27,9 +28,21 @@ public class Itinerary {
         DRAFT,
         PLANNED,
         IN_PROGRESS,
+        COMPLETING,
         COMPLETED,
-        CANCELLED
+        CANCELLED,
+        PAYMENT_PENDING,
+        PAID,
+        PAYMENT_FAILED,
+        REFUNDED
     }
+
+    public static final Set<ItineraryStatus> STATUS_COMPLETED_FAMILY = Set.of(
+            ItineraryStatus.COMPLETED,
+            ItineraryStatus.COMPLETING,
+            ItineraryStatus.PAYMENT_PENDING,
+            ItineraryStatus.PAID
+    );
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -48,6 +61,9 @@ public class Itinerary {
     private ItineraryStatus status = ItineraryStatus.DRAFT;
 
     private Double estimatedBudget;
+
+    @Column(name = "total_amount")
+    private Double totalAmount;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb default '{}'::jsonb")
@@ -127,6 +143,14 @@ public class Itinerary {
 
     public void setEstimatedBudget(Double estimatedBudget) {
         this.estimatedBudget = estimatedBudget;
+    }
+
+    public Double getTotalAmount() {
+        return totalAmount;
+    }
+
+    public void setTotalAmount(Double totalAmount) {
+        this.totalAmount = totalAmount;
     }
 
     public Map<String, Object> getMetadata() {

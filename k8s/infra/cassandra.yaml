@@ -1,0 +1,101 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  cassandra.yaml — S4-INFRA OWNED (feature/m3-s4-infra-activity)             ║
+# ║  Cassandra StatefulSet + ClusterIP Service in the tripplanning namespace.   ║
+# ║  Config mirrors M2 docker-compose:                                          ║
+# ║    image: cassandra:4                                                        ║
+# ║    CASSANDRA_CLUSTER_NAME: tripplanning-cluster                             ║
+# ║    MAX_HEAP_SIZE: 512m · HEAP_NEWSIZE: 128m · container limit: 2Gi           ║
+# ║                                                                              ║
+# ║  DNS used by activity-service Deployment (env var):                         ║
+# ║    CASSANDRA_CONTACT_POINTS: cassandra.tripplanning.svc.cluster.local       ║
+# ║    CASSANDRA_PORT:           9042                                            ║
+# ║    CASSANDRA_DATACENTER:     datacenter1                                    ║
+# ║    CASSANDRA_KEYSPACE:       tripplanning                                   ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v1
+kind: Service
+metadata:
+  name: cassandra
+  namespace: tripplanning
+  labels:
+    app: cassandra
+spec:
+  selector:
+    app: cassandra
+  ports:
+    - name: cql
+      port: 9042
+      targetPort: 9042
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: cassandra
+  namespace: tripplanning
+spec:
+  serviceName: cassandra
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cassandra
+  template:
+    metadata:
+      labels:
+        app: cassandra
+    spec:
+      containers:
+        - name: cassandra
+          image: cassandra:4
+          ports:
+            - containerPort: 9042
+              name: cql
+          env:
+            - name: CASSANDRA_CLUSTER_NAME
+              value: tripplanning-cluster
+            - name: MAX_HEAP_SIZE
+              value: "512m"
+            - name: HEAP_NEWSIZE
+              value: "128m"
+            # datacenter1 matches CASSANDRA_DATACENTER in activity-service
+            - name: CASSANDRA_DC
+              value: datacenter1
+            - name: CASSANDRA_RACK
+              value: rack1
+            - name: CASSANDRA_ENDPOINT_SNITCH
+              value: SimpleSnitch
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 512Mi
+          readinessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - "nodetool status | grep UN"
+            initialDelaySeconds: 90
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 20
+          livenessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - "nodetool status | grep UN"
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 10
+          volumeMounts:
+            - name: cassandra-data
+              mountPath: /var/lib/cassandra
+  volumeClaimTemplates:
+    - metadata:
+        name: cassandra-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi

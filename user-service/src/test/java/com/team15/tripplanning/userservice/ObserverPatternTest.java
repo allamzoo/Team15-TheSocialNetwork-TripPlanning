@@ -6,6 +6,9 @@ import com.team15.tripplanning.userservice.dto.RegisterRequest;
 import com.team15.tripplanning.userservice.model.Role;
 import com.team15.tripplanning.userservice.model.Status;
 import com.team15.tripplanning.userservice.model.User;
+import com.team15.tripplanning.contracts.feign.BookingServiceClient;
+import com.team15.tripplanning.contracts.feign.ItineraryServiceClient;
+import com.team15.tripplanning.userservice.messaging.publisher.UserEventPublisher;
 import com.team15.tripplanning.userservice.observer.EntityObserver;
 import com.team15.tripplanning.userservice.observer.MongoEventLogger;
 import com.team15.tripplanning.userservice.repository.AuthEventRepository;
@@ -33,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.timeout;
 
 /**
  * STEP 7 — Observer + Factory Pattern tests.
@@ -75,10 +79,14 @@ class ObserverPatternTest {
         // Real service wired with real MongoEventLogger → observer chain is live
         userService = new UserService(
                 userRepository, mongoEventLogger, passwordEncoder,
-                redisTemplate, authEventRepository);
+                redisTemplate, authEventRepository,
+                mock(ItineraryServiceClient.class),
+                mock(BookingServiceClient.class),
+                mock(UserEventPublisher.class));
 
         authService = new AuthService(
-                userRepository, passwordEncoder, jwtService, mongoEventLogger);
+                userRepository, passwordEncoder, jwtService, mongoEventLogger,
+                mock(UserEventPublisher.class));
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -203,8 +211,9 @@ class ObserverPatternTest {
         authService.register(req);
 
         // Assert: exactly one save, with action=REGISTERED and correct userId
+        // timeout() needed because MongoEventLogger writes via CompletableFuture.runAsync()
         ArgumentCaptor<AuthEvent> captor = ArgumentCaptor.forClass(AuthEvent.class);
-        verify(authEventRepository, times(1)).save(captor.capture());
+        verify(authEventRepository, timeout(2000).times(1)).save(captor.capture());
 
         AuthEvent saved = captor.getValue();
         assertEquals("REGISTERED", saved.getAction(),
@@ -241,9 +250,9 @@ class ObserverPatternTest {
         // Act
         authService.login(req);
 
-        // Assert
+        // Assert — timeout() because MongoEventLogger writes via CompletableFuture.runAsync()
         ArgumentCaptor<AuthEvent> captor = ArgumentCaptor.forClass(AuthEvent.class);
-        verify(authEventRepository, times(1)).save(captor.capture());
+        verify(authEventRepository, timeout(2000).times(1)).save(captor.capture());
 
         AuthEvent saved = captor.getValue();
         assertEquals("LOGGED_IN", saved.getAction(),
@@ -276,8 +285,9 @@ class ObserverPatternTest {
         userService.mergePreferences(1L, newPrefs);
 
         // Assert: observer chain fired → exactly one AUTH event saved with USER_UPDATED
+        // timeout() because MongoEventLogger writes via CompletableFuture.runAsync()
         ArgumentCaptor<AuthEvent> captor = ArgumentCaptor.forClass(AuthEvent.class);
-        verify(authEventRepository, times(1)).save(captor.capture());
+        verify(authEventRepository, timeout(2000).times(1)).save(captor.capture());
 
         AuthEvent saved = captor.getValue();
         assertEquals("USER_UPDATED", saved.getAction(),

@@ -1,0 +1,59 @@
+# k8s/statefulsets/elasticsearch-statefulset.yaml
+# S5-INFRA — Elasticsearch single-node dev cluster
+# Used by destination-service (Spring Data Elasticsearch) for destination full-text search.
+# discovery.type=single-node disables the Zen discovery quorum check that would
+# prevent a 1-replica cluster from reaching "green" health status.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: elasticsearch
+  namespace: tripplanning
+spec:
+  serviceName: elasticsearch
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      containers:
+        - name: elasticsearch
+          image: elasticsearch:8.13.4
+          ports:
+            - name: http
+              containerPort: 9200
+            - name: transport
+              containerPort: 9300
+          env:
+            - name: discovery.type
+              value: single-node
+            # Disable X-Pack security so services can connect without TLS/certs
+            - name: xpack.security.enabled
+              value: "false"
+            # Cap heap to 512 Mi — acceptable for a dev/test cluster
+            - name: ES_JAVA_OPTS
+              value: "-Xms512m -Xmx512m"
+          readinessProbe:
+            httpGet:
+              path: /_cluster/health?wait_for_status=yellow&timeout=5s
+              port: 9200
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /_cluster/health
+              port: 9200
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+          volumeMounts:
+            - name: data
+              mountPath: /usr/share/elasticsearch/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: elasticsearch-pvc

@@ -1,11 +1,17 @@
 package com.team15.tripplanning.bookingservice.controller;
 
+import com.team15.tripplanning.bookingservice.dto.AggregateByItinerariesRequest;
+import com.team15.tripplanning.bookingservice.dto.AggregateResultDTO;
 import com.team15.tripplanning.bookingservice.dto.CreateBookingRequest;
 import com.team15.tripplanning.bookingservice.dto.DestinationSeasonRevenueDTO;
+import com.team15.tripplanning.bookingservice.dto.RefundCancellationRequest;
 import com.team15.tripplanning.bookingservice.dto.RevenueReportDTO;
+import com.team15.tripplanning.bookingservice.dto.SaleAuditTrailDTO;
 import com.team15.tripplanning.bookingservice.dto.UserBookingSummaryDTO;
+import com.team15.tripplanning.bookingservice.dto.UserBookingTotalDTO;
 import com.team15.tripplanning.bookingservice.model.Booking;
 import com.team15.tripplanning.bookingservice.service.BookingService;
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -22,7 +28,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import com.team15.tripplanning.bookingservice.dto.RefundCancellationRequest;
 
 @RestController
 @RequestMapping("/api/bookings")
@@ -155,16 +160,31 @@ public class BookingController {
     // S5-F10
     @GetMapping("/analytics/destination-season")
     public ResponseEntity<List<DestinationSeasonRevenueDTO>> getRevenueByDestinationAndSeason(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
         bookingService.logAnalyticsViewed(startDate, endDate);
         return ResponseEntity.ok(
                 bookingService.getRevenueByDestinationAndSeason(startDate, endDate));
     }
 
+    // S5-F11
+    @GetMapping("/{id}/payment-history")
+    public ResponseEntity<?> getPaymentHistory(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return ResponseEntity.ok(bookingService.getPaymentHistory(id, page, size));
+    }
+
+    @GetMapping("/{id}/audit-trail")
+    public ResponseEntity<SaleAuditTrailDTO> getAuditTrail(@PathVariable Long id) {
+        return ResponseEntity.ok(bookingService.getAuditTrail(id));
+    }
+
     @PostMapping("/{id}/refund-cancellation-tier")
-    public ResponseEntity<Booking> refundCancellationTier(
+    public ResponseEntity<?> refundCancellationTier(
             @PathVariable Long id,
             @RequestBody(required = false) RefundCancellationRequest request
     ) {
@@ -172,7 +192,7 @@ public class BookingController {
             request = new RefundCancellationRequest();
         }
 
-        Booking updated = bookingService.processRefundCancellationTier(id, request);
-        return ResponseEntity.ok(updated);
+        Map<String, Object> result = bookingService.processRefundCancellationTier(id, request);
+        return ResponseEntity.ok(result);
     }
 }

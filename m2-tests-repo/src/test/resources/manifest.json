@@ -1,0 +1,2856 @@
+{
+  "scannedPath" : "C:\\Users\\Marwan Allam\\OneDrive\\Desktop\\ACL M1\\tripplanning",
+  "scannedAt" : "2026-05-12T16:54:24.307408200Z",
+  "basePackage" : "",
+  "entities" : [ {
+    "className" : "Activity",
+    "packageName" : "com.team15.tripplanning.activityservice.model",
+    "tableName" : "activities",
+    "columns" : [ {
+      "fieldName" : "id",
+      "columnName" : "id",
+      "javaType" : "Long",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : true,
+      "isGenerated" : true,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "itineraryId",
+      "columnName" : "itinerary_id",
+      "javaType" : "Long",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "name",
+      "columnName" : "name",
+      "javaType" : "String",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "category",
+      "columnName" : "category",
+      "javaType" : "ActivityCategory",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : true,
+      "relationKind" : null
+    }, {
+      "fieldName" : "latitude",
+      "columnName" : "latitude",
+      "javaType" : "Double",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "longitude",
+      "columnName" : "longitude",
+      "javaType" : "Double",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "scheduledTime",
+      "columnName" : "scheduled_time",
+      "javaType" : "LocalDateTime",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "metadata",
+      "columnName" : "metadata",
+      "javaType" : "Map<String,Object>",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    } ]
+  }, {
+    "className" : "Booking",
+    "packageName" : "com.team15.tripplanning.bookingservice.model",
+    "tableName" : "bookings",
+    "columns" : [ {
+      "fieldName" : "id",
+      "columnName" : "id",
+      "javaType" : "Long",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : true,
+      "isGenerated" : true,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "itineraryId",
+      "columnName" : "itin_id",
+      "javaType" : "Long",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "itinerary",
+      "columnName" : "itinerary",
+      "javaType" : "ItineraryRef",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : "ManyToOne"
+    }, {
+      "fieldName" : "userId",
+      "columnName" : "user_id",
+      "javaType" : "Long",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "amount",
+      "columnName" : "amount",
+      "javaType" : "Double",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "type",
+      "columnName" : "type",
+      "javaType" : "BookingType",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : true,
+      "relationKind" : null
+    }, {
+      "fieldName" : "status",
+      "columnName" : "status",
+      "javaType" : "BookingStatus",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : true,
+      "relationKind" : null
+    }, {
+      "fieldName" : "bookingDetails",
+      "columnName" : "booking_details",
+      "javaType" : "Map<String,Object>",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "createdAt",
+      "columnName" : "created_at",
+      "javaType" : "LocalDateTime",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "bookingCoupons",
+      "columnName" : "booking_coupons",
+      "javaType" : "List<BookingCoupon>",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : "OneToMany"
+    } ]
+  }, {
+    "className" : "BookingCoupon",
+    "packageName" : "com.team15.tripplanning.bookingservice.model",
+    "tableName" : "booking_coupons",
+    "columns" : [ {
+      "fieldName" : "id",
+      "columnName" : "id",
+      "javaType" : "Long",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : true,
+      "isGenerated" : true,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "booking",
+      "columnName" : "booking",
+      "javaType" : "Booking",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : "ManyToOne"
+    }, {
+      "fieldName" : "bookingId",
+      "columnName" : "booking_id",
+      "javaType" : "Long",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "coupon",
+      "columnName" : "coupon",
+      "javaType" : "Coupon",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : "ManyToOne"
+    }, {
+      "fieldName" : "couponId",
+      "columnName" : "coupon_id",
+      "javaType" : "Long",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "discountApplied",
+      "columnName" : "discount_applied",
+      "javaType" : "Double",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "appliedAt",
+      "columnName" : "applied_at",
+      "javaType" : "LocalDateTime",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    } ]
+  }, {
+    "className" : "Coupon",
+    "packageName" : "com.team15.tripplanning.bookingservice.model",
+    "tableName" : "coupons",
+    "columns" : [ {
+      "fieldName" : "id",
+      "columnName" : "id",
+      "javaType" : "Long",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : true,
+      "isGenerated" : true,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "code",
+      "columnName" : "code",
+      "javaType" : "String",
+      "nullable" : false,
+      "unique" : true,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "discountType",
+      "columnName" : "discount_type",
+      "javaType" : "DiscountType",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : true,
+      "relationKind" : null
+    }, {
+      "fieldName" : "discountValue",
+      "columnName" : "discount_value",
+      "javaType" : "Double",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "maxUses",
+      "columnName" : "max_uses",
+      "javaType" : "Integer",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "currentUses",
+      "columnName" : "current_uses",
+      "javaType" : "Integer",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "expiryDate",
+      "columnName" : "expiry_date",
+      "javaType" : "LocalDateTime",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "active",
+      "columnName" : "active",
+      "javaType" : "Boolean",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "metadata",
+      "columnName" : "metadata",
+      "javaType" : "Map<String,Object>",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "bookingCoupons",
+      "columnName" : "booking_coupons",
+      "javaType" : "List<BookingCoupon>",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : "OneToMany"
+    } ]
+  }, {
+    "className" : "ItineraryRef",
+    "packageName" : "com.team15.tripplanning.bookingservice.model",
+    "tableName" : "itineraries",
+    "columns" : [ {
+      "fieldName" : "id",
+      "columnName" : "id",
+      "javaType" : "Long",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : true,
+      "isGenerated" : true,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "userId",
+      "columnName" : "user_id",
+      "javaType" : "Long",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "title",
+      "columnName" : "title",
+      "javaType" : "String",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "status",
+      "columnName" : "status",
+      "javaType" : "ItineraryStatus",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : true,
+      "relationKind" : null
+    }, {
+      "fieldName" : "startDate",
+      "columnName" : "start_date",
+      "javaType" : "LocalDate",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "endDate",
+      "columnName" : "end_date",
+      "javaType" : "LocalDate",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    } ]
+  }, {
+    "className" : "UserRef",
+    "packageName" : "com.team15.tripplanning.bookingservice.model",
+    "tableName" : "users",
+    "columns" : [ {
+      "fieldName" : "id",
+      "columnName" : "id",
+      "javaType" : "Long",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : true,
+      "isGenerated" : true,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "name",
+      "columnName" : "name",
+      "javaType" : "String",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "email",
+      "columnName" : "email",
+      "javaType" : "String",
+      "nullable" : false,
+      "unique" : true,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "password",
+      "columnName" : "password",
+      "javaType" : "String",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "phone",
+      "columnName" : "phone",
+      "javaType" : "String",
+      "nullable" : false,
+      "unique" : true,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "role",
+      "columnName" : "role",
+      "javaType" : "String",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "status",
+      "columnName" : "status",
+      "javaType" : "String",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "createdAt",
+      "columnName" : "created_at",
+      "javaType" : "LocalDateTime",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    } ]
+  }, {
+    "className" : "Destination",
+    "packageName" : "com.team15.tripplanning.destinationservice.model",
+    "tableName" : "destinations",
+    "columns" : [ {
+      "fieldName" : "id",
+      "columnName" : "id",
+      "javaType" : "Long",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : true,
+      "isGenerated" : true,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "name",
+      "columnName" : "name",
+      "javaType" : "String",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "country",
+      "columnName" : "country",
+      "javaType" : "String",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "description",
+      "columnName" : "description",
+      "javaType" : "String",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "category",
+      "columnName" : "category",
+      "javaType" : "DestinationCategory",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : true,
+      "relationKind" : null
+    }, {
+      "fieldName" : "status",
+      "columnName" : "status",
+      "javaType" : "DestinationStatus",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : true,
+      "relationKind" : null
+    }, {
+      "fieldName" : "rating",
+      "columnName" : "rating",
+      "javaType" : "Double",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "totalRatings",
+      "columnName" : "total_ratings",
+      "javaType" : "Integer",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "details",
+      "columnName" : "details",
+      "javaType" : "Map<String,Object>",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "createdAt",
+      "columnName" : "created_at",
+      "javaType" : "LocalDateTime",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "destinationReviews",
+      "columnName" : "destination_reviews",
+      "javaType" : "List<DestinationReview>",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : "OneToMany"
+    } ]
+  }, {
+    "className" : "DestinationReview",
+    "packageName" : "com.team15.tripplanning.destinationservice.model",
+    "tableName" : "destination_reviews",
+    "columns" : [ {
+      "fieldName" : "id",
+      "columnName" : "id",
+      "javaType" : "Long",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : true,
+      "isGenerated" : true,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "destination",
+      "columnName" : "destination",
+      "javaType" : "Destination",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : "ManyToOne"
+    }, {
+      "fieldName" : "destinationId",
+      "columnName" : "destination_id",
+      "javaType" : "Long",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "type",
+      "columnName" : "type",
+      "javaType" : "DestinationReviewType",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : true,
+      "relationKind" : null
+    }, {
+      "fieldName" : "content",
+      "columnName" : "content",
+      "javaType" : "String",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "rating",
+      "columnName" : "rating",
+      "javaType" : "Integer",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "visitDate",
+      "columnName" : "visit_date",
+      "javaType" : "LocalDate",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "verified",
+      "columnName" : "verified",
+      "javaType" : "Boolean",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "metadata",
+      "columnName" : "metadata",
+      "javaType" : "Map<String,Object>",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "createdAt",
+      "columnName" : "created_at",
+      "javaType" : "LocalDateTime",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    } ]
+  }, {
+    "className" : "Itinerary",
+    "packageName" : "com.team15.tripplanning.itineraryservice.model",
+    "tableName" : "itineraries",
+    "columns" : [ {
+      "fieldName" : "id",
+      "columnName" : "id",
+      "javaType" : "Long",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : true,
+      "isGenerated" : true,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "userId",
+      "columnName" : "user_id",
+      "javaType" : "Long",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "destinationId",
+      "columnName" : "destination_id",
+      "javaType" : "Long",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "title",
+      "columnName" : "title",
+      "javaType" : "String",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "status",
+      "columnName" : "status",
+      "javaType" : "ItineraryStatus",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : true,
+      "relationKind" : null
+    }, {
+      "fieldName" : "estimatedBudget",
+      "columnName" : "estimated_budget",
+      "javaType" : "Double",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "metadata",
+      "columnName" : "metadata",
+      "javaType" : "Map<String,Object>",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "startDate",
+      "columnName" : "start_date",
+      "javaType" : "LocalDate",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "endDate",
+      "columnName" : "end_date",
+      "javaType" : "LocalDate",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "createdAt",
+      "columnName" : "created_at",
+      "javaType" : "LocalDateTime",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "itineraryDays",
+      "columnName" : "itinerary_days",
+      "javaType" : "List<ItineraryDay>",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : "OneToMany"
+    } ]
+  }, {
+    "className" : "ItineraryDay",
+    "packageName" : "com.team15.tripplanning.itineraryservice.model",
+    "tableName" : "itinerary_days",
+    "columns" : [ {
+      "fieldName" : "id",
+      "columnName" : "id",
+      "javaType" : "Long",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : true,
+      "isGenerated" : true,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "itinerary",
+      "columnName" : "itinerary",
+      "javaType" : "Itinerary",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : "ManyToOne"
+    }, {
+      "fieldName" : "itineraryId",
+      "columnName" : "itinerary_id",
+      "javaType" : "Long",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "dayOrder",
+      "columnName" : "day_order",
+      "javaType" : "Integer",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "date",
+      "columnName" : "date",
+      "javaType" : "LocalDate",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "title",
+      "columnName" : "title",
+      "javaType" : "String",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "description",
+      "columnName" : "description",
+      "javaType" : "String",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "status",
+      "columnName" : "status",
+      "javaType" : "ItineraryDayStatus",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : true,
+      "relationKind" : null
+    }, {
+      "fieldName" : "metadata",
+      "columnName" : "metadata",
+      "javaType" : "Map<String,Object>",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    } ]
+  }, {
+    "className" : "SavedDestination",
+    "packageName" : "com.team15.tripplanning.userservice.model",
+    "tableName" : "saved_destinations",
+    "columns" : [ {
+      "fieldName" : "id",
+      "columnName" : "id",
+      "javaType" : "Long",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : true,
+      "isGenerated" : true,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "user",
+      "columnName" : "user",
+      "javaType" : "User",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : "ManyToOne"
+    }, {
+      "fieldName" : "userId",
+      "columnName" : "user_id",
+      "javaType" : "Long",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "label",
+      "columnName" : "label",
+      "javaType" : "String",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "destinationName",
+      "columnName" : "destination_name",
+      "javaType" : "String",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "country",
+      "columnName" : "country",
+      "javaType" : "String",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "latitude",
+      "columnName" : "latitude",
+      "javaType" : "Double",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "longitude",
+      "columnName" : "longitude",
+      "javaType" : "Double",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "isDefault",
+      "columnName" : "is_default",
+      "javaType" : "Boolean",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "metadata",
+      "columnName" : "metadata",
+      "javaType" : "Map<String,Object>",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "createdAt",
+      "columnName" : "created_at",
+      "javaType" : "LocalDateTime",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    } ]
+  }, {
+    "className" : "User",
+    "packageName" : "com.team15.tripplanning.userservice.model",
+    "tableName" : "users",
+    "columns" : [ {
+      "fieldName" : "id",
+      "columnName" : "id",
+      "javaType" : "Long",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : true,
+      "isGenerated" : true,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "name",
+      "columnName" : "name",
+      "javaType" : "String",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "email",
+      "columnName" : "email",
+      "javaType" : "String",
+      "nullable" : false,
+      "unique" : true,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "password",
+      "columnName" : "password",
+      "javaType" : "String",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "phone",
+      "columnName" : "phone",
+      "javaType" : "String",
+      "nullable" : false,
+      "unique" : true,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "role",
+      "columnName" : "role",
+      "javaType" : "Role",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : true,
+      "relationKind" : null
+    }, {
+      "fieldName" : "status",
+      "columnName" : "status",
+      "javaType" : "Status",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : true,
+      "relationKind" : null
+    }, {
+      "fieldName" : "preferences",
+      "columnName" : "preferences",
+      "javaType" : "Map<String,Object>",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "createdAt",
+      "columnName" : "created_at",
+      "javaType" : "LocalDateTime",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "savedDestinations",
+      "columnName" : "saved_destinations",
+      "javaType" : "List<SavedDestination>",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : "OneToMany"
+    } ]
+  } ],
+  "enums" : [ {
+    "enumName" : "ActivityCategory",
+    "packageName" : "com.team15.tripplanning.activityservice.model",
+    "values" : [ "SIGHTSEEING", "ADVENTURE", "DINING", "CULTURAL", "LEISURE", "OUTDOOR" ]
+  }, {
+    "enumName" : "BookingType",
+    "packageName" : "com.team15.tripplanning.bookingservice.model",
+    "values" : [ "ACCOMMODATION", "TRANSPORT", "ACTIVITY" ]
+  }, {
+    "enumName" : "BookingStatus",
+    "packageName" : "com.team15.tripplanning.bookingservice.model",
+    "values" : [ "PENDING", "CONFIRMED", "FAILED", "CANCELLED" ]
+  }, {
+    "enumName" : "DiscountType",
+    "packageName" : "com.team15.tripplanning.bookingservice.model",
+    "values" : [ "PERCENTAGE", "FIXED" ]
+  }, {
+    "enumName" : "ItineraryStatus",
+    "packageName" : "com.team15.tripplanning.bookingservice.model",
+    "values" : [ "DRAFT", "PLANNED", "IN_PROGRESS", "COMPLETED", "CANCELLED" ]
+  }, {
+    "enumName" : "DestinationCategory",
+    "packageName" : "com.team15.tripplanning.destinationservice.model",
+    "values" : [ "BEACH", "MOUNTAIN", "CITY", "HISTORICAL", "ADVENTURE" ]
+  }, {
+    "enumName" : "DestinationReviewType",
+    "packageName" : "com.team15.tripplanning.destinationservice.model",
+    "values" : [ "VISITOR", "EXPERT", "GUIDE" ]
+  }, {
+    "enumName" : "DestinationStatus",
+    "packageName" : "com.team15.tripplanning.destinationservice.model",
+    "values" : [ "ACTIVE", "INACTIVE", "SEASONAL" ]
+  }, {
+    "enumName" : "ItineraryStatus",
+    "packageName" : "com.team15.tripplanning.itineraryservice.model",
+    "values" : [ "DRAFT", "PLANNED", "IN_PROGRESS", "COMPLETED", "CANCELLED" ]
+  }, {
+    "enumName" : "ItineraryDayStatus",
+    "packageName" : "com.team15.tripplanning.itineraryservice.model",
+    "values" : [ "PLANNED", "COMPLETED", "SKIPPED" ]
+  }, {
+    "enumName" : "ItineraryStatus",
+    "packageName" : "com.team15.tripplanning.itineraryservice.model",
+    "values" : [ "DRAFT", "PLANNED", "IN_PROGRESS", "COMPLETED", "CANCELLED" ]
+  }, {
+    "enumName" : "EventType",
+    "packageName" : "com.team15.tripplanning.shared.event",
+    "values" : [ "AUTH", "DESTINATION", "ITINERARY", "ACTIVITY", "PAYMENT_AUDIT" ]
+  }, {
+    "enumName" : "Role",
+    "packageName" : "com.team15.tripplanning.userservice.model",
+    "values" : [ "TRAVELER", "ADMIN" ]
+  }, {
+    "enumName" : "Status",
+    "packageName" : "com.team15.tripplanning.userservice.model",
+    "values" : [ "ACTIVE", "DEACTIVATED" ]
+  }, {
+    "enumName" : "EventType",
+    "packageName" : "com.team15.tripplanning.userservice.observer",
+    "values" : [ "AUTH", "DESTINATION", "ITINERARY", "ACTIVITY", "PAYMENT" ]
+  } ],
+  "controllers" : [ {
+    "className" : "ActivityController",
+    "packageName" : "com.team15.tripplanning.activityservice.controller",
+    "basePaths" : [ "/api/activities" ],
+    "endpoints" : [ {
+      "verb" : "POST",
+      "path" : "/api/activities",
+      "methodName" : "create",
+      "pathVariables" : [ ],
+      "requestBodyType" : "Activity",
+      "responseType" : "ResponseEntity<Activity>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/activities",
+      "methodName" : "findAll",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<Activity>>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/activities/nearby",
+      "methodName" : "findNearby",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<NearbyActivityDTO>>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/activities/{id}",
+      "methodName" : "findById",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Activity>"
+    }, {
+      "verb" : "PUT",
+      "path" : "/api/activities/{id}",
+      "methodName" : "update",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : "Activity",
+      "responseType" : "ResponseEntity<Activity>"
+    }, {
+      "verb" : "DELETE",
+      "path" : "/api/activities/{id}",
+      "methodName" : "delete",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Void>"
+    }, {
+      "verb" : "POST",
+      "path" : "/api/activities/itinerary/{itineraryId}",
+      "methodName" : "createActivityForItinerary",
+      "pathVariables" : [ "itineraryId" ],
+      "requestBodyType" : "Activity",
+      "responseType" : "ResponseEntity<Activity>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/activities/itinerary/{itineraryId}/latest",
+      "methodName" : "getLatestActivity",
+      "pathVariables" : [ "itineraryId" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Activity>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/activities/itinerary/{itineraryId}/summary",
+      "methodName" : "getActivitySummary",
+      "pathVariables" : [ "itineraryId" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<ActivitySummaryDTO>"
+    }, {
+      "verb" : "DELETE",
+      "path" : "/api/activities/purge",
+      "methodName" : "purgeOldActivities",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Map<String,Integer>>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/activities/budget-friendly",
+      "methodName" : "findBudgetFriendlyActivities",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<BudgetActivityDTO>>"
+    }, {
+      "verb" : "POST",
+      "path" : "/api/activities/batch",
+      "methodName" : "batchActivityCreation",
+      "pathVariables" : [ ],
+      "requestBodyType" : "BatchActivityRequestDTO",
+      "responseType" : "ResponseEntity<BatchActivityResponseDTO>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/activities/metadata/search",
+      "methodName" : "searchByMetadata",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<Activity>>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/activities/history",
+      "methodName" : "getActivitiesInDateRange",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<Activity>>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/activities/analytics",
+      "methodName" : "getActivityAnalytics",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<ActivityAnalyticsDTO>"
+    }, {
+      "verb" : "POST",
+      "path" : "/api/activities/{id}/events",
+      "methodName" : "recordLifecycleEvent",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : "RecordEventRequest",
+      "responseType" : "ResponseEntity<ActivityLifecycleEventDTO>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/activities/{id}/timeline",
+      "methodName" : "getActivityTimeline",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<ActivityEventDTO>>"
+    } ]
+  }, {
+    "className" : "ActivityHealthController",
+    "packageName" : "com.team15.tripplanning.activityservice.controller",
+    "basePaths" : [ "/api/activities" ],
+    "endpoints" : [ {
+      "verb" : "GET",
+      "path" : "/api/activities/health",
+      "methodName" : "health",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<String>"
+    } ]
+  }, {
+    "className" : "BookingController",
+    "packageName" : "com.team15.tripplanning.bookingservice.controller",
+    "basePaths" : [ "/api/bookings" ],
+    "endpoints" : [ {
+      "verb" : "POST",
+      "path" : "/api/bookings",
+      "methodName" : "create",
+      "pathVariables" : [ ],
+      "requestBodyType" : "Booking",
+      "responseType" : "ResponseEntity<Booking>"
+    }, {
+      "verb" : "POST",
+      "path" : "/api/bookings/create",
+      "methodName" : "createFromRequest",
+      "pathVariables" : [ ],
+      "requestBodyType" : "CreateBookingRequest",
+      "responseType" : "ResponseEntity<Booking>"
+    }, {
+      "verb" : "POST",
+      "path" : "/api/bookings/itinerary/{itineraryId}",
+      "methodName" : "createForItinerary",
+      "pathVariables" : [ "itineraryId" ],
+      "requestBodyType" : "CreateBookingRequest",
+      "responseType" : "ResponseEntity<Booking>"
+    }, {
+      "verb" : "POST",
+      "path" : "/api/bookings/{bookingId}/coupons/{couponId}",
+      "methodName" : "applyCoupon",
+      "pathVariables" : [ "bookingId", "couponId" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Booking>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/bookings",
+      "methodName" : "findAll",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<Booking>>"
+    }, {
+      "verb" : "PUT",
+      "path" : "/api/bookings/itinerary/{itineraryId}/cancel",
+      "methodName" : "cancelBookingsByItinerary",
+      "pathVariables" : [ "itineraryId" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Void>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/bookings/{id}",
+      "methodName" : "findById",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Booking>"
+    }, {
+      "verb" : "PUT",
+      "path" : "/api/bookings/{id}",
+      "methodName" : "update",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : "Booking",
+      "responseType" : "ResponseEntity<Booking>"
+    }, {
+      "verb" : "DELETE",
+      "path" : "/api/bookings/{id}",
+      "methodName" : "delete",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Void>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/bookings/reports/revenue",
+      "methodName" : "getRevenueReport",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<RevenueReportDTO>"
+    }, {
+      "verb" : "PUT",
+      "path" : "/api/bookings/{id}/retry",
+      "methodName" : "retryBooking",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Booking>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/bookings/{id}/details",
+      "methodName" : "getBookingDetails",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<?>"
+    }, {
+      "verb" : "PUT",
+      "path" : "/api/bookings/{id}/cancel",
+      "methodName" : "cancelBooking",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : "Map<String,String>",
+      "responseType" : "ResponseEntity<Booking>"
+    }, {
+      "verb" : "POST",
+      "path" : "/api/bookings/{id}/cancel",
+      "methodName" : "cancelBookingPost",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : "Map<String,Object>",
+      "responseType" : "ResponseEntity<Booking>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/bookings/coupons/top-used",
+      "methodName" : "getTopUsedCoupons",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<?>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/bookings/user/{userId}/summary",
+      "methodName" : "getUserBookingSummary",
+      "pathVariables" : [ "userId" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<UserBookingSummaryDTO>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/bookings/users/{userId}/summary",
+      "methodName" : "getUserBookingSummary",
+      "pathVariables" : [ "userId" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<UserBookingSummaryDTO>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/bookings/search",
+      "methodName" : "searchBookings",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<Booking>>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/bookings/analytics/destination-season",
+      "methodName" : "getRevenueByDestinationAndSeason",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<DestinationSeasonRevenueDTO>>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/bookings/{id}/audit-trail",
+      "methodName" : "getAuditTrail",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<SaleAuditTrailDTO>"
+    }, {
+      "verb" : "POST",
+      "path" : "/api/bookings/{id}/refund-cancellation-tier",
+      "methodName" : "refundCancellationTier",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : "RefundCancellationRequest",
+      "responseType" : "ResponseEntity<Booking>"
+    } ]
+  }, {
+    "className" : "BookingCouponController",
+    "packageName" : "com.team15.tripplanning.bookingservice.controller",
+    "basePaths" : [ "/api/booking-coupons" ],
+    "endpoints" : [ {
+      "verb" : "POST",
+      "path" : "/api/booking-coupons",
+      "methodName" : "create",
+      "pathVariables" : [ ],
+      "requestBodyType" : "BookingCoupon",
+      "responseType" : "ResponseEntity<BookingCoupon>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/booking-coupons",
+      "methodName" : "findAll",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<BookingCoupon>>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/booking-coupons/{id}",
+      "methodName" : "findById",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<BookingCoupon>"
+    }, {
+      "verb" : "PUT",
+      "path" : "/api/booking-coupons/{id}",
+      "methodName" : "update",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : "BookingCoupon",
+      "responseType" : "ResponseEntity<BookingCoupon>"
+    }, {
+      "verb" : "DELETE",
+      "path" : "/api/booking-coupons/{id}",
+      "methodName" : "delete",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Void>"
+    } ]
+  }, {
+    "className" : "BookingHealthController",
+    "packageName" : "com.team15.tripplanning.bookingservice.controller",
+    "basePaths" : [ "/api/bookings" ],
+    "endpoints" : [ {
+      "verb" : "GET",
+      "path" : "/api/bookings/health",
+      "methodName" : "health",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<String>"
+    } ]
+  }, {
+    "className" : "CouponController",
+    "packageName" : "com.team15.tripplanning.bookingservice.controller",
+    "basePaths" : [ "/api/bookings/coupons", "/api/coupons" ],
+    "endpoints" : [ {
+      "verb" : "POST",
+      "path" : "/api/bookings/coupons",
+      "methodName" : "create",
+      "pathVariables" : [ ],
+      "requestBodyType" : "Coupon",
+      "responseType" : "ResponseEntity<Coupon>"
+    }, {
+      "verb" : "POST",
+      "path" : "/api/coupons",
+      "methodName" : "create",
+      "pathVariables" : [ ],
+      "requestBodyType" : "Coupon",
+      "responseType" : "ResponseEntity<Coupon>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/bookings/coupons",
+      "methodName" : "findAll",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<Coupon>>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/coupons",
+      "methodName" : "findAll",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<Coupon>>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/bookings/coupons/{id}",
+      "methodName" : "findById",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Coupon>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/coupons/{id}",
+      "methodName" : "findById",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Coupon>"
+    }, {
+      "verb" : "PUT",
+      "path" : "/api/bookings/coupons/{id}",
+      "methodName" : "update",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : "Coupon",
+      "responseType" : "ResponseEntity<Coupon>"
+    }, {
+      "verb" : "PUT",
+      "path" : "/api/coupons/{id}",
+      "methodName" : "update",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : "Coupon",
+      "responseType" : "ResponseEntity<Coupon>"
+    }, {
+      "verb" : "DELETE",
+      "path" : "/api/bookings/coupons/{id}",
+      "methodName" : "delete",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Void>"
+    }, {
+      "verb" : "DELETE",
+      "path" : "/api/coupons/{id}",
+      "methodName" : "delete",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Void>"
+    } ]
+  }, {
+    "className" : "DestinationController",
+    "packageName" : "com.team15.tripplanning.destinationservice.controller",
+    "basePaths" : [ "/api/destinations" ],
+    "endpoints" : [ {
+      "verb" : "POST",
+      "path" : "/api/destinations",
+      "methodName" : "create",
+      "pathVariables" : [ ],
+      "requestBodyType" : "Destination",
+      "responseType" : "ResponseEntity<Destination>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/destinations",
+      "methodName" : "findAll",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<Destination>>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/destinations/{id}",
+      "methodName" : "findById",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Destination>"
+    }, {
+      "verb" : "PUT",
+      "path" : "/api/destinations/{id}",
+      "methodName" : "update",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : "Destination",
+      "responseType" : "ResponseEntity<Destination>"
+    }, {
+      "verb" : "DELETE",
+      "path" : "/api/destinations/{id}",
+      "methodName" : "delete",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Void>"
+    }, {
+      "verb" : "POST",
+      "path" : "/api/destinations/{id}/index",
+      "methodName" : "indexDestination",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Void>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/destinations/{id}/revenue",
+      "methodName" : "getDestinationRevenueSummary",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<DestinationRevenueDTO>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/destinations/search/full-text",
+      "methodName" : "fullTextSearch",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<DestinationSearchDocument>>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/destinations/search",
+      "methodName" : "searchDestinations",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<Destination>>"
+    }, {
+      "verb" : "PUT",
+      "path" : "/api/destinations/{id}/details",
+      "methodName" : "updateDestinationDetails",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : "Map<String,Object>",
+      "responseType" : "ResponseEntity<Destination>"
+    }, {
+      "verb" : "PUT",
+      "path" : "/api/destinations/{id}/status",
+      "methodName" : "updateDestinationStatus",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : "Map<String,String>",
+      "responseType" : "ResponseEntity<Destination>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/destinations/details/search",
+      "methodName" : "filterByDetailAttribute",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<Destination>>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/destinations/reports/top-rated",
+      "methodName" : "getTopRated",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<TopDestinationDTO>>"
+    }, {
+      "verb" : "POST",
+      "path" : "/api/destinations/{id}/rate",
+      "methodName" : "rateDestination",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : "DestinationRateRequest",
+      "responseType" : "ResponseEntity<Destination>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/destinations/reviews/low-rated",
+      "methodName" : "getLowRatedReviews",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<DestinationReviewAlertDTO>>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/destinations/low-rated",
+      "methodName" : "getLowRatedReviews",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<DestinationReviewAlertDTO>>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/destinations/reports/low-rated",
+      "methodName" : "getLowRatedReviews",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<DestinationReviewAlertDTO>>"
+    } ]
+  }, {
+    "className" : "DestinationDashboardController",
+    "packageName" : "com.team15.tripplanning.destinationservice.controller",
+    "basePaths" : [ "/api/destinations" ],
+    "endpoints" : [ {
+      "verb" : "GET",
+      "path" : "/api/destinations/{id}/dashboard",
+      "methodName" : "getDashboard",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<DestinationDashboardDTO>"
+    } ]
+  }, {
+    "className" : "DestinationHealthController",
+    "packageName" : "com.team15.tripplanning.destinationservice.controller",
+    "basePaths" : [ "/api/destinations" ],
+    "endpoints" : [ {
+      "verb" : "GET",
+      "path" : "/api/destinations/health",
+      "methodName" : "health",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<String>"
+    } ]
+  }, {
+    "className" : "DestinationReviewController",
+    "packageName" : "com.team15.tripplanning.destinationservice.controller",
+    "basePaths" : [ "/api" ],
+    "endpoints" : [ {
+      "verb" : "POST",
+      "path" : "/api/destination-reviews",
+      "methodName" : "create",
+      "pathVariables" : [ ],
+      "requestBodyType" : "DestinationReview",
+      "responseType" : "ResponseEntity<DestinationReview>"
+    }, {
+      "verb" : "POST",
+      "path" : "/api/destinations/{destinationId}/reviews",
+      "methodName" : "create",
+      "pathVariables" : [ "destinationId" ],
+      "requestBodyType" : "DestinationReview",
+      "responseType" : "ResponseEntity<DestinationReview>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/destination-reviews",
+      "methodName" : "findAll",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<DestinationReview>>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/destination-reviews/{id}",
+      "methodName" : "findById",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<DestinationReview>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/destinations/{destinationId}/reviews",
+      "methodName" : "findAllByDestination",
+      "pathVariables" : [ "destinationId" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<DestinationReview>>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/destinations/{destinationId}/reviews/{reviewId}",
+      "methodName" : "findByDestinationAndId",
+      "pathVariables" : [ "destinationId", "reviewId" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<DestinationReview>"
+    }, {
+      "verb" : "PUT",
+      "path" : "/api/destination-reviews/{id}",
+      "methodName" : "update",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : "DestinationReview",
+      "responseType" : "ResponseEntity<DestinationReview>"
+    }, {
+      "verb" : "PUT",
+      "path" : "/api/destinations/{destinationId}/reviews/{reviewId}",
+      "methodName" : "updateForDestination",
+      "pathVariables" : [ "destinationId", "reviewId" ],
+      "requestBodyType" : "DestinationReview",
+      "responseType" : "ResponseEntity<DestinationReview>"
+    }, {
+      "verb" : "DELETE",
+      "path" : "/api/destination-reviews/{id}",
+      "methodName" : "delete",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Void>"
+    }, {
+      "verb" : "DELETE",
+      "path" : "/api/destinations/{destinationId}/reviews/{reviewId}",
+      "methodName" : "deleteForDestination",
+      "pathVariables" : [ "destinationId", "reviewId" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Void>"
+    }, {
+      "verb" : "PUT",
+      "path" : "/api/destinations/{destinationId}/reviews/{reviewId}/verify",
+      "methodName" : "verifyReviewPut",
+      "pathVariables" : [ "destinationId", "reviewId" ],
+      "requestBodyType" : "VerifyReviewRequest",
+      "responseType" : "ResponseEntity<Destination>"
+    }, {
+      "verb" : "POST",
+      "path" : "/api/destinations/{destinationId}/reviews/{reviewId}/verify",
+      "methodName" : "verifyReviewPost",
+      "pathVariables" : [ "destinationId", "reviewId" ],
+      "requestBodyType" : "VerifyReviewRequest",
+      "responseType" : "ResponseEntity<Destination>"
+    } ]
+  }, {
+    "className" : "ItineraryController",
+    "packageName" : "com.team15.tripplanning.itineraryservice.controller",
+    "basePaths" : [ "/api/itineraries" ],
+    "endpoints" : [ {
+      "verb" : "POST",
+      "path" : "/api/itineraries",
+      "methodName" : "create",
+      "pathVariables" : [ ],
+      "requestBodyType" : "Itinerary",
+      "responseType" : "ResponseEntity<Itinerary>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/itineraries",
+      "methodName" : "findAll",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<Itinerary>>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/itineraries/{id}",
+      "methodName" : "findById",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Itinerary>"
+    }, {
+      "verb" : "PUT",
+      "path" : "/api/itineraries/{id}",
+      "methodName" : "update",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : "Itinerary",
+      "responseType" : "ResponseEntity<Itinerary>"
+    }, {
+      "verb" : "DELETE",
+      "path" : "/api/itineraries/{id}",
+      "methodName" : "delete",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Void>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/itineraries/search",
+      "methodName" : "search",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<Itinerary>>"
+    }, {
+      "verb" : "POST",
+      "path" : "/api/itineraries/{itineraryId}/days",
+      "methodName" : "addDays",
+      "pathVariables" : [ "itineraryId" ],
+      "requestBodyType" : "List<ItineraryDayRequestDTO>",
+      "responseType" : "ResponseEntity<?>"
+    }, {
+      "verb" : "PUT",
+      "path" : "/api/itineraries/{id}/assign",
+      "methodName" : "assignDestination",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Itinerary>"
+    }, {
+      "verb" : "POST",
+      "path" : "/api/itineraries/estimate",
+      "methodName" : "estimateTripCost",
+      "pathVariables" : [ ],
+      "requestBodyType" : "EstimateRequest",
+      "responseType" : "ResponseEntity<TripCostEstimateDTO>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/itineraries/metadata/search",
+      "methodName" : "filterByMetadata",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<Itinerary>>"
+    }, {
+      "verb" : "PUT",
+      "path" : "/api/itineraries/{id}/cancel",
+      "methodName" : "cancelItinerary",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Itinerary>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/itineraries/{itineraryId}/days",
+      "methodName" : "getDays",
+      "pathVariables" : [ "itineraryId" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<ItineraryDay>>"
+    }, {
+      "verb" : "PUT",
+      "path" : "/api/itineraries/{id}/complete",
+      "methodName" : "completeItinerary",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Itinerary>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/itineraries/{itineraryId}/details",
+      "methodName" : "getItineraryDetails",
+      "pathVariables" : [ "itineraryId" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<ItineraryDetailsDTO>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/itineraries/analytics",
+      "methodName" : "getAnalytics",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<ItineraryAnalyticsDTO>"
+    }, {
+      "verb" : "POST",
+      "path" : "/api/itineraries/{itineraryId}/record-visit",
+      "methodName" : "recordVisit",
+      "pathVariables" : [ "itineraryId" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Map<String,Object>>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/itineraries/analytics/dashboard",
+      "methodName" : "getAnalyticsDashboard",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<ItineraryAnalyticsDashboardDTO>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/itineraries/recommendations",
+      "methodName" : "getRecommendations",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<?>"
+    } ]
+  }, {
+    "className" : "ItineraryDayController",
+    "packageName" : "com.team15.tripplanning.itineraryservice.controller",
+    "basePaths" : [ "/api/itinerary-days" ],
+    "endpoints" : [ {
+      "verb" : "POST",
+      "path" : "/api/itinerary-days",
+      "methodName" : "create",
+      "pathVariables" : [ ],
+      "requestBodyType" : "ItineraryDay",
+      "responseType" : "ResponseEntity<ItineraryDay>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/itinerary-days",
+      "methodName" : "findAll",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<ItineraryDay>>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/itinerary-days/{id}",
+      "methodName" : "findById",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<ItineraryDay>"
+    }, {
+      "verb" : "PUT",
+      "path" : "/api/itinerary-days/{id}",
+      "methodName" : "update",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : "ItineraryDay",
+      "responseType" : "ResponseEntity<ItineraryDay>"
+    }, {
+      "verb" : "DELETE",
+      "path" : "/api/itinerary-days/{id}",
+      "methodName" : "delete",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Void>"
+    } ]
+  }, {
+    "className" : "ItineraryHealthController",
+    "packageName" : "com.team15.tripplanning.itineraryservice.controller",
+    "basePaths" : [ "/api/itineraries" ],
+    "endpoints" : [ {
+      "verb" : "GET",
+      "path" : "/api/itineraries/health",
+      "methodName" : "health",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<String>"
+    } ]
+  }, {
+    "className" : "AuthController",
+    "packageName" : "com.team15.tripplanning.userservice.controller",
+    "basePaths" : [ "/api/auth" ],
+    "endpoints" : [ {
+      "verb" : "POST",
+      "path" : "/api/auth/register",
+      "methodName" : "register",
+      "pathVariables" : [ ],
+      "requestBodyType" : "RegisterRequest",
+      "responseType" : "ResponseEntity<AuthResponse>"
+    }, {
+      "verb" : "POST",
+      "path" : "/api/auth/login",
+      "methodName" : "login",
+      "pathVariables" : [ ],
+      "requestBodyType" : "LoginRequest",
+      "responseType" : "ResponseEntity<AuthResponse>"
+    } ]
+  }, {
+    "className" : "SavedDestinationController",
+    "packageName" : "com.team15.tripplanning.userservice.controller",
+    "basePaths" : [ "/api/saved-destinations" ],
+    "endpoints" : [ {
+      "verb" : "POST",
+      "path" : "/api/saved-destinations/user/{userId}",
+      "methodName" : "create",
+      "pathVariables" : [ "userId" ],
+      "requestBodyType" : "SavedDestination",
+      "responseType" : "ResponseEntity<SavedDestination>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/saved-destinations",
+      "methodName" : "findAll",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<SavedDestination>>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/saved-destinations/{id}",
+      "methodName" : "findById",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<SavedDestination>"
+    }, {
+      "verb" : "PUT",
+      "path" : "/api/saved-destinations/{id}",
+      "methodName" : "update",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : "SavedDestination",
+      "responseType" : "ResponseEntity<SavedDestination>"
+    }, {
+      "verb" : "DELETE",
+      "path" : "/api/saved-destinations/{id}",
+      "methodName" : "delete",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Void>"
+    } ]
+  }, {
+    "className" : "UserController",
+    "packageName" : "com.team15.tripplanning.userservice.controller",
+    "basePaths" : [ "/api/users" ],
+    "endpoints" : [ {
+      "verb" : "POST",
+      "path" : "/api/users",
+      "methodName" : "create",
+      "pathVariables" : [ ],
+      "requestBodyType" : "User",
+      "responseType" : "ResponseEntity<User>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/users",
+      "methodName" : "findAll",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<User>>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/users/search",
+      "methodName" : "search",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<User>>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/users/{id}",
+      "methodName" : "findById",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<User>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/users/{id}/profile",
+      "methodName" : "getProfile",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<UserProfileDTO>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/users/{id}/trip-summary",
+      "methodName" : "getTripSummary",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<UserTripSummaryDTO>"
+    }, {
+      "verb" : "PUT",
+      "path" : "/api/users/{id}",
+      "methodName" : "update",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : "User",
+      "responseType" : "ResponseEntity<User>"
+    }, {
+      "verb" : "PUT",
+      "path" : "/api/users/{id}/preferences",
+      "methodName" : "updatePreferences",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : "Map<String,Object>",
+      "responseType" : "ResponseEntity<User>"
+    }, {
+      "verb" : "POST",
+      "path" : "/api/users/{userId}/saved-destinations",
+      "methodName" : "createSavedDestination",
+      "pathVariables" : [ "userId" ],
+      "requestBodyType" : "SavedDestination",
+      "responseType" : "ResponseEntity<SavedDestination>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/users/{userId}/saved-destinations",
+      "methodName" : "findSavedDestinationsByUser",
+      "pathVariables" : [ "userId" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<SavedDestination>>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/users/{userId}/saved-destinations/{destinationId}",
+      "methodName" : "findSavedDestinationById",
+      "pathVariables" : [ "userId", "destinationId" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<SavedDestination>"
+    }, {
+      "verb" : "DELETE",
+      "path" : "/api/users/{userId}/saved-destinations/{destinationId}",
+      "methodName" : "deleteSavedDestinationById",
+      "pathVariables" : [ "userId", "destinationId" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Void>"
+    }, {
+      "verb" : "PUT",
+      "path" : "/api/users/{userId}/saved-destinations/{destinationId}/default",
+      "methodName" : "setDefaultSavedDestination",
+      "pathVariables" : [ "userId", "destinationId" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<User>"
+    }, {
+      "verb" : "PUT",
+      "path" : "/api/users/{userId}/destinations/{destinationId}/default",
+      "methodName" : "setDefaultSavedDestinationLegacyPath",
+      "pathVariables" : [ "userId", "destinationId" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<User>"
+    }, {
+      "verb" : "DELETE",
+      "path" : "/api/users/{id}",
+      "methodName" : "delete",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Void>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/users/reports/top-travelers",
+      "methodName" : "getTopTravelersBySpending",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<TopTravelerDTO>>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/users/preferences/search",
+      "methodName" : "searchByPreference",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<User>>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/users/preferences/travel-style",
+      "methodName" : "findByTravelStyleWithMinimumTrips",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<List<User>>"
+    }, {
+      "verb" : "PUT",
+      "path" : "/api/users/{id}/role",
+      "methodName" : "updateRole",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : "Map<String,String>",
+      "responseType" : "ResponseEntity<User>"
+    }, {
+      "verb" : "PUT",
+      "path" : "/api/users/{id}/deactivate",
+      "methodName" : "deactivate",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<User>"
+    }, {
+      "verb" : "GET",
+      "path" : "/api/users/{id}/activity",
+      "methodName" : "getActivityFeed",
+      "pathVariables" : [ "id" ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<Map<String,Object>>"
+    } ]
+  }, {
+    "className" : "UserHealthController",
+    "packageName" : "com.team15.tripplanning.userservice.controller",
+    "basePaths" : [ "/api/users" ],
+    "endpoints" : [ {
+      "verb" : "GET",
+      "path" : "/api/users/health",
+      "methodName" : "health",
+      "pathVariables" : [ ],
+      "requestBodyType" : null,
+      "responseType" : "ResponseEntity<String>"
+    } ]
+  } ],
+  "mongoCollections" : [ {
+    "className" : "ActivityEvent",
+    "packageName" : "com.team15.tripplanning.activityservice.model.mongo",
+    "collectionName" : "activity_events",
+    "fields" : [ {
+      "fieldName" : "id",
+      "javaType" : "String",
+      "isId" : true
+    }, {
+      "fieldName" : "activityId",
+      "javaType" : "Long",
+      "isId" : false
+    }, {
+      "fieldName" : "itineraryId",
+      "javaType" : "Long",
+      "isId" : false
+    }, {
+      "fieldName" : "action",
+      "javaType" : "String",
+      "isId" : false
+    }, {
+      "fieldName" : "timestamp",
+      "javaType" : "LocalDateTime",
+      "isId" : false
+    }, {
+      "fieldName" : "details",
+      "javaType" : "Map<String,Object>",
+      "isId" : false
+    } ]
+  }, {
+    "className" : "PaymentAuditEvent",
+    "packageName" : "com.team15.tripplanning.bookingservice.model.mongo",
+    "collectionName" : "payment_audit_trail",
+    "fields" : [ {
+      "fieldName" : "id",
+      "javaType" : "String",
+      "isId" : true
+    }, {
+      "fieldName" : "bookingId",
+      "javaType" : "Long",
+      "isId" : false
+    }, {
+      "fieldName" : "userId",
+      "javaType" : "Long",
+      "isId" : false
+    }, {
+      "fieldName" : "action",
+      "javaType" : "String",
+      "isId" : false
+    }, {
+      "fieldName" : "method",
+      "javaType" : "String",
+      "isId" : false
+    }, {
+      "fieldName" : "amount",
+      "javaType" : "Double",
+      "isId" : false
+    }, {
+      "fieldName" : "timestamp",
+      "javaType" : "LocalDateTime",
+      "isId" : false
+    }, {
+      "fieldName" : "details",
+      "javaType" : "Map<String,Object>",
+      "isId" : false
+    } ]
+  }, {
+    "className" : "DestinationEvent",
+    "packageName" : "com.team15.tripplanning.destinationservice.model.mongo",
+    "collectionName" : "destination_events",
+    "fields" : [ {
+      "fieldName" : "id",
+      "javaType" : "String",
+      "isId" : true
+    }, {
+      "fieldName" : "destinationId",
+      "javaType" : "Long",
+      "isId" : false
+    }, {
+      "fieldName" : "action",
+      "javaType" : "String",
+      "isId" : false
+    }, {
+      "fieldName" : "timestamp",
+      "javaType" : "LocalDateTime",
+      "isId" : false
+    }, {
+      "fieldName" : "details",
+      "javaType" : "Map<String,Object>",
+      "isId" : false
+    } ]
+  }, {
+    "className" : "ItineraryEvent",
+    "packageName" : "com.team15.tripplanning.itineraryservice.model.mongo",
+    "collectionName" : "itinerary_events",
+    "fields" : [ {
+      "fieldName" : "id",
+      "javaType" : "String",
+      "isId" : true
+    }, {
+      "fieldName" : "itineraryId",
+      "javaType" : "Long",
+      "isId" : false
+    }, {
+      "fieldName" : "userId",
+      "javaType" : "Long",
+      "isId" : false
+    }, {
+      "fieldName" : "action",
+      "javaType" : "String",
+      "isId" : false
+    }, {
+      "fieldName" : "timestamp",
+      "javaType" : "LocalDateTime",
+      "isId" : false
+    }, {
+      "fieldName" : "details",
+      "javaType" : "Map<String,Object>",
+      "isId" : false
+    } ]
+  }, {
+    "className" : "AuthEvent",
+    "packageName" : "com.team15.tripplanning.userservice.document",
+    "collectionName" : "auth_events",
+    "fields" : [ {
+      "fieldName" : "id",
+      "javaType" : "String",
+      "isId" : true
+    }, {
+      "fieldName" : "userId",
+      "javaType" : "Long",
+      "isId" : false
+    }, {
+      "fieldName" : "action",
+      "javaType" : "String",
+      "isId" : false
+    }, {
+      "fieldName" : "timestamp",
+      "javaType" : "LocalDateTime",
+      "isId" : false
+    }, {
+      "fieldName" : "details",
+      "javaType" : "Map<String,Object>",
+      "isId" : false
+    } ]
+  } ],
+  "esIndices" : [ {
+    "className" : "DestinationSearchDocument",
+    "packageName" : "com.team15.tripplanning.destinationservice.model",
+    "indexName" : "destinations",
+    "fields" : [ {
+      "fieldName" : "id",
+      "javaType" : "Long",
+      "isId" : true
+    }, {
+      "fieldName" : "name",
+      "javaType" : "String",
+      "isId" : false
+    }, {
+      "fieldName" : "country",
+      "javaType" : "String",
+      "isId" : false
+    }, {
+      "fieldName" : "category",
+      "javaType" : "String",
+      "isId" : false
+    }, {
+      "fieldName" : "description",
+      "javaType" : "String",
+      "isId" : false
+    }, {
+      "fieldName" : "highlights",
+      "javaType" : "String",
+      "isId" : false
+    }, {
+      "fieldName" : "rating",
+      "javaType" : "Double",
+      "isId" : false
+    }, {
+      "fieldName" : "totalRatings",
+      "javaType" : "Integer",
+      "isId" : false
+    }, {
+      "fieldName" : "status",
+      "javaType" : "String",
+      "isId" : false
+    } ]
+  } ],
+  "neo4jNodes" : [ {
+    "className" : "DestinationNode",
+    "packageName" : "com.team15.tripplanning.itineraryservice.model.neo4j",
+    "label" : "DestinationNode",
+    "fields" : [ {
+      "fieldName" : "id",
+      "javaType" : "Long",
+      "isId" : true
+    }, {
+      "fieldName" : "destinationId",
+      "javaType" : "Long",
+      "isId" : false
+    }, {
+      "fieldName" : "name",
+      "javaType" : "String",
+      "isId" : false
+    }, {
+      "fieldName" : "country",
+      "javaType" : "String",
+      "isId" : false
+    }, {
+      "fieldName" : "category",
+      "javaType" : "String",
+      "isId" : false
+    } ]
+  }, {
+    "className" : "TripRelationshipRecord",
+    "packageName" : "com.team15.tripplanning.itineraryservice.model.neo4j",
+    "label" : "TripRoute",
+    "fields" : [ {
+      "fieldName" : "id",
+      "javaType" : "Long",
+      "isId" : true
+    }, {
+      "fieldName" : "startDestination",
+      "javaType" : "String",
+      "isId" : false
+    }, {
+      "fieldName" : "endDestination",
+      "javaType" : "String",
+      "isId" : false
+    }, {
+      "fieldName" : "transportCost",
+      "javaType" : "Double",
+      "isId" : false
+    }, {
+      "fieldName" : "accommodationCost",
+      "javaType" : "Double",
+      "isId" : false
+    }, {
+      "fieldName" : "activitiesCost",
+      "javaType" : "Double",
+      "isId" : false
+    }, {
+      "fieldName" : "seasonMultiplier",
+      "javaType" : "Double",
+      "isId" : false
+    } ]
+  }, {
+    "className" : "UserNode",
+    "packageName" : "com.team15.tripplanning.itineraryservice.model.neo4j",
+    "label" : "UserNode",
+    "fields" : [ {
+      "fieldName" : "id",
+      "javaType" : "Long",
+      "isId" : true
+    }, {
+      "fieldName" : "userId",
+      "javaType" : "Long",
+      "isId" : false
+    }, {
+      "fieldName" : "name",
+      "javaType" : "String",
+      "isId" : false
+    } ]
+  } ],
+  "neo4jRelationships" : [ {
+    "className" : "VisitedRelationship",
+    "packageName" : "com.team15.tripplanning.itineraryservice.model.neo4j",
+    "fields" : [ {
+      "fieldName" : "id",
+      "javaType" : "Long",
+      "isId" : true
+    }, {
+      "fieldName" : "visitCount",
+      "javaType" : "Integer",
+      "isId" : false
+    }, {
+      "fieldName" : "lastVisitDate",
+      "javaType" : "LocalDateTime",
+      "isId" : false
+    }, {
+      "fieldName" : "recorded_itinerary_ids",
+      "javaType" : "List<Long>",
+      "isId" : false
+    } ]
+  } ],
+  "cassandraTables" : [ {
+    "className" : "ActivityLifecycleEvent",
+    "packageName" : "com.team15.tripplanning.activityservice.model.cassandra",
+    "tableName" : "activity_lifecycle_events",
+    "columns" : [ {
+      "fieldName" : "key",
+      "columnName" : "key",
+      "javaType" : "ActivityLifecycleEventKey",
+      "isPartitionKey" : true,
+      "isClusteringKey" : false
+    }, {
+      "fieldName" : "status",
+      "columnName" : "status",
+      "javaType" : "String",
+      "isPartitionKey" : false,
+      "isClusteringKey" : false
+    }, {
+      "fieldName" : "category",
+      "columnName" : "category",
+      "javaType" : "String",
+      "isPartitionKey" : false,
+      "isClusteringKey" : false
+    }, {
+      "fieldName" : "latitude",
+      "columnName" : "latitude",
+      "javaType" : "Double",
+      "isPartitionKey" : false,
+      "isClusteringKey" : false
+    }, {
+      "fieldName" : "longitude",
+      "columnName" : "longitude",
+      "javaType" : "Double",
+      "isPartitionKey" : false,
+      "isClusteringKey" : false
+    }, {
+      "fieldName" : "notes",
+      "columnName" : "notes",
+      "javaType" : "String",
+      "isPartitionKey" : false,
+      "isClusteringKey" : false
+    } ]
+  } ],
+  "auth" : {
+    "userTable" : "users",
+    "userColumns" : [ {
+      "fieldName" : "id",
+      "columnName" : "id",
+      "javaType" : "Long",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : true,
+      "isGenerated" : true,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "name",
+      "columnName" : "name",
+      "javaType" : "String",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "email",
+      "columnName" : "email",
+      "javaType" : "String",
+      "nullable" : false,
+      "unique" : true,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "password",
+      "columnName" : "password",
+      "javaType" : "String",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "phone",
+      "columnName" : "phone",
+      "javaType" : "String",
+      "nullable" : false,
+      "unique" : true,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "role",
+      "columnName" : "role",
+      "javaType" : "Role",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : true,
+      "relationKind" : null
+    }, {
+      "fieldName" : "status",
+      "columnName" : "status",
+      "javaType" : "Status",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : true,
+      "relationKind" : null
+    }, {
+      "fieldName" : "preferences",
+      "columnName" : "preferences",
+      "javaType" : "Map<String,Object>",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "createdAt",
+      "columnName" : "created_at",
+      "javaType" : "LocalDateTime",
+      "nullable" : false,
+      "unique" : false,
+      "required" : true,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : null
+    }, {
+      "fieldName" : "savedDestinations",
+      "columnName" : "saved_destinations",
+      "javaType" : "List<SavedDestination>",
+      "nullable" : true,
+      "unique" : false,
+      "required" : false,
+      "isId" : false,
+      "isGenerated" : false,
+      "isEnum" : false,
+      "relationKind" : "OneToMany"
+    } ],
+    "roleColumn" : "role",
+    "roleEnumJavaType" : "Role",
+    "roleEnumValues" : [ "TRAVELER", "ADMIN" ],
+    "adminLabel" : "ADMIN",
+    "emailColumn" : "email",
+    "passwordColumn" : "password",
+    "loginPath" : "/api/auth/register",
+    "loginVerb" : "POST"
+  }
+}

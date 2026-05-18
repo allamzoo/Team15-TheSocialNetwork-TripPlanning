@@ -1,0 +1,18 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  grafana-pvc.yaml — S4-INFRA OWNED (feature/m3-s4-infra-activity)           ║
+# ║  Persistent storage for Grafana state: sqlite DB, sessions, plugins.        ║
+# ║  Mounted at /var/lib/grafana in grafana-deployment.yaml.                    ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-pvc
+  namespace: monitoring
+  labels:
+    app: grafana
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

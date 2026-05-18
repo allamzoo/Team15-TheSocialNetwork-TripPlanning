@@ -133,7 +133,7 @@ public class ActivityController {
     // ---------- S4-F4 ----------
     @PostMapping("/batch")
     public ResponseEntity<BatchActivityResponseDTO> batchActivityCreation(@RequestBody BatchActivityRequestDTO request) {
-        List<Activity> createdActivities = activityService.batchActivitiyCreation(request);
+        List<Activity> createdActivities = activityService.batchActivityCreation(request);
         BatchActivityResponseDTO response = new BatchActivityResponseDTO(
                 createdActivities.size(),
                 "Successfully created " + createdActivities.size() + " activities");
@@ -167,6 +167,10 @@ public class ActivityController {
 
             @RequestParam
             @DateTimeFormat(iso = ISO.DATE) LocalDate endDate) {
+
+        // Log ANALYTICS_VIEWED on every call (cache hit or miss) per spec §4.4.4.
+        // Must run outside the @Cacheable layer — Spring AOP intercepts external calls only.
+        activityService.logAnalyticsViewed(startDate, endDate);
 
         ActivityAnalyticsDTO dto = activityService.getActivityAnalytics(startDate, endDate);
         return ResponseEntity.ok(dto);

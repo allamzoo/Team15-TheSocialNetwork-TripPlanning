@@ -1,8 +1,6 @@
 package com.team15.tripplanning.userservice.security;
 
-import com.team15.tripplanning.userservice.repository.UserRepository;
 import com.team15.tripplanning.userservice.security.handler.SignatureValidationHandler;
-import com.team15.tripplanning.userservice.security.handler.UserLoaderHandler;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,11 +17,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
-    private final UserRepository userRepository;
 
-    public JwtAuthenticationFilter(JwtService jwtService, UserRepository userRepository) {
+    public JwtAuthenticationFilter(JwtService jwtService) {
         this.jwtService = jwtService;
-        this.userRepository = userRepository;
     }
 
     @Override
@@ -42,8 +38,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         ctx.setToken(header.substring(7));
 
         SignatureValidationHandler validation = new SignatureValidationHandler(jwtService);
-        UserLoaderHandler userLoader = new UserLoaderHandler(userRepository);
-        validation.setNext(userLoader);
 
         boolean passed = validation.handle(ctx);
 

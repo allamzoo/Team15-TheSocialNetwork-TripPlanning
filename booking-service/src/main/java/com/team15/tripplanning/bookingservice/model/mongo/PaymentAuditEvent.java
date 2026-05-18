@@ -17,6 +17,7 @@ public class PaymentAuditEvent implements MongoEvent {
     private Long bookingId;
     private Long userId;
     private String action;
+    private String eventType;
     private String method;
     private Double amount;
     private LocalDateTime timestamp;
@@ -24,10 +25,15 @@ public class PaymentAuditEvent implements MongoEvent {
 
     public PaymentAuditEvent() {}
 
+    public static PaymentAuditEvent from(Map<String, Object> params) {
+        return new PaymentAuditEvent(params);
+    }
+
     public PaymentAuditEvent(Map<String, Object> params) {
         this.bookingId = params.get("bookingId") instanceof Number n ? n.longValue() : null;
         this.userId    = params.get("userId")    instanceof Number n ? n.longValue() : null;
         this.action    = (String) params.getOrDefault("action", "PAYMENT_AUDIT");
+        this.eventType = this.action; // mirror action into eventType for test compatibility
         this.method    = (String) params.get("method");
         this.amount    = params.get("amount") instanceof Number n ? n.doubleValue() : null;
         this.timestamp = LocalDateTime.now();
@@ -41,8 +47,15 @@ public class PaymentAuditEvent implements MongoEvent {
     @Override public String getAction()               { return action; }
     @Override public Map<String, Object> getDetails() { return details; }
 
-    public Long getBookingId() { return bookingId; }
-    public Long getUserId()    { return userId; }
-    public String getMethod()  { return method; }
-    public Double getAmount()  { return amount; }
+    public Long getBookingId()  { return bookingId; }
+    public Long getUserId()     { return userId; }
+    public String getMethod()   { return method; }
+    public Double getAmount()   { return amount; }
+    public String getEventType(){ return eventType; }
+    public void setEventType(String eventType){ this.eventType = eventType; }
+
+    /** Returns the effective event type — from eventType field if set, otherwise from action */
+    public String effectiveEventType() {
+        return eventType != null ? eventType : action;
+    }
 }

@@ -1,5 +1,7 @@
 package com.team15.tripplanning.destinationservice.controller;
 
+import com.team15.tripplanning.contracts.dto.BatchDestinationRequest;
+import com.team15.tripplanning.contracts.dto.DestinationSummaryDTO;
 import com.team15.tripplanning.destinationservice.dto.DestinationRateRequest;
 import com.team15.tripplanning.destinationservice.dto.DestinationReviewAlertDTO;
 import com.team15.tripplanning.destinationservice.dto.DestinationRevenueDTO;
@@ -41,6 +43,13 @@ public class DestinationController {
     @PostMapping
     public ResponseEntity<Destination> create(@RequestBody Destination destination) {
         return ResponseEntity.ok(destinationService.create(destination));
+    }
+
+    /** S5-F10: batch lookup — folds N Feign calls into 1 for booking-service grouping. */
+    @PostMapping("/batch")
+    public ResponseEntity<List<DestinationSummaryDTO>> batchGetDestinations(
+            @RequestBody BatchDestinationRequest request) {
+        return ResponseEntity.ok(destinationService.batchGetDestinations(request.destinationIds()));
     }
 
     @GetMapping

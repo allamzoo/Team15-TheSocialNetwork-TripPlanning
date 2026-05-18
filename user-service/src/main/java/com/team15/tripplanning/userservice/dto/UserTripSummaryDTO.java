@@ -6,6 +6,7 @@ public class UserTripSummaryDTO {
     private Long totalTrips;
     private Long completedTrips;
     private Long cancelledTrips;
+
     private Double totalSpent;
     private Double averageBudget;
 

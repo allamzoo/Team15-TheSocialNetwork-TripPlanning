@@ -1,0 +1,25 @@
+# k8s/services/elasticsearch-svc.yaml
+# S5-INFRA — Elasticsearch ClusterIP Service
+# destination-service connects via:
+#   spring.elasticsearch.uris: http://elasticsearch:9200
+# Port 9300 (inter-node transport) is also declared for completeness even
+# though we run single-node; it costs nothing and avoids Kubernetes warnings
+# if ES ever logs "transport bound to ...".
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+  namespace: tripplanning
+spec:
+  selector:
+    app: elasticsearch
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 9200
+      targetPort: 9200
+      protocol: TCP
+    - name: transport
+      port: 9300
+      targetPort: 9300
+      protocol: TCP

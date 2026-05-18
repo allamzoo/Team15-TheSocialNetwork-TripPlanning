@@ -1,0 +1,76 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  prometheus.yaml — S3-INFRA OWNED (feature/m3-s3-infra-itinerary)           ║
+# ║  Prometheus ClusterIP Service + Deployment in the monitoring namespace.     ║
+# ║  Config is loaded from prometheus-configmap.yaml (each slice edits only     ║
+# ║  its own scrape_configs job block there).                                    ║
+# ║                                                                              ║
+# ║  DNS used by Grafana datasource:                                             ║
+# ║    http://prometheus.monitoring.svc.cluster.local:9090                      ║
+# ║                                                                              ║
+# ║  NOTE: Grafana Deployment + Service are owned by S4-INFRA and live in       ║
+# ║  k8s/monitoring/grafana/ — do NOT add Grafana resources to this file.       ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: monitoring
+  labels:
+    app: prometheus
+spec:
+  selector:
+    app: prometheus
+  ports:
+    - name: http
+      port: 9090
+      targetPort: 9090
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.51.2
+          args:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/prometheus
+            - --web.console.libraries=/usr/share/prometheus/console_libraries
+            - --web.console.templates=/usr/share/prometheus/consoles
+          ports:
+            - containerPort: 9090
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 9090
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          volumeMounts:
+            - name: prometheus-config
+              mountPath: /etc/prometheus
+            - name: prometheus-data
+              mountPath: /prometheus
+      volumes:
+        - name: prometheus-config
+          configMap:
+            name: prometheus-config    # declared in prometheus-configmap.yaml
+        - name: prometheus-data
+          persistentVolumeClaim:
+            claimName: prometheus-pvc  # declared in prometheus/prometheus-pvc.yaml

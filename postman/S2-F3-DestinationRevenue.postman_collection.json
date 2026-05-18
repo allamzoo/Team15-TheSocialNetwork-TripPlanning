@@ -1,0 +1,314 @@
+{
+  "info": {
+    "_postman_id": "s2-f3-revenue-v2",
+    "name": "S2-F3 Destination Booking Revenue",
+    "description": "Spec scenario: Destination ID=1 (Dahab). 3 itineraries in itinerary-postgres referencing destinationId=1. 5 CONFIRMED bookings with amounts 200,300,400,500,600 in March 2026. Expect totalBookings=5, totalRevenue=2000.00, averageBookingAmount=400.00.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "SETUP 1 \u2014 Create Destination (Dahab, ADVENTURE)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Dahab\",\n  \"country\": \"Egypt\",\n  \"category\": \"ADVENTURE\",\n  \"status\": \"ACTIVE\",\n  \"rating\": 0.0,\n  \"totalRatings\": 0,\n  \"description\": \"A beautiful destination\"\n}"
+        },
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Destination created (200 or 201)', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
+              "});",
+              "pm.environment.set('destId', pm.response.json().id);",
+              "console.log('destId saved:', pm.response.json().id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "SETUP 2 \u2014 Create Itinerary 1 in itinerary-service (destinationId=destId, COMPLETED)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Test Trip\",\n  \"userId\": 1,\n  \"destinationId\": {{destId}},\n  \"status\": \"COMPLETED\",\n  \"startDate\": \"2026-03-01\",\n  \"endDate\": \"2026-03-10\",\n  \"estimatedBudget\": 1000\n}"
+        },
+        "url": {
+          "raw": "{{itineraryBaseUrl}}/api/itineraries",
+          "host": [
+            "{{itineraryBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "itineraries"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Itinerary 1 created', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
+              "});",
+              "pm.environment.set('itinerary1Id', pm.response.json().id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "SETUP 3 \u2014 Create Itinerary 2 (destinationId=destId, COMPLETED)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Test Trip\",\n  \"userId\": 2,\n  \"destinationId\": {{destId}},\n  \"status\": \"COMPLETED\",\n  \"startDate\": \"2026-03-05\",\n  \"endDate\": \"2026-03-15\",\n  \"estimatedBudget\": 800\n}"
+        },
+        "url": {
+          "raw": "{{itineraryBaseUrl}}/api/itineraries",
+          "host": [
+            "{{itineraryBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "itineraries"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Itinerary 2 created', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
+              "});",
+              "pm.environment.set('itinerary2Id', pm.response.json().id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "SETUP 4 \u2014 Create Itinerary 3 (destinationId=destId, COMPLETED)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Test Trip\",\n  \"userId\": 3,\n  \"destinationId\": {{destId}},\n  \"status\": \"COMPLETED\",\n  \"startDate\": \"2026-03-10\",\n  \"endDate\": \"2026-03-20\",\n  \"estimatedBudget\": 1200\n}"
+        },
+        "url": {
+          "raw": "{{itineraryBaseUrl}}/api/itineraries",
+          "host": [
+            "{{itineraryBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "itineraries"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Itinerary 3 created', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
+              "});",
+              "pm.environment.set('itinerary3Id', pm.response.json().id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST \u2014 Revenue Happy Path (expect totalBookings=5, totalRevenue=2000, avg=400)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations/{{destId}}/revenue?startDate=2026-03-01&endDate=2026-03-31",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations",
+            "{{destId}}",
+            "revenue"
+          ],
+          "query": [
+            {
+              "key": "startDate",
+              "value": "2026-03-01"
+            },
+            {
+              "key": "endDate",
+              "value": "2026-03-31"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "var body = pm.response.json();",
+              "pm.test('destinationId matches', function () {",
+              "  pm.expect(String(body.destinationId)).to.eql(String(pm.environment.get('destId')));",
+              "});",
+              "pm.test('name is Dahab', function () {",
+              "  pm.expect(body.name).to.eql('Dahab');",
+              "});",
+              "pm.test('totalBookings present (spec expects 5 with seed data)', function () {",
+              "  pm.expect(body).to.have.property('totalBookings');",
+              "  console.log('totalBookings:', body.totalBookings, '(spec expects 5 after booking seed)');",
+              "});",
+              "pm.test('totalRevenue present (spec expects 2000.00)', function () {",
+              "  pm.expect(body).to.have.property('totalRevenue');",
+              "  console.log('totalRevenue:', body.totalRevenue, '(spec expects 2000.00)');",
+              "});",
+              "pm.test('averageBookingAmount present (spec expects 400.00)', function () {",
+              "  pm.expect(body).to.have.property('averageBookingAmount');",
+              "  console.log('averageBookingAmount:', body.averageBookingAmount, '(spec expects 400.00)');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST \u2014 400 startDate after endDate",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations/{{destId}}/revenue?startDate=2026-03-31&endDate=2026-03-01",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations",
+            "{{destId}}",
+            "revenue"
+          ],
+          "query": [
+            {
+              "key": "startDate",
+              "value": "2026-03-31"
+            },
+            {
+              "key": "endDate",
+              "value": "2026-03-01"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 400 for reversed date range', function () {",
+              "  pm.response.to.have.status(400);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "TEST \u2014 404 Destination Not Found",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{destinationBaseUrl}}/api/destinations/999999/revenue?startDate=2026-03-01&endDate=2026-03-31",
+          "host": [
+            "{{destinationBaseUrl}}"
+          ],
+          "path": [
+            "api",
+            "destinations",
+            "999999",
+            "revenue"
+          ],
+          "query": [
+            {
+              "key": "startDate",
+              "value": "2026-03-01"
+            },
+            {
+              "key": "endDate",
+              "value": "2026-03-31"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 404 for non-existent destination', function () {",
+              "  pm.response.to.have.status(404);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

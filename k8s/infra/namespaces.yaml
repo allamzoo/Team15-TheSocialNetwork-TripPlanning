@@ -1,0 +1,20 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  namespaces.yaml — INFRA OWNED (committed at Day-0 kickoff)                 ║
+# ║  Two namespaces for the entire platform:                                     ║
+# ║    tripplanning — all 5 microservices + shared infra (postgres, rabbitmq)   ║
+# ║    monitoring   — prometheus, loki, grafana                                  ║
+# ║  Do NOT add namespaces in feature slice PRs.                                 ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tripplanning
+  labels:
+    app.kubernetes.io/managed-by: team15
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    app.kubernetes.io/managed-by: team15

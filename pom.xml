@@ -9,18 +9,20 @@
     <version>1.0-SNAPSHOT</version>
 
     <properties>
-        <maven.compiler.source>25</maven.compiler.source>
-        <maven.compiler.target>25</maven.compiler.target>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
     <packaging>pom</packaging>
     <modules>
+        <module>contracts</module>
         <module>shared-lib</module>
         <module>user-service</module>
         <module>destination-service</module>
         <module>itinerary-service</module>
         <module>activity-service</module>
         <module>booking-service</module>
+        <module>api-gateway</module>
     </modules>
 
 </project>

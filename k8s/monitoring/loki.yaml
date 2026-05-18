@@ -1,0 +1,71 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  loki.yaml — MONITORING-INFRA OWNED (committed at Day-0 kickoff)            ║
+# ║  Fixes the K8s Service name "loki" in the monitoring namespace so           ║
+# ║  Grafana and each service's Loki4J appender can resolve it via DNS:         ║
+# ║    http://loki.monitoring.svc.cluster.local:3100                            ║
+# ║                                                                              ║
+# ║  Referenced in grafana-datasources.yaml (already committed).               ║
+# ║  Each service's Loki4J config (logback-spring.xml) should set:             ║
+# ║    <url>http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push</url>║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+apiVersion: v1
+kind: Service
+metadata:
+  name: loki
+  namespace: monitoring
+  labels:
+    app: loki
+spec:
+  selector:
+    app: loki
+  ports:
+    - name: http
+      port: 3100
+      targetPort: 3100
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: loki
+  namespace: monitoring
+spec:
+  serviceName: loki
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loki
+  template:
+    metadata:
+      labels:
+        app: loki
+    spec:
+      containers:
+        - name: loki
+          image: grafana/loki:2.9.4
+          args:
+            - -config.file=/etc/loki/config.yaml
+          ports:
+            - containerPort: 3100
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              memory: 128Mi
+          volumeMounts:
+            - name: loki-config
+              mountPath: /etc/loki
+            - name: loki-data
+              mountPath: /loki
+      volumes:
+        - name: loki-config
+          configMap:
+            name: loki-config
+  volumeClaimTemplates:
+    - metadata:
+        name: loki-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
