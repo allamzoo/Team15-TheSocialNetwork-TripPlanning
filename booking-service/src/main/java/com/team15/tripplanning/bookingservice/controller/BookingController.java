@@ -7,15 +7,10 @@ import com.team15.tripplanning.bookingservice.dto.DestinationSeasonRevenueDTO;
 import com.team15.tripplanning.bookingservice.dto.RefundCancellationRequest;
 import com.team15.tripplanning.bookingservice.dto.RevenueReportDTO;
 import com.team15.tripplanning.bookingservice.dto.SaleAuditTrailDTO;
-import com.team15.tripplanning.bookingservice.dto.SettlementProcessRequest;
-import com.team15.tripplanning.bookingservice.dto.SettlementResultDTO;
 import com.team15.tripplanning.bookingservice.dto.UserBookingSummaryDTO;
 import com.team15.tripplanning.bookingservice.dto.UserBookingTotalDTO;
 import com.team15.tripplanning.bookingservice.model.Booking;
-import com.team15.tripplanning.bookingservice.security.JwtService;
 import com.team15.tripplanning.bookingservice.service.BookingService;
-import com.team15.tripplanning.bookingservice.service.SettlementService;
-import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -37,15 +32,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/bookings")
 public class BookingController {
     private final BookingService bookingService;
-    private final SettlementService settlementService;
-    private final JwtService jwtService;
 
-    public BookingController(BookingService bookingService,
-                             SettlementService settlementService,
-                             JwtService jwtService) {
+    public BookingController(BookingService bookingService) {
         this.bookingService = bookingService;
-        this.settlementService = settlementService;
-        this.jwtService = jwtService;
     }
 
     @PostMapping
@@ -234,19 +223,4 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.getConfirmedSummaryForItinerary(itineraryId));
     }
 
-    /** POST /api/bookings/settlement/process */
-    @PostMapping("/settlement/process")
-    public ResponseEntity<SettlementResultDTO> processSettlement(
-            @RequestBody SettlementProcessRequest request,
-            HttpServletRequest httpRequest
-    ) {
-        String header = httpRequest.getHeader("Authorization");
-        if (header == null || !header.startsWith("Bearer ")) {
-            throw new org.springframework.web.server.ResponseStatusException(
-                    HttpStatus.UNAUTHORIZED, "Missing or invalid Authorization header");
-        }
-        Long jwtUserId = jwtService.extractUserId(header.substring(7));
-        SettlementResultDTO result = settlementService.processSettlement(request, jwtUserId);
-        return ResponseEntity.ok(result);
-    }
 }
