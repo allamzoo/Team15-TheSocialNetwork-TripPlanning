@@ -25,6 +25,10 @@ public class PaymentAuditEvent implements MongoEvent {
 
     public PaymentAuditEvent() {}
 
+    public static PaymentAuditEvent from(Map<String, Object> params) {
+        return new PaymentAuditEvent(params);
+    }
+
     public PaymentAuditEvent(Map<String, Object> params) {
         this.bookingId = params.get("bookingId") instanceof Number n ? n.longValue() : null;
         this.userId    = params.get("userId")    instanceof Number n ? n.longValue() : null;

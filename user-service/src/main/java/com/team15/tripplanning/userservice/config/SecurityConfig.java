@@ -38,6 +38,7 @@ public class SecurityConfig {
                                 "/api/itineraries/health",
                                 "/api/activities/health",
                                 "/api/bookings/health",
+                                "/actuator/**",
                                 "/error",
                                 "/api/users",
                                 "/api/users/**"

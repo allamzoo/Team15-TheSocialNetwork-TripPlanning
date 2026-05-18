@@ -13,6 +13,16 @@ scrape_configs:
       - targets: ['itinerary-service:8080']
     metrics_path: /actuator/prometheus
 
+  - job_name: destination-service
+    static_configs:
+      - targets: ['destination-service:8080']
+    metrics_path: /actuator/prometheus
+
+  - job_name: activity-service
+    static_configs:
+      - targets: ['activity-service:8080']
+    metrics_path: /actuator/prometheus
+
   - job_name: booking-service
     static_configs:
       - targets: ['booking-service:8080']

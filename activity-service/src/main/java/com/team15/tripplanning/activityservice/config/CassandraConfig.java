@@ -1,12 +1,14 @@
 package com.team15.tripplanning.activityservice.config;
 
+import com.datastax.oss.driver.api.core.config.DefaultDriverOption;
+import com.datastax.oss.driver.api.core.config.DriverConfigLoader;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.cassandra.config.CqlSessionFactoryBean;
 
-import java.util.Arrays;
+import java.time.Duration;
 
 @Configuration
 @ConditionalOnProperty(name = "cassandra.enabled", havingValue = "true")
@@ -31,6 +33,20 @@ public class CassandraConfig {
         factory.setPort(port);
         factory.setLocalDatacenter(localDatacenter);
         factory.setKeyspaceName(keyspaceName);
+
+        // Increase driver request timeout to 30s for CREATE KEYSPACE / CREATE TABLE
+        // startup scripts (default is 2s which can timeout on first-run or slow Cassandra).
+        factory.setSessionBuilderConfigurer(sessionBuilder ->
+                sessionBuilder.withConfigLoader(
+                        DriverConfigLoader.programmaticBuilder()
+                                .withDuration(DefaultDriverOption.REQUEST_TIMEOUT,
+                                        Duration.ofSeconds(30))
+                                .withDuration(DefaultDriverOption.CONNECTION_INIT_QUERY_TIMEOUT,
+                                        Duration.ofSeconds(30))
+                                .build()
+                )
+        );
+
         factory.setKeyspaceStartupScripts(java.util.Arrays.asList(
                 "CREATE KEYSPACE IF NOT EXISTS " + keyspaceName
                         + " WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1}"

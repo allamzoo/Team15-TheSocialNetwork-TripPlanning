@@ -4,6 +4,10 @@ import com.team15.tripplanning.bookingservice.messaging.publisher.PaymentEventPu
 import com.team15.tripplanning.bookingservice.model.Settlement;
 import com.team15.tripplanning.bookingservice.model.Settlement.SettlementStatus;
 import com.team15.tripplanning.bookingservice.repository.SettlementRepository;
+import com.team15.tripplanning.contracts.events.PaymentCompletedEvent;
+import com.team15.tripplanning.contracts.events.PaymentFailedEvent;
+import com.team15.tripplanning.contracts.events.PaymentInitiatedEvent;
+import com.team15.tripplanning.contracts.events.PaymentRefundedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -19,16 +23,16 @@ import java.time.LocalDateTime;
  *
  * State transitions:
  *
- *   createPending()   SETTLEMENT_PENDING  ← ItineraryCompletedEvent consumed
- *   process()         → SETTLED           ← POST /api/bookings/settlement/process (success)
+ *   createPending()   PENDING     ← ItineraryCompletedEvent consumed
+ *   process()         → COMPLETED ← POST /api/bookings/settlement/process (success)
  *                       publishes payment.completed
- *   fail()            → PAYMENT_FAILED    ← POST /api/bookings/settlement/process (failure)
+ *   fail()            → FAILED    ← POST /api/bookings/settlement/process (failure)
  *                       publishes payment.failed
- *   refund()          → REFUNDED          ← ItineraryCancelledEvent consumed
+ *   refund()          → REFUNDED  ← ItineraryCancelledEvent consumed
  *                       publishes payment.refunded
  *
- * All mutations are transactional. The unique constraint on settlements.itinerary_id
- * is the idempotency guard — duplicate ItineraryCompletedEvents are silently ignored.
+ * NOTE: The active saga handling is done directly by ItineraryEventConsumer and
+ * feature.settlement.SettlementService. This class is retained for reference.
  */
 @Service
 public class SettlementSaga {
@@ -44,7 +48,7 @@ public class SettlementSaga {
         this.publisher            = publisher;
     }
 
-    // ── Step 1: Create SETTLEMENT_PENDING ─────────────────────────────────────
+    // ── Step 1: Create PENDING ────────────────────────────────────────────────
 
     /**
      * Called by ItineraryEventConsumer on ItineraryCompletedEvent.
@@ -60,20 +64,20 @@ public class SettlementSaga {
 
         Settlement s = new Settlement(itineraryId, userId, amount);
         s = settlementRepository.save(s);
-        log.info("SETTLEMENT_PENDING created: id={} itineraryId={} amount={}",
+        log.info("PENDING settlement created: id={} itineraryId={} amount={}",
                 s.getId(), itineraryId, amount);
 
-        publisher.publishInitiated(s.getId(), itineraryId, amount);
+        publisher.publishPaymentInitiated(new PaymentInitiatedEvent(s.getId(), itineraryId, amount));
         return s;
     }
 
-    // ── Step 2a: Process → SETTLED ────────────────────────────────────────────
+    // ── Step 2a: Process → COMPLETED ─────────────────────────────────────────
 
     /**
      * Called by POST /api/bookings/settlement/process.
      * Validates that amount > 0 and userId matches the settlement owner.
-     * On success: SETTLED + publishes payment.completed.
-     * On failure: PAYMENT_FAILED + publishes payment.failed.
+     * On success: COMPLETED + publishes payment.completed.
+     * On failure: FAILED + publishes payment.failed.
      */
     @Transactional
     public Settlement process(Long itineraryId, Long userId, BigDecimal amount) {
@@ -82,7 +86,7 @@ public class SettlementSaga {
                         HttpStatus.NOT_FOUND,
                         "No settlement found for itineraryId=" + itineraryId));
 
-        if (s.getStatus() != SettlementStatus.SETTLEMENT_PENDING) {
+        if (s.getStatus() != SettlementStatus.PENDING) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Settlement is already in state " + s.getStatus());
         }
@@ -94,21 +98,21 @@ public class SettlementSaga {
                 && userId.equals(s.getUserId());
 
         if (valid) {
-            s.setStatus(SettlementStatus.SETTLED);
+            s.setStatus(SettlementStatus.COMPLETED);
             s.setSettledAt(LocalDateTime.now());
             s = settlementRepository.save(s);
-            log.info("Settlement SETTLED: id={} itineraryId={}", s.getId(), itineraryId);
-            publisher.publishCompleted(s.getId(), itineraryId, s.getAmount());
+            log.info("Settlement COMPLETED: id={} itineraryId={}", s.getId(), itineraryId);
+            publisher.publishPaymentCompleted(new PaymentCompletedEvent(s.getId(), itineraryId, s.getAmount()));
         } else {
             String reason = amount == null || amount.compareTo(BigDecimal.ZERO) <= 0
                     ? "Invalid amount: " + amount
                     : "userId mismatch: expected=" + s.getUserId() + " got=" + userId;
-            s.setStatus(SettlementStatus.PAYMENT_FAILED);
+            s.setStatus(SettlementStatus.FAILED);
             s.setFailureReason(reason);
             s = settlementRepository.save(s);
-            log.warn("Settlement PAYMENT_FAILED: id={} itineraryId={} reason={}",
+            log.warn("Settlement FAILED: id={} itineraryId={} reason={}",
                     s.getId(), itineraryId, reason);
-            publisher.publishFailed(s.getId(), itineraryId, reason);
+            publisher.publishPaymentFailed(new PaymentFailedEvent(s.getId(), itineraryId, reason));
         }
 
         return s;
@@ -118,7 +122,7 @@ public class SettlementSaga {
 
     /**
      * Called when itinerary.cancelled is consumed (compensation flow).
-     * Transitions SETTLEMENT_PENDING or PAYMENT_FAILED → REFUNDED.
+     * Transitions PENDING or FAILED → REFUNDED.
      */
     @Transactional
     public void refund(Long itineraryId) {
@@ -126,7 +130,7 @@ public class SettlementSaga {
             s.setStatus(SettlementStatus.REFUNDED);
             settlementRepository.save(s);
             log.info("Settlement REFUNDED: id={} itineraryId={}", s.getId(), itineraryId);
-            publisher.publishRefunded(s.getId(), itineraryId, s.getAmount());
+            publisher.publishPaymentRefunded(new PaymentRefundedEvent(s.getId(), itineraryId, s.getAmount()));
         });
     }
 }

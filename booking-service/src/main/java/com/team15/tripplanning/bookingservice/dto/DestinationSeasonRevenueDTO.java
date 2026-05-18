@@ -36,4 +36,10 @@ public class DestinationSeasonRevenueDTO {
     public Double getSurchargeRevenue()     { return surchargeRevenue; }
     public Long getPeakBookingCount()       { return peakBookingCount; }
     public Long getOffPeakBookingCount()    { return offPeakBookingCount; }
+
+    public void setTotalRevenue(Double totalRevenue) { this.totalRevenue = totalRevenue; }
+    public void setBaseRevenue(Double baseRevenue) { this.baseRevenue = baseRevenue; }
+    public void setSurchargeRevenue(Double surchargeRevenue) { this.surchargeRevenue = surchargeRevenue; }
+    public void setPeakBookingCount(Long peakBookingCount) { this.peakBookingCount = peakBookingCount; }
+    public void setOffPeakBookingCount(Long offPeakBookingCount) { this.offPeakBookingCount = offPeakBookingCount; }
 }

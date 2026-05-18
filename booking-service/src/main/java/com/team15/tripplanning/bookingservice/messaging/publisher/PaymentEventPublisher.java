@@ -9,8 +9,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
-
 /**
  * S5-EVENTS — Publishes all payment-related events to the payment.events TopicExchange.
  *
@@ -31,43 +29,27 @@ public class PaymentEventPublisher {
         this.rabbitTemplate = rabbitTemplate;
     }
 
-    public void publishInitiated(Long settlementId, Long itineraryId, BigDecimal amount) {
-        var event = new PaymentInitiatedEvent(settlementId, itineraryId, amount);
+    public void publishPaymentInitiated(PaymentInitiatedEvent event) {
         log.info("Publishing payment.initiated: settlementId={} itineraryId={} amount={}",
-                settlementId, itineraryId, amount);
-        rabbitTemplate.convertAndSend(
-                AmqpConfig.PAYMENT_EXCHANGE,
-                AmqpConfig.ROUTING_PAYMENT_INITIATED,
-                event);
+                event.settlementId(), event.itineraryId(), event.amount());
+        rabbitTemplate.convertAndSend(AmqpConfig.PAYMENT_EXCHANGE, AmqpConfig.ROUTING_PAYMENT_INITIATED, event);
     }
 
-    public void publishCompleted(Long settlementId, Long itineraryId, BigDecimal amount) {
-        var event = new PaymentCompletedEvent(settlementId, itineraryId, amount);
+    public void publishPaymentCompleted(PaymentCompletedEvent event) {
         log.info("Publishing payment.completed: settlementId={} itineraryId={} amount={}",
-                settlementId, itineraryId, amount);
-        rabbitTemplate.convertAndSend(
-                AmqpConfig.PAYMENT_EXCHANGE,
-                AmqpConfig.ROUTING_PAYMENT_COMPLETED,
-                event);
+                event.settlementId(), event.itineraryId(), event.amount());
+        rabbitTemplate.convertAndSend(AmqpConfig.PAYMENT_EXCHANGE, AmqpConfig.ROUTING_PAYMENT_COMPLETED, event);
     }
 
-    public void publishFailed(Long settlementId, Long itineraryId, String reason) {
-        var event = new PaymentFailedEvent(settlementId, itineraryId, reason);
+    public void publishPaymentFailed(PaymentFailedEvent event) {
         log.info("Publishing payment.failed: settlementId={} itineraryId={} reason={}",
-                settlementId, itineraryId, reason);
-        rabbitTemplate.convertAndSend(
-                AmqpConfig.PAYMENT_EXCHANGE,
-                AmqpConfig.ROUTING_PAYMENT_FAILED,
-                event);
+                event.settlementId(), event.itineraryId(), event.reason());
+        rabbitTemplate.convertAndSend(AmqpConfig.PAYMENT_EXCHANGE, AmqpConfig.ROUTING_PAYMENT_FAILED, event);
     }
 
-    public void publishRefunded(Long settlementId, Long itineraryId, BigDecimal refundAmount) {
-        var event = new PaymentRefundedEvent(settlementId, itineraryId, refundAmount);
+    public void publishPaymentRefunded(PaymentRefundedEvent event) {
         log.info("Publishing payment.refunded: settlementId={} itineraryId={} refundAmount={}",
-                settlementId, itineraryId, refundAmount);
-        rabbitTemplate.convertAndSend(
-                AmqpConfig.PAYMENT_EXCHANGE,
-                AmqpConfig.ROUTING_PAYMENT_REFUNDED,
-                event);
+                event.settlementId(), event.itineraryId(), event.refundAmount());
+        rabbitTemplate.convertAndSend(AmqpConfig.PAYMENT_EXCHANGE, AmqpConfig.ROUTING_PAYMENT_REFUNDED, event);
     }
 }

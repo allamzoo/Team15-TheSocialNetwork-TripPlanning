@@ -56,6 +56,21 @@ public class DatabaseMigrationConfig {
             jdbc.execute("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS start_date DATE");
             jdbc.execute("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS end_date DATE");
 
+            // M3 settlements table (saga anchor)
+            jdbc.execute("""
+                CREATE TABLE IF NOT EXISTS settlements (
+                    id BIGSERIAL PRIMARY KEY,
+                    itinerary_id BIGINT NOT NULL,
+                    user_id BIGINT NOT NULL,
+                    amount NUMERIC(10,2) NOT NULL,
+                    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    settled_at TIMESTAMP NULL,
+                    failure_reason VARCHAR(255) NULL
+                )
+                """);
+            jdbc.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_settlements_itinerary_id ON settlements (itinerary_id)");
+
         } catch (Exception e) {
             log.warn("Database migration for bookings.status skipped or partially failed: {}", e.getMessage());
         }

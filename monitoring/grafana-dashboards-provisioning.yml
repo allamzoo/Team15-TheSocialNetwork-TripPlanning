@@ -1,0 +1,13 @@
+apiVersion: 1
+providers:
+  - name: Trip Planning
+    orgId: 1
+    folder: Trip Planning
+    folderUid: tripplanning
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/tripplanning
+      foldersFromFilesStructure: false

@@ -1,36 +1,42 @@
 package com.team15.tripplanning.bookingservice.feature.settlement;
 
-import com.team15.tripplanning.bookingservice.saga.SettlementSaga;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import com.team15.tripplanning.bookingservice.dto.SettlementProcessRequest;
+import com.team15.tripplanning.bookingservice.dto.SettlementResultDTO;
+import com.team15.tripplanning.bookingservice.model.Settlement;
+import com.team15.tripplanning.bookingservice.repository.SettlementRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
-import com.team15.tripplanning.bookingservice.model.Settlement;
-import com.team15.tripplanning.bookingservice.repository.SettlementRepository;
-import java.math.BigDecimal;
-import java.util.Map;
 
 /**
  * S5-READ-DB / S5-EVENTS
  *
- * GET  /api/bookings/settlements/{itineraryId}  → SettlementDTO  (read-only query)
- * POST /api/bookings/settlement/process          → SettlementDTO  (saga transition)
+ * GET  /api/bookings/settlements/{itineraryId}  → SettlementDTO       (read-only query)
+ * GET  /api/bookings/settlements                → Page<Settlement>     (ADMIN only)
+ * POST /api/bookings/settlement/process         → SettlementResultDTO  (saga transition)
  */
 @RestController
 @RequestMapping("/api/bookings")
 public class SettlementController {
 
-    private final SettlementService settlementService;
-    private final SettlementSaga    settlementSaga;
+    private final SettlementService    settlementService;
+    private final SettlementRepository settlementRepository;
 
     public SettlementController(SettlementService settlementService,
-                                SettlementSaga settlementSaga) {
-        this.settlementService = settlementService;
-        this.settlementSaga    = settlementSaga;
+                                SettlementRepository settlementRepository) {
+        this.settlementService    = settlementService;
+        this.settlementRepository = settlementRepository;
     }
 
     /** GET /api/bookings/settlements/{itineraryId} */
@@ -38,6 +44,7 @@ public class SettlementController {
     public ResponseEntity<SettlementDTO> getByItinerary(@PathVariable Long itineraryId) {
         return ResponseEntity.ok(settlementService.getByItineraryId(itineraryId));
     }
+
     /**
      * GET /api/bookings/settlements
      * Returns a paginated list of all settlements. ADMIN only.
@@ -54,17 +61,12 @@ public class SettlementController {
 
     /**
      * POST /api/bookings/settlement/process
-     * Body: { "itineraryId": 20, "userId": 1, "amount": 2000 }
-     *
-     * Drives SettlementSaga.process() — transitions SETTLEMENT_PENDING → SETTLED or PAYMENT_FAILED.
+     * Drives SettlementService.processSettlement() — transitions PENDING → COMPLETED or FAILED.
      */
     @PostMapping("/settlement/process")
-    public ResponseEntity<SettlementDTO> process(@RequestBody Map<String, Object> body) {
-        Long itineraryId = Long.valueOf(body.get("itineraryId").toString());
-        Long userId      = Long.valueOf(body.get("userId").toString());
-        BigDecimal amount = new BigDecimal(body.get("amount").toString());
-
-        var settlement = settlementSaga.process(itineraryId, userId, amount);
-        return ResponseEntity.ok(SettlementDTO.from(settlement));
+    public ResponseEntity<SettlementResultDTO> processSettlement(
+            @RequestBody SettlementProcessRequest request,
+            HttpServletRequest httpRequest) {
+        return ResponseEntity.ok(settlementService.processSettlement(request, httpRequest));
     }
 }
