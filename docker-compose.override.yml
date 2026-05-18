@@ -60,7 +60,10 @@ services:
       - "3000:3000"
     environment:
       GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
     volumes:
-      - ./k8s/monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+      - ./k8s/monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards/tripplanning
+      - ./monitoring/grafana-dashboards-provisioning.yml:/etc/grafana/provisioning/dashboards/dashboards.yml
+      - ./monitoring/grafana-datasources-provisioning.yml:/etc/grafana/provisioning/datasources/datasources.yml
     depends_on:
       - prometheus
